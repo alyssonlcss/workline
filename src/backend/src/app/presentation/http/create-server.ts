@@ -46,14 +46,6 @@ const dataDownloadSchema = z.object({
   periodSelection: z.object({
     year: z.union([z.string().trim(), z.array(z.string().trim())]).optional(),
     month: z.union([z.string().trim(), z.array(z.string().trim())]).optional(),
-    dayRange: z.object({
-      min: z.number().int().min(1),
-      max: z.number().int().min(1),
-    }).optional(),
-    monthDayRanges: z.record(z.string(), z.object({
-      min: z.number().int().min(1),
-      max: z.number().int().min(1),
-    })).optional(),
   }).optional(),
 });
 
@@ -101,7 +93,9 @@ export async function createServer() {
 
   server.post('/api/scanner/executions', async (request, reply) => {
     const payload = createExecutionSchema.parse(request.body);
-    const job = await startScannerJob.execute(payload);
+    const userAgent = request.headers['user-agent'] ?? '';
+    const clientBrowserType = userAgent.includes('Edg/') ? 'edge' : userAgent.includes('Chrome/') ? 'chrome' : undefined;
+    const job = await startScannerJob.execute({ ...payload, clientBrowserType });
     return reply.code(202).send(job);
   });
 
@@ -110,6 +104,8 @@ export async function createServer() {
     const reportTitle = payload.reportTitle ?? environment.spotfire.defaultReportTitle;
     const dataDirectory = resolve(process.cwd(), environment.spotfire.outputDirectory);
     const controller = new AbortController();
+    const userAgent = request.headers['user-agent'] ?? '';
+    const clientBrowserType = userAgent.includes('Edg/') ? 'edge' : userAgent.includes('Chrome/') ? 'chrome' : undefined;
 
     activeDataDownloadController?.abort(createAbortError('data download superseded by a newer request'));
     activeDataDownloadController = controller;
@@ -155,6 +151,7 @@ export async function createServer() {
         tablesToExport: downloadTargets.map(t => ({ tab: t.analysisTab, tableTitle: t.tableTitle })),
         selectedFilters: payload.selectedFilters,
         periodSelection: payload.periodSelection,
+        clientBrowserType,
         signal: controller.signal,
         onProgress,
       });
