@@ -259,6 +259,7 @@ type SavedFilterState = {
 
               <div class="rpt-hero-actions" style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
                 <button class="rpt-export-btn" (click)="openExportModal()">Exportar PDF</button>
+                <button class="rpt-export-btn" style="background-color: #f59e0b; color: #fff; border-color: #d97706;" (click)="openWarningModal()">Enviar Aviso</button>
               </div>
             </div>
 
@@ -401,6 +402,34 @@ type SavedFilterState = {
 
             </div>
 
+            <!-- Warning Modal -->
+            <div class="export-modal-backdrop" *ngIf="warningModalOpen()" (click)="closeWarningModal()"></div>
+            <div class="export-modal" *ngIf="warningModalOpen()" role="dialog" aria-modal="true">
+              <div class="export-modal-header">
+                <div class="export-modal-title-row">
+                  <h3 class="export-modal-title">Enviar Aviso</h3>
+                </div>
+                <button class="export-modal-close" (click)="closeWarningModal()" aria-label="Fechar">✕</button>
+              </div>
+              <p class="export-modal-desc">Selecione o tipo de aviso que deseja enviar para as equipes com base nos dados do relatório atual.</p>
+              
+              <div class="export-modal-options">
+                <div class="export-option-row">
+                  <div class="export-option-info">
+                    <span class="export-option-icon">⚠️</span>
+                    <div class="export-option-body">
+                      <span class="export-option-title">Equipes com desvios recorrentes</span>
+                      <span class="export-option-sub">Envia um alerta sobre desvios operacionais reincidentes identificados no relatório.</span>
+                    </div>
+                  </div>
+                  <div class="export-option-actions">
+                    <button class="export-action-btn export-action-btn--share" (click)="sendWarningMessage('desvios')">
+                      Enviar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
             <!-- ======= MODO OPERACIONAL ======= -->
             <ng-container *ngIf="reportType() === 'operacional'">
 
@@ -1143,7 +1172,8 @@ type SavedFilterState = {
                         <span class="rpt-osdia-chip">Dias c/ atraso <strong>{{ analysis.diasAcimaMetaCount }}/{{ analysis.totalDays }}</strong></span>
                         <span class="rpt-osdia-chip" *ngIf="analysis.summary.countDeslocMuitoLento > 0">Desloc.&gt;37min: <strong>{{ analysis.summary.countDeslocMuitoLento }}</strong></span>
                         <span class="rpt-osdia-chip" *ngIf="analysis.summary.countSemDeslocRegistrado > 0">Sem registro: <strong>{{ analysis.summary.countSemDeslocRegistrado }}</strong></span>
-                        <span class="rpt-osdia-chip" *ngIf="analysis.summary.countDespachioTardio > 0">Despacho tardio: <strong>{{ analysis.summary.countDespachioTardio }}</strong></span>
+                        <span class="rpt-osdia-chip" *ngIf="analysis.summary.countDespachoTardio > 0">Despacho tardio: <strong>{{ analysis.summary.countDespachoTardio }}</strong></span>
+                        <span class="rpt-osdia-chip" *ngIf="analysis.summary.countLoginAtrasado > 0">Log In atrasado: <strong>{{ analysis.summary.countLoginAtrasado }}</strong></span>
                       </div>
                       <div class="osdia-ev-list" *ngIf="analysis.flaggedDays.length > 0; else noDeslocEvidence">
                         <ng-template #deslocEvTpl let-ev>
@@ -1155,7 +1185,10 @@ type SavedFilterState = {
                           <app-timeline-visual [ev]="ev"></app-timeline-visual>
                           <ul class="osdia-ev-alerts">
                             <li *ngIf="ev.flags.includes('despacho_tardio')" class="osdia-ev-alert">
-                              <strong>Despacho tardio:</strong> <span [innerHTML]="highlightMin(deslocAlertBody('despacho_tardio', ev))"></span>
+                              <strong>{{ ev.flags.includes('login_atrasado') ? 'Despacho tardio após login atrasado:' : 'Despacho tardio:' }}</strong> <span [innerHTML]="highlightMin(deslocAlertBody('despacho_tardio', ev))"></span>
+                            </li>
+                            <li *ngIf="ev.flags.includes('login_atrasado')" class="osdia-ev-alert">
+                              <strong>Log In atrasado:</strong> <span [innerHTML]="highlightMin(deslocAlertBody('login_atrasado', ev))"></span>
                             </li>
                             <li *ngIf="ev.flags.includes('desloc_muito_lento')" class="osdia-ev-alert">
                               <strong>1º Desloc.:</strong> <span [innerHTML]="highlightMin(deslocAlertBody('desloc_muito_lento', ev))"></span>
@@ -4908,6 +4941,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.selectedTrendLine.set(id);
     }
   }
+  protected readonly warningModalOpen = signal(false);
   protected readonly exportModalOpen = signal(false);
   protected readonly exportModalStep = signal<'mode' | 'bases'>('mode');
   protected readonly exportModeType = signal<'proprias' | 'parceiras'>('proprias');
@@ -5208,6 +5242,187 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.pendingShareText.set(null);
     this.pendingShareMode.set(null);
     this.exportModalOpen.set(true);
+  }
+
+  protected openWarningModal(): void {
+    this.warningModalOpen.set(true);
+  }
+
+  protected closeWarningModal(): void {
+    this.warningModalOpen.set(false);
+  }
+
+  protected sendWarningMessage(type: string): void {
+    const report = this.reportData();
+    const config = this.basesConfig;
+    if (!report || !config) {
+      alert('Relatório ou configuração de bases não carregados.');
+      return;
+    }
+
+    const getPoloForTeam = (team: string) => {
+      for (const polo of config.polos) {
+        if (polo.matchType === 'direct_prefix') {
+          for (const base of polo.bases) {
+            if (base.propria && team.startsWith(base.propria[0])) return base.name;
+            if (base.parceira && team.startsWith(base.parceira[0])) return base.name;
+          }
+        } else if (polo.matchType === 'infix_type_with_base_prefix') {
+          for (const base of polo.bases) {
+            const p_propria = (base.prefixes?.[0] || '') + (polo.typeIdentifiers?.propria[0] || '');
+            const p_parceira = (base.prefixes?.[0] || '') + (polo.typeIdentifiers?.parceira[0] || '');
+            if (team.startsWith(p_propria) || team.startsWith(p_parceira)) return base.name;
+          }
+        }
+      }
+      return 'Outros';
+    };
+
+    const poloMap: Record<string, { team: string; badness: number; problem: string }[]> = {};
+    for (const sc of report.teamScorecard) {
+      const polo = getPoloForTeam(sc.team);
+      if (!poloMap[polo]) poloMap[polo] = [];
+      
+      const teamDesvios: { name: string; priority: number; avgMin: number; count: number; globalAvg: number }[] = [];
+      
+      // Calculate averages for the top priority flags from Utilizacao
+      const util = report.specialAnalysis.utilizacaoAnalysis.find((u: any) => u.team === sc.team);
+      if (util && util.flaggedOrders) {
+        const partidasAll = util.flaggedOrders.filter((o: any) => o.temp_prep_os_min > 0);
+        const partidasOver10 = util.flaggedOrders.filter((o: any) => o.flags?.includes('temp_prep_alto'));
+        if (partidasOver10.length > 0) {
+          const avg = Math.round(partidasAll.reduce((acc: number, val: any) => acc + (val.temp_prep_os_min || 0), 0) / (partidasAll.length || 1));
+          teamDesvios.push({ name: 'Partida', priority: 1, avgMin: avg, count: partidasOver10.length, globalAvg: 0 });
+        }
+      
+        const intervalosAll = util.flaggedOrders.flatMap((o: any) => o.sem_os_details?.filter((d: any) => d.type === 'intervalo_deslocamento' && d.min > 0) || []);
+        const intervalosOver10 = intervalosAll.filter((d: any) => d.min > 10);
+        if (intervalosOver10.length > 0) {
+          const avg = Math.round(intervalosAll.reduce((acc: number, val: any) => acc + val.min, 0) / (intervalosAll.length || 1));
+          const globalAvg = Math.round(intervalosAll.reduce((acc: number, val: any) => acc + (val.global_avg_min || 0), 0) / (intervalosAll.length || 1));
+          teamDesvios.push({ name: 'Desl. Intervalo', priority: 2, avgMin: avg, count: intervalosOver10.length, globalAvg });
+        }
+      
+        const entreOsAll = util.flaggedOrders.flatMap((o: any) => o.sem_os_details?.filter((d: any) => d.type === 'entre_ordens' && d.min > 0) || []);
+        const entreOsOver10 = entreOsAll.filter((d: any) => d.min > 10);
+        if (entreOsOver10.length > 0) {
+          const avg = Math.round(entreOsAll.reduce((acc: number, val: any) => acc + val.min, 0) / (entreOsAll.length || 1));
+          const globalAvg = Math.round(entreOsAll.reduce((acc: number, val: any) => acc + (val.global_avg_min || 0), 0) / (entreOsAll.length || 1));
+          teamDesvios.push({ name: 'Entre OS', priority: 3, avgMin: avg, count: entreOsOver10.length, globalAvg });
+        }
+      }
+
+      // Check failing KPIs for the remaining priorities
+      if (sc.kpiStatus.retornoBase === 'below' && sc.kpis.retornoBase !== undefined) {
+        const ana = report.specialAnalysis.retornoBaseAnalysis.find((a: any) => a.team === sc.team);
+        if (ana) {
+          teamDesvios.push({ name: 'Retorno a Base', priority: 4, avgMin: Math.round(sc.kpis.retornoBase), count: ana.flaggedDays?.length || 0, globalAvg: Math.round(ana.globalAvgRetornoMin || 0) });
+        }
+      }
+      if (sc.kpiStatus.tmeImp === 'below' && sc.kpis.tmeImp !== undefined) {
+        const ana = report.specialAnalysis.tmeImpAnalysis.find((a: any) => a.team === sc.team);
+        if (ana) {
+          teamDesvios.push({ name: 'TME IMP', priority: 5, avgMin: Math.round(sc.kpis.tmeImp), count: ana.flaggedOrders?.length || 0, globalAvg: Math.round(ana.globalAvgTmeImpMin || 0) });
+        }
+      }
+      if (sc.kpiStatus.primeiroDesloc === 'below' && sc.kpis.primeiroDesloc !== undefined) {
+        const ana = report.specialAnalysis.primeiroDeslocAnalysis.find((a: any) => a.team === sc.team);
+        if (ana) {
+          teamDesvios.push({ name: '1º Desloc.', priority: 6, avgMin: Math.round(sc.kpis.primeiroDesloc), count: ana.flaggedDays?.length || 0, globalAvg: Math.round(ana.globalAvgDeslocMin || 0) });
+        }
+      }
+      if (sc.kpiStatus.primeiroLogin === 'below' && sc.kpis.primeiroLogin !== undefined) {
+        const ana = report.specialAnalysis.primeiroLoginAnalysis.find((a: any) => a.team === sc.team);
+        if (ana) {
+          teamDesvios.push({ name: '1º Login', priority: 7, avgMin: Math.round(sc.kpis.primeiroLogin), count: ana.flaggedDays?.length || 0, globalAvg: Math.round(ana.globalAvgLoginMin || 0) });
+        }
+      }
+
+      const diasTrab = util?.totalJornadas || report.specialAnalysis.retornoBaseAnalysis.find((a: any) => a.team === sc.team)?.totalDays || report.specialAnalysis.primeiroDeslocAnalysis.find((a: any) => a.team === sc.team)?.totalDays || 1;
+      const totalOrders = util?.totalOrders || report.specialAnalysis.tmeImpAnalysis.find((a: any) => a.team === sc.team)?.totalOrders || 0;
+
+      const recurrentDesvios = teamDesvios.filter(d => {
+        const showOS = ['Partida', 'Entre OS'].includes(d.name);
+        const base = showOS ? totalOrders : diasTrab;
+        if (base === 0) return false;
+        return (d.count / base) >= 0.20;
+      });
+
+      // Sort by priority to pick the top 3 worst flags/KPIs based on the requested order
+      recurrentDesvios.sort((a, b) => a.priority - b.priority);
+      const top3 = recurrentDesvios.slice(0, 3);
+
+      let problemStr = '';
+      if (top3.length === 0) {
+        problemStr = '  ✅ *Nenhum desvio crítico.*';
+      } else {
+        problemStr = top3.map(d => {
+          const showOS = ['Partida', 'Entre OS'].includes(d.name);
+          let timesStr = showOS 
+            ? `${d.count}x em ${totalOrders} OS (${diasTrab} dias)`
+            : `${d.count}x (${diasTrab} dias)`;
+          
+          if (['Partida', 'Desl. Intervalo', 'Entre OS'].includes(d.name)) {
+            timesStr += ' > 10m';
+          }
+          
+          const aboveAvg = d.globalAvg > 0 ? d.avgMin - d.globalAvg : 0;
+          const aboveAvgStr = aboveAvg > 0 ? ` (+${aboveAvg}m base)` : '';
+          
+          let emoji = '⚠️';
+          if (d.name === 'Partida') emoji = '🏁';
+          else if (d.name === 'Entre OS') emoji = '🔄';
+          else if (d.name === 'Desl. Intervalo') emoji = '⏸️';
+          else if (d.name === 'Retorno a Base') emoji = '🏠';
+          else if (d.name === 'TME IMP') emoji = '⏱️';
+          else if (d.name === '1º Login') emoji = '📱';
+          else if (d.name === '1º Desloc.') emoji = '🚐';
+
+          return `  ${emoji} *${d.name}:* ${timesStr} | ⏱️ Média: ${d.avgMin}m${aboveAvgStr}`;
+        }).join('\n');
+      }
+
+      let badness = 0;
+      for (const d of teamDesvios) {
+        badness += d.count * (10 - d.priority);
+      }
+
+      poloMap[polo].push({
+        team: sc.team,
+        badness: badness,
+        problem: problemStr
+      });
+    }
+
+    let msg = `📊 *Desempenho Operacional | ${this.periodRangeLabel() || 'Últimos 7 dias'}*\n\n`;
+
+    for (const polo of Object.keys(poloMap).sort()) {
+      if (polo === 'Outros') continue;
+      const teams = poloMap[polo];
+      teams.sort((a, b) => b.badness - a.badness);
+      
+      const worst2 = teams.slice(0, 2);
+      msg += `📍 *${polo}*\n`;
+      for (const t of worst2) {
+        msg += `🚐 *${t.team}*\n${t.problem}\n\n`;
+      }
+    }
+    msg = msg.trimEnd(); // Remove extra newlines at the end
+
+    this.closeWarningModal();
+    if (navigator.share) {
+      navigator.share({
+        title: 'Desempenho Operacional',
+        text: msg,
+      }).catch(err => {
+        console.error('Share failed', err);
+        navigator.clipboard.writeText(msg);
+        alert('Aviso copiado para a área de transferência.');
+      });
+    } else {
+      navigator.clipboard.writeText(msg);
+      alert('Aviso copiado para a área de transferência (compartilhamento nativo não suportado neste navegador).');
+    }
   }
 
   protected closeExportModal(): void {
@@ -6411,7 +6626,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         lbl.startsWith('2º Desp.') ||
         lbl === 'Entre OS' ||
         lbl === 'Desl. Intervalo' ||
-        lbl === 'Partida'
+        lbl === 'Partida' ||
+        lbl === '1º Desloc.'
       ) {
         total += seg.durationMin;
       }

@@ -46,7 +46,7 @@ const environmentSchema = z.object({
   SPOTFIRE_EXPORT_MENU_LABEL: z.string().default('Export table'),
   SPOTFIRE_EXPORT_PARENT_MENU_LABEL: z.string().default('Export'),
   SPOTFIRE_OUTPUT_DIR: z.string().default('../../data'),
-  SPOTFIRE_DOWNLOAD_TABLES: z.string().default('Tab_Completa-Deslocamentos,Ranking-Detalhamento_Diário,Desvios-Relatório_Geral:Desvios'),
+  SPOTFIRE_DOWNLOAD_TABLES: z.string().default('Tab_Completa-Deslocamentos,Desvios-Relatório_Geral:Desvios'),
   SPOTFIRE_DEBUG: booleanFromEnvironment.default(false),
   REPORT_OUTPUT_FILE_NAME: z.string().default('scanner-analytics-report.json'),
 });

@@ -452,7 +452,8 @@ export interface PrimeiroDeslocTeamAnalysis {
     countDeslocLento: number;
     countDeslocMuitoLento: number;
     countSemDeslocRegistrado: number;
-    countDespachioTardio: number;
+    countDespachoTardio: number;
+    countLoginAtrasado: number;
   };
 }
 
@@ -539,7 +540,6 @@ export interface GeneratedReport {
   totals: {
     teams: number;
     deslocamentos: number;
-    rankingRows: number;
     desviosRows: number;
   };
   kpis: ReportKpiInsight[];

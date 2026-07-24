@@ -59,7 +59,7 @@ export interface SemOsDetail {
 export class DashboardPdfService {
 
   private static readonly TIMELINE_IDLE_LABELS = new Set([
-    'Entre OS', 'Desl. Intervalo', 'Partida', 'Deslocamento p/OS', 'Retorno Vazio',
+    'Entre OS', 'Desl. Intervalo', 'Partida', '1º Desloc.', 'Deslocamento p/OS', 'Retorno Vazio',
   ]);
 
   private getOciosoTotal(ev: any): number | null {
@@ -74,8 +74,11 @@ export class DashboardPdfService {
         lbl.startsWith('2º Desp.') ||
         lbl === 'Entre OS' ||
         lbl === 'Desl. Intervalo' ||
-        lbl === 'Partida'
+        lbl === 'Partida' ||
+        lbl === '1º Desloc.'
       ) {
+        total += seg.durationMin;
+      } else if (lbl === 'Log In' && (seg.flags?.length ?? 0) > 0) {
         total += seg.durationMin;
       }
     }
@@ -1327,13 +1330,15 @@ export class DashboardPdfService {
           ];
           if (analysis.summary?.countDeslocMuitoLento > 0) chips.push(`Desloc.>37min: ${analysis.summary.countDeslocMuitoLento}`);
           if (analysis.summary?.countSemDeslocRegistrado > 0) chips.push(`Sem registro: ${analysis.summary.countSemDeslocRegistrado}`);
-          if (analysis.summary?.countDespachioTardio > 0) chips.push(`Despacho tardio: ${analysis.summary.countDespachioTardio}`);
+          if (analysis.summary?.countDespachoTardio > 0) chips.push(`Despacho tardio: ${analysis.summary.countDespachoTardio}`);
+          if (analysis.summary?.countLoginAtrasado > 0) chips.push(`Log In atrasado: ${analysis.summary.countLoginAtrasado}`);
           const teamItems: any[] = [chipRow(chips)];
           analysis.flaggedDays?.forEach((ev: any, evIdx: number, evArr: any[]) => {
             const dayItems: any[] = [];
             const deslocTl = this.buildTimelinePdfBlock(ev);
             if (deslocTl) dayItems.push(deslocTl);
-            if (ev.flags?.includes('despacho_tardio')) dayItems.push(alertItem(`Despacho tardio: ${helpers.deslocAlertBody('despacho_tardio', ev)}`));
+            if (ev.flags?.includes('despacho_tardio')) dayItems.push(alertItem(`${ev.flags.includes('login_atrasado') ? 'Despacho tardio após login atrasado:' : 'Despacho tardio:'} ${helpers.deslocAlertBody('despacho_tardio', ev)}`));
+            if (ev.flags?.includes('login_atrasado')) dayItems.push(alertItem(`Log In atrasado: ${helpers.deslocAlertBody('login_atrasado', ev)}`));
             if (ev.flags?.includes('desloc_muito_lento')) dayItems.push(alertItem(`1º Desloc.: ${helpers.deslocAlertBody('desloc_muito_lento', ev)}`));
             else if (ev.flags?.includes('desloc_lento')) dayItems.push(alertItem(`1º Desloc.: ${helpers.deslocAlertBody('desloc_lento', ev)}`));
             if (ev.flags?.includes('triagem_alto')) dayItems.push(alertItem(`2º Desp.: ${helpers.deslocAlertBody('triagem_alto', ev)}`));

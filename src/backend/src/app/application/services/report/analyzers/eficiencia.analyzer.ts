@@ -4,9 +4,9 @@ import { createAccessor, parseNumber, normalizeToken, parseDateTimeBr, round2, p
 import { enrichEficienciaEvidence } from './enrich-utils.js';
 import { countDistinctDates, mergeEvidenceFlags } from './os-dia.analyzer.js';
 
-export function analyzeEficiencia(deslocRows: CsvRow[], rankingRows: CsvRow[], kpis: KpiInsight[]): EficienciaTeamAnalysis[] {
-    if (deslocRows.length === 0 || rankingRows.length === 0) {
-      console.log('[Eficiencia Analysis] No deslocamentos or ranking data');
+export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[]): EficienciaTeamAnalysis[] {
+    if (deslocRows.length === 0) {
+      console.log('[Eficiencia Analysis] No deslocamentos data');
       return [];
     }
 

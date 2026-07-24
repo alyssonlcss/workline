@@ -304,7 +304,7 @@ export function buildActionPlans(
       // ── Eficiência — flag-first analysis ──────────────────────────────────
       const eficAny = eficienciaAnalysis.find((a) => a.team === tm.team);
 
-      // Flag: TR muito baixo (qualquer analysisType — indica erro de apontamento)
+      // Flag: TR muito baixo (any analysisType — indica erro de apontamento)
       const trBaixoOrders = eficAny?.flaggedOrders.filter((o) => o.flags.includes('tr_muito_baixo')) ?? [];
       if (trBaixoOrders.length > 0) {
         const globalAvgExec = eficAny!.globalAvgExecucaoMin;
@@ -481,12 +481,12 @@ export function buildActionPlans(
               `Sem "A Caminho" no 1º despacho — Reforçar uso correto do aplicativo: acionar "A Caminho" ao sair, mesmo que já esteja em deslocamento. A ausência prejudica o cálculo do KPI e impede identificar atrasos reais.`,
             );
           }
-          if (desloc.summary.countDespachioTardio > 0) {
+          if (desloc.summary.countDespachoTardio > 0) {
             const tardioOnes = desloc.flaggedDays.filter((d) => d.flags.includes('despacho_tardio'));
             const avgTardio  = tardioOnes.length > 0 ? round2(tardioOnes.reduce((s, d) => s + d.despacho_apos_inicio_min, 0) / tardioOnes.length) : 0;
             const loginDelay = tardioOnes.length > 0 ? round2(tardioOnes.reduce((s, d) => s + d.login_atraso_min, 0) / tardioOnes.length) : 0;
             issues.push(
-              `Despacho tardio: ${desloc.summary.countDespachioTardio} dia(s) com o primeiro despacho recebido com mais de 10 min após o início de jornada — média de ${avgTardio} min` +
+              `Despacho tardio: ${desloc.summary.countDespachoTardio} dia(s) com o primeiro despacho recebido com mais de 10 min após o início de jornada — média de ${avgTardio} min` +
               (loginDelay > 0 ? ` (inclui ${loginDelay} min de atraso de login)` : '') + `.` +
               kpiCtx('1º Desloc.'),
             );
@@ -601,26 +601,26 @@ export function buildActionPlans(
   }
 
   // ─── Team Scorecard ────────────────────────────────────────────────────────
-export function buildTeamScorecard(rankingRows: CsvRow[], kpis: KpiInsight[]): TeamKpiScorecard[] {
-    if (rankingRows.length === 0) return [];
+export function buildTeamScorecard(deslocRows: CsvRow[], kpis: KpiInsight[]): TeamKpiScorecard[] {
+    if (deslocRows.length === 0) return [];
 
-    const rankAcc = createAccessor(rankingRows[0]);
-    const teamCol  = rankAcc.resolve(['Equipe', 'Team', 'Equipe Nome']);
-    const classCol = rankAcc.resolve(['Classificação', 'Classificacao']);
-    const diasCol  = rankAcc.resolve(['Dias Trabalhados', 'DiasTrabalhados']);
-    if (!teamCol) return [];
+    const acc = createAccessor(deslocRows[0]);
+    const teamCol  = acc.resolve(['Equipe', 'Team', 'Equipe Nome']);
+    const dateCol  = acc.resolve(['Data Referência', 'Data Referencia', 'Data', 'Data Conclusao']);
+    if (!teamCol || !dateCol) return [];
 
-    // First occurrence per team: grab classificacao and diasTrabalhados
-    const teamMeta = new Map<string, { classificacao?: number; diasTrabalhados?: number }>();
-    for (const row of rankingRows) {
+    const teamDates = new Map<string, Set<string>>();
+    for (const row of deslocRows) {
       const team = String(row[teamCol] ?? '').trim();
-      if (!team || teamMeta.has(team)) continue;
-      const cl = classCol ? parseNumber(String(row[classCol] ?? '')) : null;
-      const dt = diasCol  ? parseNumber(String(row[diasCol]  ?? '')) : null;
-      teamMeta.set(team, {
-        classificacao:   (cl !== null && Number.isFinite(cl)) ? cl : undefined,
-        diasTrabalhados: (dt !== null && Number.isFinite(dt)) ? dt : undefined,
-      });
+      const date = String(row[dateCol] ?? '').trim();
+      if (!team || !date) continue;
+      
+      let dates = teamDates.get(team);
+      if (!dates) {
+        dates = new Set<string>();
+        teamDates.set(team, dates);
+      }
+      dates.add(date);
     }
 
     // kpi name → team → raw value (from KPI scores already computed)
@@ -641,7 +641,7 @@ export function buildTeamScorecard(rankingRows: CsvRow[], kpis: KpiInsight[]): T
       { key: 'retornoBase',   kpiName: 'Retorno Base' },
     ];
 
-    const allTeams = new Set<string>(teamMeta.keys());
+    const allTeams = new Set<string>(teamDates.keys());
     for (const insight of kpis) {
       for (const s of insight.scores) allTeams.add(s.team);
     }
@@ -649,7 +649,7 @@ export function buildTeamScorecard(rankingRows: CsvRow[], kpis: KpiInsight[]): T
     const result: TeamKpiScorecard[] = [];
 
     for (const team of allTeams) {
-      const meta = teamMeta.get(team) ?? {};
+      const dates = teamDates.get(team);
       const kpiValues: TeamKpiScorecard['kpis']    = {};
       const kpiStatus: TeamKpiScorecard['kpiStatus'] = {};
       let score = 0;
@@ -658,8 +658,6 @@ export function buildTeamScorecard(rankingRows: CsvRow[], kpis: KpiInsight[]): T
       for (const { key, kpiName } of KPI_KEY_MAP) {
         const val = kpiValueMap.get(kpiName)?.get(team);
         if (val === undefined) {
-          // TME IMP shown as — in the ranking means the team has no improdutivo orders,
-          // which is better than the meta — count it as achieved, not as a miss.
           if (kpiName === 'TME IMP') {
             (kpiStatus as Record<string, string>)[key] = 'above';
             score++;
@@ -674,7 +672,15 @@ export function buildTeamScorecard(rankingRows: CsvRow[], kpis: KpiInsight[]): T
         if (isAbove) score++; else kpisBelowMeta++;
       }
 
-      result.push({ team, ...meta, kpis: kpiValues, kpiStatus, score, kpisBelowMeta });
+      result.push({ 
+        team, 
+        classificacao: undefined,
+        diasTrabalhados: dates?.size ?? 0, 
+        kpis: kpiValues, 
+        kpiStatus, 
+        score, 
+        kpisBelowMeta 
+      });
     }
 
     return result.sort((a, b) => {
@@ -692,23 +698,16 @@ export function buildExecutiveSummary(
     osDiaAnalysis: OsDiaTeamAnalysis[],
     utilizacaoAnalysis: UtilizacaoTeamAnalysis[],
     actionPlan: TeamActionPlan[],
-    rankingRows: CsvRow[],
     tmeImpAnalysis: TmeImpTeamAnalysis[],
     retornoBaseAnalysis: RetornoBaseTeamAnalysis[],
   ): ExecutiveSummary {
     const totalTeams = scorecard.length;
     const teamsBelowMetaCount = scorecard.filter((s) => s.kpisBelowMeta >= 3).length;
 
-    // Period days: max value of Dias Trabalhados across ranking rows
     let periodDays = 0;
-    if (rankingRows.length > 0) {
-      const acc = rankingRows.length > 0 ? createAccessor(rankingRows[0]) : null;
-      const diasCol = acc?.resolve(['Dias Trabalhados', 'DiasTrabalhados']);
-      if (diasCol) {
-        for (const row of rankingRows) {
-          const v = parseNumber(String(row[diasCol] ?? ''));
-          if (v !== null && Number.isFinite(v) && v > periodDays) periodDays = v;
-        }
+    for (const sc of scorecard) {
+      if (sc.diasTrabalhados && sc.diasTrabalhados > periodDays) {
+        periodDays = sc.diasTrabalhados;
       }
     }
 

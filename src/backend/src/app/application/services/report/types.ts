@@ -131,7 +131,6 @@ export interface GeneratedReport {
   totals: {
     teams: number;
     deslocamentos: number;
-    rankingRows: number;
     desviosRows: number;
   };
   kpis: KpiInsight[];
@@ -533,7 +532,7 @@ export interface PrimeiroDeslocDayEvidence {
   hora_despacho_anterior?: string;
   /** Despachada timestamp of the primary (first 'A Caminho') OS. */
   despachada?: string;
-  flags: Array<'desloc_lento' | 'desloc_muito_lento' | 'sem_desloc_registrado' | 'despacho_tardio' | 'triagem_alto'>;
+  flags: Array<'desloc_lento' | 'desloc_muito_lento' | 'sem_desloc_registrado' | 'despacho_tardio' | 'login_atrasado' | 'triagem_alto'>;
   /** Pre-computed alert text per flag code. */
   alertTexts?: Record<string, string>;
   /** Duration in minutes from hora_despacho_anterior to despachada (the "Desp. Prioritário" window). */
@@ -557,7 +556,8 @@ export interface PrimeiroDeslocTeamAnalysis {
     countDeslocLento: number;
     countDeslocMuitoLento: number;
     countSemDeslocRegistrado: number;
-    countDespachioTardio: number;
+    countDespachoTardio: number;
+    countLoginAtrasado: number;
   };
 }
 

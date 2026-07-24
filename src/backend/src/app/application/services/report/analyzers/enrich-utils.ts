@@ -385,13 +385,20 @@ export function enrichDeslocEvidence(days: PrimeiroDeslocDayEvidence[], metaTarg
       for (const flag of ev.flags) {
         switch (flag) {
           case 'despacho_tardio':
-            alertTexts[flag] = `a equipe recebeu a primeira OS com ${nfBr(ev.despacho_apos_inicio_min)} min de atraso em relação ao início da jornada — acima do limite de 10 min.${ev.login_atraso_min > 0 ? ` Desse total, ${nfBr(ev.login_atraso_min)} min foram de atraso no acesso ao sistema (início da jornada ${ev.inicio_calendario} → acesso ${ev.log_in_corrigido}) e os demais ${nfBr(ev.despacho_apos_inicio_min - ev.login_atraso_min)} min de espera entre o acesso e o primeiro despacho.` : ''} Esse atraso reduz o tempo disponível para atendimentos no dia.`;
+            if (ev.flags.includes('login_atrasado')) {
+              alertTexts[flag] = `a distribuição de OS ocorre apenas após o acesso ao sistema. Como a equipe iniciou com ${nfBr(ev.login_atraso_min)} min de atraso no Log In, o despacho da primeira OS foi naturalmente impactado pela regra de negócio. No total, passaram-se ${nfBr(ev.despacho_apos_inicio_min)} min entre o início da jornada programada e o recebimento da OS (sendo ${nfBr(ev.despacho_apos_inicio_min - ev.login_atraso_min)} min de espera após o acesso).`;
+            } else {
+              alertTexts[flag] = `a equipe recebeu a primeira OS com ${nfBr(ev.despacho_apos_inicio_min)} min de atraso em relação ao início da jornada - acima do limite de 10 min. Esse atraso na fila inicial de distribuição reduz o tempo disponível para atendimentos no dia.`;
+            }
+            break;
+          case 'login_atrasado':
+            alertTexts[flag] = `a equipe registrou acesso ao sistema (Log In) às ${ev.log_in_corrigido}, acumulando ${nfBr(ev.login_atraso_min)} min de ociosidade em relação ao início da jornada programada (${ev.inicio_calendario}). O atraso compromete diretamente o tempo de deslocamento.`;
             break;
           case 'desloc_muito_lento':
-            alertTexts[flag] = `a equipe levou ${nfBr(ev.primeiro_desloc_min)} min para registrar saída após o primeiro despacho — mais de 1,5× a meta de ${metaTarget} min. Uma demora tão grande indica que o técnico ficou parado por muito tempo antes de se deslocar para o primeiro atendimento do dia.`;
+            alertTexts[flag] = `a equipe acumulou ${nfBr(ev.primeiro_desloc_min)} min desde o início da jornada até registrar a saída para o primeiro atendimento — mais de 1,5× a meta de ${metaTarget} min.${ev.despacho_apos_inicio_min > 0 ? ` Lembre-se que este tempo inclui o atraso de ${nfBr(ev.despacho_apos_inicio_min)} min ocorrido até o recebimento da primeira OS.` : ' Uma demora tão grande indica que o técnico ficou parado por muito tempo antes de se deslocar.'}`;
             break;
           case 'desloc_lento':
-            alertTexts[flag] = `a equipe levou ${nfBr(ev.primeiro_desloc_min)} min para registrar saída após o primeiro despacho — acima da meta de ${metaTarget} min (média da equipe: ${nfBr(ev.team_avg_desloc_min)} min). Sair tarde para o primeiro atendimento reduz o aproveitamento da jornada.`;
+            alertTexts[flag] = `a equipe acumulou ${nfBr(ev.primeiro_desloc_min)} min desde o início da jornada até registrar a saída para o primeiro atendimento — acima da meta de ${metaTarget} min (média da equipe: ${nfBr(ev.team_avg_desloc_min)} min).${ev.despacho_apos_inicio_min > 0 ? ` Esse tempo é fortemente impactado pelo atraso inicial de ${nfBr(ev.despacho_apos_inicio_min)} min até o recebimento da OS.` : ' Sair tarde reduz o aproveitamento da jornada.'}`;
             break;
           case 'sem_desloc_registrado':
             alertTexts[flag] = `há registro de despacho, mas o técnico não atualizou o status de saída. Isso impede o cálculo real do 1º Desloc. e indica que o deslocamento pode ter ocorrido sem lançamento no sistema.`;

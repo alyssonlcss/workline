@@ -7,8 +7,8 @@ import { nfBr, semOsDetailText, enrichOsDiaEvidence } from './enrich-utils.js';
 import { calculateTempPrepValue, calculateSemOsValue } from '../builders/team-stats.builder.js';
 import { KPI_ALIASES } from '../constants.js';
 
-export function analyzeOsDia(deslocRows: CsvRow[], rankingRows: CsvRow[], kpis: KpiInsight[]): OsDiaTeamAnalysis[] {
-    if (deslocRows.length === 0 || rankingRows.length === 0) {
+export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[]): OsDiaTeamAnalysis[] {
+    if (deslocRows.length === 0) {
       return [];
     }
 
@@ -18,42 +18,14 @@ export function analyzeOsDia(deslocRows: CsvRow[], rankingRows: CsvRow[], kpis: 
     const SEM_OS_THRESHOLD_MIN = 10;
     const TOLERANCE_MIN = 5; // invisible grace margin — keeps displayed limits unchanged
 
-    // 1. Determine under-performing teams from ranking (average OS/Dia < meta)
-    const rankAcc = createAccessor(rankingRows[0]);
-    const rankTeamCol = rankAcc.resolve(['Equipe', 'Team', 'Equipe Nome']);
-    const rankOsDiaCol = rankAcc.resolve(KPI_ALIASES['OS Dia'] ?? []);
-
-    if (!rankTeamCol || !rankOsDiaCol) {
-      return [];
-    }
-
-    const teamOsDiaTotals = new Map<string, { sum: number; count: number }>();
-    for (const row of rankingRows) {
-      const team = String(row[rankTeamCol] ?? '').trim();
-      const value = parseNumber(String(row[rankOsDiaCol] ?? ''));
-      if (team && value !== null && Number.isFinite(value)) {
-        const entry = teamOsDiaTotals.get(team) ?? { sum: 0, count: 0 };
-        entry.sum += value;
-        entry.count += 1;
-        teamOsDiaTotals.set(team, entry);
-      }
-    }
-
-    // Use the same 3 worst teams from the OS Dia KPI ranking opportunityTeams.
-    // Fall back to all-below-meta if no KPI insight is available.
+    // 1. Determine under-performing teams from KPI insight
+    // Fall back to empty if no KPI insight is available, because OS Dia insight is always computed.
     const osDiaInsight = kpis.find((k) => k.kpi === 'OS Dia');
     const underPerforming = new Map<string, number>();
     if (osDiaInsight) {
       for (const t of osDiaInsight.scores) {
         if (t.rawValue < osDiaInsight.metaTarget) {
           underPerforming.set(t.team, t.rawValue);
-        }
-      }
-    } else {
-      for (const [team, { sum, count }] of teamOsDiaTotals.entries()) {
-        const avg = sum / count;
-        if (avg < OS_DIA_META) {
-          underPerforming.set(team, avg);
         }
       }
     }
@@ -1021,11 +993,11 @@ export function analyzeOsDia(deslocRows: CsvRow[], rankingRows: CsvRow[], kpis: 
         flaggedOrders: prioritizedFlaggedOrders,
         extraFlaggedOrders,
         summary: {
-          countTrExceeds:    flaggedOrders.filter((e) => e.flags.includes('tr_excede_hd')).length,
-          countTlExceeds:    flaggedOrders.filter((e) => e.flags.includes('tl_excede_hd')).length,
-          countTempPrepAlto: flaggedOrders.filter((e) => e.flags.includes('temp_prep_alto')).length,
-          countSemOsAlto:    flaggedOrders.filter((e) => e.flags.includes('sem_os_alto')).length,
-          countRetornoExcedente: flaggedOrders.filter((e) => e.flags.includes('retorno_excedente')).length,
+          countTrExceeds:    new Set(flaggedOrders.filter((e) => e.flags.includes('tr_excede_hd')).map(e => e.nr_ordem)).size,
+          countTlExceeds:    new Set(flaggedOrders.filter((e) => e.flags.includes('tl_excede_hd')).map(e => e.nr_ordem)).size,
+          countTempPrepAlto: new Set(flaggedOrders.filter((e) => e.flags.includes('temp_prep_alto')).map(e => e.nr_ordem)).size,
+          countSemOsAlto:    new Set(flaggedOrders.filter((e) => e.flags.includes('sem_os_alto')).map(e => e.nr_ordem)).size,
+          countRetornoExcedente: new Set(flaggedOrders.filter((e) => e.flags.includes('retorno_excedente')).map(e => e.nr_ordem)).size,
         },
         idleAnalysis,
       });

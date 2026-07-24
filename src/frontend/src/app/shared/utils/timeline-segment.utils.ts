@@ -163,10 +163,15 @@ export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACami
       if (ev.flags?.includes('tl_excede_hd')) flags.push('Temp. Deslocamento Alto');
     } else if (label === 'Partida') {
       if (ev.primeiro_desloc_min !== undefined && ev.temp_prep_os_min === undefined) {
+        label = '1º Desloc.';
         durationMin = Math.max(ev.primeiro_desloc_min, 1);
+        const realDuration = Math.round((p2.ts - p1.ts) / 60000);
+        subtitle = `Partida pós Desp.: ${realDuration}m`;
         if (ev.flags?.includes('desloc_lento') || ev.flags?.includes('desloc_muito_lento')) {
           flags.push('1º Desloc. ≥25min');
         }
+        if (ev.flags?.includes('login_atrasado')) flags.push('Atraso no Log In');
+        if (ev.flags?.includes('despacho_tardio')) flags.push('Despacho Tardio');
       } else if (ev.temp_prep_os_min !== undefined) {
         durationMin = Math.max(ev.temp_prep_os_min, 1);
         if (ev.flags?.includes('temp_prep_alto')) flags.push('Temp. Partida ≥10min');
@@ -174,13 +179,21 @@ export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACami
     } else if (label === 'Entre OS' && ev.entre_ordens_min !== undefined && ev.entre_ordens_min > 0) {
       durationMin = Math.max(ev.entre_ordens_min, 1);
       if (ev.flags?.includes('entre_ordens_alto')) flags.push('Entre OS ≥15min');
-    } else if (label === 'Log In' && p1.key === 'inicio_calendario') {
-      const hdMin = ev.hd_total_min;
-      if (hdMin && durationMin > hdMin * 0.1 && durationMin >= 10) {
-        flags.push('Atraso Inicial');
+    } else if (label === 'Log In') {
+      if (p1.key === 'inicio_calendario') {
+        const hdMin = ev.hd_total_min;
+        if (hdMin && durationMin > hdMin * 0.1 && durationMin >= 10) {
+          flags.push('Atraso Inicial');
+        }
+        if (ev.log_in_diff_min !== undefined && ev.log_in_diff_min !== durationMin) {
+          overrideDuration = `${durationMin}min (diff: ${ev.log_in_diff_min > 0 ? '+' : ''}${ev.log_in_diff_min}m)`;
+        }
       }
-      if (ev.log_in_diff_min !== undefined && ev.log_in_diff_min !== durationMin) {
-        overrideDuration = `${durationMin}min (diff: ${ev.log_in_diff_min > 0 ? '+' : ''}${ev.log_in_diff_min}m)`;
+      const icalPt = uniquePts.find(p => p.key === 'inicio_calendario');
+      const linPt  = uniquePts.find(p => p.key === 'log_in');
+      if (icalPt && linPt) {
+        const diff = Math.round((icalPt.ts - linPt.ts) / 60000);
+        if (diff < -8) flags.push('login_atrasado');
       }
     } else if (label.startsWith('1º Desp.') && p2.key === 'hora_despacho_anterior') {
       const icalPt2 = uniquePts.find(p => p.key === 'inicio_calendario');
@@ -220,8 +233,20 @@ export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACami
           return s.from === p1.raw && s.to === p2.raw;
         });
       }
+      if ((label === 'Retorno Vazio' || label === 'Retorno a Base') && md) durationMin = Math.max(md.min, 1);
       
-      if ((label.startsWith('1º Desp.') || label === 'Retorno Vazio' || label === 'Retorno a Base') && md) durationMin = Math.max(md.min, 1);
+      if (label.startsWith('1º Desp.')) {
+        const icalPt = uniquePts.find(p => p.key === 'inicio_calendario');
+        if (icalPt && p2.ts > icalPt.ts) {
+          const totalDuration = Math.max(Math.round((p2.ts - icalPt.ts) / 60000), 1);
+          const postLoginDuration = Math.round((p2.ts - p1.ts) / 60000);
+          durationMin = totalDuration;
+          subtitle = `1º Desp. pós login: ${postLoginDuration}m`;
+        } else if (md) {
+          durationMin = Math.max(md.min, 1);
+        }
+      }
+
       if (md) {
         if (label === 'Retorno Vazio' || label === 'Retorno a Base') {
           if (md.retorno_base_discounted != null) {
@@ -246,14 +271,6 @@ export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACami
             : (md.min >= SEM_OS_LIMIT + 0.1);
           if (isAbove) flags.push('acima_media');
         }
-      }
-    } else if (label === 'Log In') {
-      const icalPt = uniquePts.find(p => p.key === 'inicio_calendario');
-      const linPt  = uniquePts.find(p => p.key === 'log_in');
-      if (icalPt && linPt) {
-        const diff = Math.round((icalPt.ts - linPt.ts) / 60000);
-        overrideDuration = `${diff}min`;
-        if (diff < -8) flags.push('login_atrasado');
       }
     }
 

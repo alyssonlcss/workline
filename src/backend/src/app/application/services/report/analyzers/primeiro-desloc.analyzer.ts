@@ -138,7 +138,8 @@ export function analyzePrimeiroDesloc(deslocRows: CsvRow[], kpis: KpiInsight[]):
       let countDeslocLento = 0;
       let countDeslocMuitoLento = 0;
       let countSemDeslocRegistrado = 0;
-      let countDespachioTardio = 0;
+      let countDespachoTardio = 0;
+      let countLoginAtrasado = 0;
 
       for (const { row, nrOrdemAnterior, horaDespachoAnterior, triagemMin, despachada } of jornadaData) {
         const deslocMin    = primeiroDeslocCol   ? parseNumber(String(row[primeiroDeslocCol] ?? '')) : null;
@@ -192,7 +193,11 @@ export function analyzePrimeiroDesloc(deslocRows: CsvRow[], kpis: KpiInsight[]):
         // Only flagged as supplemental — requires a primary desloc flag to be present
         if (despachoAposInicioMin > DESPACHO_TARDIO_MIN && flags.length > 0) {
           flags.push('despacho_tardio');
-          countDespachioTardio++;
+          countDespachoTardio++;
+        }
+        if (loginAtrasoMin > 8 && flags.length > 0) {
+          flags.push('login_atrasado');
+          countLoginAtrasado++;
         }
 
         // Desp. Prioritário: prior OS was dispatched before team's first A Caminho (triagem window)
@@ -241,7 +246,7 @@ export function analyzePrimeiroDesloc(deslocRows: CsvRow[], kpis: KpiInsight[]):
         extraFlaggedDays: flaggedDays.length > 10
           ? enrichDeslocEvidence(flaggedDays.slice(10), DESLOC_META)
           : [],
-        summary: { countDeslocLento, countDeslocMuitoLento, countSemDeslocRegistrado, countDespachioTardio },
+        summary: { countDeslocLento, countDeslocMuitoLento, countSemDeslocRegistrado, countDespachoTardio, countLoginAtrasado },
       });
     }
 

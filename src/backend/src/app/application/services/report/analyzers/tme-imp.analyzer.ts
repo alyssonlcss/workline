@@ -4,8 +4,8 @@ import { createAccessor, parseNumber, normalizeToken, round2, parseDateTimeBr } 
 import { enrichTmeImpEvidence } from './enrich-utils.js';
 import { countDistinctDates } from './os-dia.analyzer.js';
 
-export function analyzeTmeImp(deslocRows: CsvRow[], rankingRows: CsvRow[], kpis: KpiInsight[]): TmeImpTeamAnalysis[] {
-    if (deslocRows.length === 0 || rankingRows.length === 0) return [];
+export function analyzeTmeImp(deslocRows: CsvRow[], kpis: KpiInsight[]): TmeImpTeamAnalysis[] {
+    if (deslocRows.length === 0) return [];
 
     const TME_IMP_META = 20;
 

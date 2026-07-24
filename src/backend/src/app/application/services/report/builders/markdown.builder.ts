@@ -28,7 +28,6 @@ export function buildMarkdownReport(report: GeneratedReport): string {
     lines.push(`| :--- | ---: |`);
     lines.push(`| Equipes avaliadas | ${report.totals.teams} |`);
     lines.push(`| Registros de deslocamento | ${report.totals.deslocamentos} |`);
-    lines.push(`| Linhas de ranking | ${report.totals.rankingRows} |`);
     lines.push(`| Linhas de desvios | ${report.totals.desviosRows} |`);
     lines.push('');
     lines.push(hr);
