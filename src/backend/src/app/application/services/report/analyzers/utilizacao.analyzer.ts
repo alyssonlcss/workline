@@ -22,7 +22,6 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
     for (const t of utilizacaoKpi.opportunityTeams) {
       underPerforming.set(t.team, t.value);
     }
-    if (underPerforming.size === 0) return [];
 
     // Resolve columns (same as analyzeOsDia)
     const deslocAcc = createAccessor(deslocRows[0]);
@@ -188,7 +187,6 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
     const grouped = new Map<string, { team: string; date: string; rows: CsvRow[] }>();
     for (const row of deslocRows) {
       const team = String(row[teamCol] ?? '').trim();
-      if (!underPerforming.has(team)) continue;
       const date = String(row[dateCol] ?? '').trim();
       if (!date) continue;
       const key = `${team}::${date}`;
@@ -917,8 +915,11 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
     // Build result
     const distinctDates = dateCol ? countDistinctDates(deslocRows, dateCol) : 0;
     const result: UtilizacaoTeamAnalysis[] = [];
-    for (const [team, utilizacaoValue] of underPerforming.entries()) {
-      if (!Array.from(grouped.values()).some((g) => g.team === team)) continue;
+
+    const allTeams = Array.from(new Set(Array.from(grouped.values()).map((g) => g.team)));
+    for (const team of allTeams) {
+      const utilKpiTeam = utilizacaoKpi.opportunityTeams.find((t) => t.team === team);
+      const utilizacaoValue = utilKpiTeam ? utilKpiTeam.value : 0;
 
       const flaggedOrders = mergeEvidenceFlags(teamEvidences.get(team) ?? []);
       const allBasic = teamAllBasicUtil.get(team) ?? [];
@@ -1013,7 +1014,7 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
       const aAlerts = a.summary.countTempPrepAlto + a.summary.countSemOsAlto;
       const bAlerts = b.summary.countTempPrepAlto + b.summary.countSemOsAlto;
       return bAlerts - aAlerts;
-    }).slice(0, 3);
+    });
   }
 
   // ─── TME IMP Analyzer ─────────────────────────────────────────────────────

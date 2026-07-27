@@ -260,7 +260,7 @@ type SavedFilterState = {
 
               <div class="rpt-hero-actions" style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
                 <button class="rpt-export-btn" (click)="openExportModal()">Exportar PDF</button>
-                <button class="rpt-export-btn" style="background-color: #f59e0b; color: #fff; border-color: #d97706;" (click)="openWarningModal()">Enviar Aviso</button>
+                <button class="rpt-export-btn rpt-export-btn-blue" (click)="openWarningModal()">Enviar Aviso</button>
               </div>
             </div>
 
@@ -2206,6 +2206,17 @@ type SavedFilterState = {
       .rpt-export-btn:hover {
         background: rgba(230, 57, 80, 0.18);
         border-color: rgba(230, 57, 80, 0.6);
+      }
+
+      .rpt-export-btn-blue {
+        border: 1px solid rgba(37, 99, 235, 0.4) !important;
+        background: rgba(37, 99, 235, 0.12) !important;
+        color: #2563eb !important;
+      }
+
+      .rpt-export-btn-blue:hover {
+        background: rgba(37, 99, 235, 0.22) !important;
+        border-color: rgba(37, 99, 235, 0.7) !important;
       }
 
       /* ── Export Modal ── */
@@ -5158,7 +5169,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
-    const getPoloForTeam = (team: string) => {
+    const L3 = '  • ';
+    const DIVIDER = '────────────────────';
+    const CCI_DIVIDER = '════════════════════';
+
+    const getBaseForTeam = (team: string) => {
       for (const polo of config.polos) {
         if (polo.matchType === 'direct_prefix') {
           for (const base of polo.bases) {
@@ -5176,15 +5191,27 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return 'Outros';
     };
 
-    const poloMap: Record<string, { team: string; badness: number; problem: string }[]> = {};
+    const baseMap: Record<string, { team: string; badness: number; problem: string }[]> = {};
+    const baseEntreOsMap: Record<string, Array<{
+      team: string;
+      count: number;
+      distinctDaysCount: number;
+      totalOrders: number;
+      diasTrab: number;
+      avgMin: number;
+      globalAvg: number;
+      sumOver15Min: number;
+    }>> = {};
+
     for (const sc of report.teamScorecard) {
-      const polo = getPoloForTeam(sc.team);
-      if (!poloMap[polo]) poloMap[polo] = [];
-      
+      const base = getBaseForTeam(sc.team);
+
       const teamDesvios: { name: string; priority: number; avgMin: number; count: number; globalAvg: number }[] = [];
-      
-      // Calculate averages for the top priority flags from Utilizacao
+
       const util = report.specialAnalysis.utilizacaoAnalysis.find((u: any) => u.team === sc.team);
+      const diasTrab = util?.totalJornadas || report.specialAnalysis.retornoBaseAnalysis.find((a: any) => a.team === sc.team)?.totalDays || report.specialAnalysis.primeiroDeslocAnalysis.find((a: any) => a.team === sc.team)?.totalDays || 1;
+      const totalOrders = util?.totalOrders || report.specialAnalysis.tmeImpAnalysis.find((a: any) => a.team === sc.team)?.totalOrders || 0;
+
       if (util && util.flaggedOrders) {
         const partidasAll = util.flaggedOrders.filter((o: any) => o.temp_prep_os_min > 0);
         const partidasOver10 = util.flaggedOrders.filter((o: any) => o.flags?.includes('temp_prep_alto'));
@@ -5192,7 +5219,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const avg = Math.round(partidasAll.reduce((acc: number, val: any) => acc + (val.temp_prep_os_min || 0), 0) / (partidasAll.length || 1));
           teamDesvios.push({ name: 'Partida', priority: 1, avgMin: avg, count: partidasOver10.length, globalAvg: 0 });
         }
-      
+
         const intervalosAll = util.flaggedOrders.flatMap((o: any) => o.sem_os_details?.filter((d: any) => d.type === 'intervalo_deslocamento' && d.min > 0) || []);
         const intervalosOver10 = intervalosAll.filter((d: any) => d.min > 10);
         if (intervalosOver10.length > 0) {
@@ -5200,7 +5227,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const globalAvg = Math.round(intervalosAll.reduce((acc: number, val: any) => acc + (val.global_avg_min || 0), 0) / (intervalosAll.length || 1));
           teamDesvios.push({ name: 'Desl. Intervalo', priority: 2, avgMin: avg, count: intervalosOver10.length, globalAvg });
         }
-      
+
         const entreOsAll = util.flaggedOrders.flatMap((o: any) => o.sem_os_details?.filter((d: any) => d.type === 'entre_ordens' && d.min > 0) || []);
         const entreOsOver10 = entreOsAll.filter((d: any) => d.min > 10);
         if (entreOsOver10.length > 0) {
@@ -5208,9 +5235,36 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const globalAvg = Math.round(entreOsAll.reduce((acc: number, val: any) => acc + (val.global_avg_min || 0), 0) / (entreOsAll.length || 1));
           teamDesvios.push({ name: 'Entre OS', priority: 3, avgMin: avg, count: entreOsOver10.length, globalAvg });
         }
+
+        // Collect Entre OS > 15min for CCI section with distinct days count
+        const entreOsOrders = util.flaggedOrders.filter((o: any) =>
+          o.sem_os_details?.some((d: any) => d.type === 'entre_ordens' && d.min > 15)
+        );
+        const entreOsOver15 = entreOsAll.filter((d: any) => d.min > 15);
+        if (entreOsOver15.length > 0) {
+          const avg = Math.round(entreOsAll.reduce((acc: number, val: any) => acc + val.min, 0) / (entreOsAll.length || 1));
+          const globalAvg = Math.round(entreOsAll.reduce((acc: number, val: any) => acc + (val.global_avg_min || 0), 0) / (entreOsAll.length || 1));
+          const sumOver15Min = entreOsOver15.reduce((acc: number, val: any) => acc + val.min, 0);
+
+          const distinctDates = new Set(
+            entreOsOrders.map((o: any) => o.date_ref).filter(Boolean)
+          );
+          const distinctDaysCount = distinctDates.size > 0 ? distinctDates.size : entreOsOver15.length;
+
+          if (!baseEntreOsMap[base]) baseEntreOsMap[base] = [];
+          baseEntreOsMap[base].push({
+            team: sc.team,
+            count: entreOsOver15.length,
+            distinctDaysCount,
+            totalOrders,
+            diasTrab,
+            avgMin: avg,
+            globalAvg,
+            sumOver15Min
+          });
+        }
       }
 
-      // Check failing KPIs for the remaining priorities
       if (sc.kpiStatus.retornoBase === 'below' && sc.kpis.retornoBase !== undefined) {
         const ana = report.specialAnalysis.retornoBaseAnalysis.find((a: any) => a.team === sc.team);
         if (ana) {
@@ -5236,81 +5290,157 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       }
 
-      const diasTrab = util?.totalJornadas || report.specialAnalysis.retornoBaseAnalysis.find((a: any) => a.team === sc.team)?.totalDays || report.specialAnalysis.primeiroDeslocAnalysis.find((a: any) => a.team === sc.team)?.totalDays || 1;
-      const totalOrders = util?.totalOrders || report.specialAnalysis.tmeImpAnalysis.find((a: any) => a.team === sc.team)?.totalOrders || 0;
-
+      // Filter recurrent desvios (excluding Entre OS which belongs only to CCI)
       const recurrentDesvios = teamDesvios.filter(d => {
-        const showOS = ['Partida', 'Entre OS'].includes(d.name);
-        const base = showOS ? totalOrders : diasTrab;
-        if (base === 0) return false;
-        return (d.count / base) >= 0.20;
+        if (d.name === 'Entre OS') return false;
+        const showOS = d.name === 'Partida';
+        const baseCount = showOS ? totalOrders : diasTrab;
+        if (baseCount === 0) return false;
+        return (d.count / baseCount) >= 0.20;
       });
 
-      // Sort by priority to pick the top 3 worst flags/KPIs based on the requested order
+      // ONLY include team if it has actual recurrent desvios
+      if (recurrentDesvios.length === 0) {
+        continue;
+      }
+
       recurrentDesvios.sort((a, b) => a.priority - b.priority);
       const top3 = recurrentDesvios.slice(0, 3);
 
-      let problemStr = '';
-      if (top3.length === 0) {
-        problemStr = '  ✅ *Nenhum desvio crítico.*';
-      } else {
-        problemStr = top3.map(d => {
-          const showOS = ['Partida', 'Entre OS'].includes(d.name);
-          let timesStr = showOS 
-            ? `${d.count}x em ${totalOrders} OS (${diasTrab} dias)`
-            : `${d.count}x (${diasTrab} dias)`;
-          
-          if (['Partida', 'Desl. Intervalo', 'Entre OS'].includes(d.name)) {
-            timesStr += ' > 10m';
-          }
-          
-          const aboveAvg = d.globalAvg > 0 ? d.avgMin - d.globalAvg : 0;
-          const aboveAvgStr = aboveAvg > 0 ? ` (+${aboveAvg}m base)` : '';
-          
-          let emoji = '⚠️';
-          if (d.name === 'Partida') emoji = '🏁';
-          else if (d.name === 'Entre OS') emoji = '🔄';
-          else if (d.name === 'Desl. Intervalo') emoji = '⏸️';
-          else if (d.name === 'Retorno a Base') emoji = '🏠';
-          else if (d.name === 'TME IMP') emoji = '⏱️';
-          else if (d.name === '1º Login') emoji = '📱';
-          else if (d.name === '1º Desloc.') emoji = '🚐';
+      const problemStr = top3.map(d => {
+        const showOS = d.name === 'Partida';
+        let timesStr = showOS 
+          ? `${d.count}x em ${totalOrders} OS (${diasTrab} dias)`
+          : `${d.count}x em ${diasTrab} dias`;
+        
+        if (['Partida', 'Desl. Intervalo'].includes(d.name)) {
+          timesStr += ' > 10m';
+        }
+        
+        const aboveAvg = d.globalAvg > 0 ? d.avgMin - d.globalAvg : 0;
+        const aboveAvgStr = aboveAvg > 0 ? ` (+${aboveAvg}m base)` : '';
+        
+        let emoji = '⚠️';
+        if (d.name === 'Partida') emoji = '🏁';
+        else if (d.name === 'Desl. Intervalo') emoji = '⏸️';
+        else if (d.name === 'Retorno a Base') emoji = '🏠';
+        else if (d.name === 'TME IMP') emoji = '⏱️';
+        else if (d.name === '1º Login') emoji = '📱';
+        else if (d.name === '1º Desloc.') emoji = '🚐';
 
-          return `  ${emoji} *${d.name}:* ${timesStr} | ⏱️ Média: ${d.avgMin}m${aboveAvgStr}`;
-        }).join('\n');
-      }
+        return `${L3}${emoji} *${d.name}:* ${timesStr} | ⏱️ Média: ${d.avgMin}m${aboveAvgStr}`;
+      }).join('\n');
 
       let badness = 0;
       for (const d of teamDesvios) {
         badness += d.count * (10 - d.priority);
       }
 
-      poloMap[polo].push({
+      if (!baseMap[base]) baseMap[base] = [];
+      baseMap[base].push({
         team: sc.team,
         badness: badness,
         problem: problemStr
       });
     }
 
-    let msg = `📊 *Desempenho Operacional | ${this.periodRangeLabel() || 'Últimos 7 dias'}*\n\n`;
+    const ALL_OPT = '(Todos)';
+    const dateFilter = this.reportFilterStates().find((f) => f.key === 'reportDataRef');
+    const selectedDateOptions = (dateFilter?.value || []).filter((v) => v !== ALL_OPT && v !== '(All)');
 
-    for (const polo of Object.keys(poloMap).sort()) {
-      if (polo === 'Outros') continue;
-      const teams = poloMap[polo];
+    let activeDates: string[] = [];
+    if (selectedDateOptions.length > 0) {
+      activeDates = [...selectedDateOptions].sort((a, b) => {
+        const pA = a.split('/'); const pB = b.split('/');
+        if (pA.length === 3 && pB.length === 3) {
+          return new Date(parseInt(pA[2]), parseInt(pA[1]) - 1, parseInt(pA[0])).getTime() -
+                 new Date(parseInt(pB[2]), parseInt(pB[1]) - 1, parseInt(pB[0])).getTime();
+        }
+        return a.localeCompare(b);
+      });
+    } else if (report.availableDates && report.availableDates.length > 0) {
+      activeDates = [...report.availableDates];
+    }
+
+    const daysCount = activeDates.length > 0 ? activeDates.length : 1;
+    let periodStr = '';
+
+    if (activeDates.length > 0) {
+      const minDate = activeDates[0];
+      const maxDate = activeDates[activeDates.length - 1];
+      const minDdMm = minDate.slice(0, 5);
+      const maxDdMm = maxDate.slice(0, 5);
+      periodStr = minDdMm === maxDdMm ? minDdMm : `${minDdMm} a ${maxDdMm}`;
+    } else {
+      periodStr = this.periodRangeLabel() || '';
+    }
+
+    let msg = `📊 *RAIO X DE GARGALOS OPERACIONAIS RECORRENTES*\n🗓️ *Período: ${daysCount} dias (${periodStr})*\n${DIVIDER}\n\n`;
+
+    // Main section grouped by Base
+    const sortedBaseNames = Object.keys(baseMap).filter(b => b !== 'Outros').sort();
+    sortedBaseNames.forEach((baseName, index) => {
+      const teams = baseMap[baseName];
+      if (!teams || teams.length === 0) return;
+
       teams.sort((a, b) => b.badness - a.badness);
-      
       const worst2 = teams.slice(0, 2);
-      msg += `📍 *${polo}*\n`;
+
+      msg += `📍 *BASE: ${baseName.toUpperCase()}*\n\n`;
       for (const t of worst2) {
         msg += `🚐 *${t.team}*\n${t.problem}\n\n`;
       }
+      msg += `${DIVIDER}\n\n`;
+    });
+
+    // Add CCI section for Entre OS > 15min grouped by Base
+    if (Object.keys(baseEntreOsMap).length > 0) {
+      msg += `${CCI_DIVIDER}\n📍 *CENTRO DE CONTROLE INTEGRADO*\n${CCI_DIVIDER}\n\n`;
+      const sortedCciBases = Object.keys(baseEntreOsMap).filter(b => b !== 'Outros').sort();
+      sortedCciBases.forEach((baseName, index) => {
+        const teams = baseEntreOsMap[baseName];
+        if (!teams || teams.length === 0) return;
+
+        const recurrentTeams = teams.filter((t) => {
+          const totalOrders = t.totalOrders || 1;
+          const diasTrab = t.diasTrab || 1;
+          const cond1 = (t.count / totalOrders) >= 0.20;
+          const cond2 = (t.distinctDaysCount / diasTrab) >= 0.25;
+          return cond1 || cond2;
+        });
+
+        if (recurrentTeams.length === 0) return;
+
+        recurrentTeams.sort((a, b) => b.sumOver15Min - a.sumOver15Min || b.count - a.count);
+        const top3Teams = recurrentTeams.slice(0, 3);
+
+        msg += `🏢 *Base: ${baseName}*\n`;
+        for (const t of top3Teams) {
+          const timesStr = `${t.count}x em ${t.totalOrders} OS (${t.distinctDaysCount} dias) > 15m`;
+          const aboveAvg = t.globalAvg > 0 ? t.avgMin - t.globalAvg : 0;
+          const aboveAvgStr = aboveAvg > 0 ? ` (+${aboveAvg}m base)` : '';
+          msg += `${L3}🔄 *Entre OS:* ${t.team} | ${timesStr} | ⏱️ Média: ${t.avgMin}m${aboveAvgStr}\n`;
+        }
+        msg += `\n`;
+      });
     }
-    msg = msg.trimEnd(); // Remove extra newlines at the end
+
+    // Add concise legend at the end
+    msg += `${DIVIDER}\n💡 *Legenda dos Desvios:*\n`;
+    msg += `  🏁 *Partida:* Saída para OS (A Caminho)/ prep. ≥ 10m\n`;
+    msg += `  📱 *1º Login:* Atraso no 1º login do dia\n`;
+    msg += `  🚐 *1º Desloc.:* Atraso na partida do 1º deslocamento\n`;
+    msg += `  ⏸️ *Desl. Intervalo:* Parada em deslocamento > 10m\n`;
+    msg += `  🔄 *Entre OS:* Ociosidade entre ordens > 15m\n`;
+    msg += `  🏠 *Retorno a Base:* Tempo elevado de retorno\n`;
+    msg += `  ⏱️ *TME IMP:* Tempo de reparo em improdutivas acima do padrão\n`;
+
+    msg = msg.trimEnd();
 
     this.closeWarningModal();
     if (navigator.share) {
       navigator.share({
-        title: 'Desempenho Operacional',
+        title: 'Raio X de Gargalos Operacionais Recorrentes',
         text: msg,
       }).catch(err => {
         console.error('Share failed', err);

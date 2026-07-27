@@ -2840,6 +2840,7 @@ DashboardComponent = __decorate([
 
               <div class="rpt-hero-actions" style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
                 <button class="rpt-export-btn" (click)="openExportModal()">Exportar PDF</button>
+                <button class="rpt-export-btn rpt-export-btn-blue" (click)="openWarningModal()">Enviar Aviso</button>
               </div>
             </div>
 
@@ -4959,6 +4960,17 @@ DashboardComponent = __decorate([
       .rpt-export-btn:hover {
         background: rgba(230, 57, 80, 0.18);
         border-color: rgba(230, 57, 80, 0.6);
+      }
+
+      .rpt-export-btn-blue {
+        border-color: rgba(37, 99, 235, 0.35);
+        background: rgba(37, 99, 235, 0.1);
+        color: #2563eb;
+      }
+
+      .rpt-export-btn-blue:hover {
+        background: rgba(37, 99, 235, 0.18);
+        border-color: rgba(37, 99, 235, 0.6);
       }
 
       /* ── Export Modal ── */
