@@ -59,7 +59,15 @@ Na raiz do projeto, execute o script `setup.bat`:
 ```bat
 setup.bat
 ```
-Ele instalará as dependências de ambos os subprojetos (Frontend e Backend) automaticamente e iniciará os dois servidores em terminais dedicados.
+
+#### O que o `setup.bat` faz automaticamente:
+1. **Verificação do Ambiente (Node.js)**: Verifica no sistema (em todas as variáveis de ambiente `PATH`) se o Node.js está instalado. Caso não encontre o Node.js, realiza o download automático e a instalação portátil da versão `v24.16.0` em `Documents/NodeJS`, configurando o `PATH` do usuário e da sessão de forma autônoma.
+2. **Instalação das Dependências**: Navega até as pastas `src/backend` e `src/frontend` e executa o `npm install` em cada uma, caso as dependências ainda não estejam instaladas.
+3. **Inicialização dos Servidores**: Utiliza o Windows Terminal (`wt.exe`) para abrir automaticamente duas abas separadas e iniciar os serviços simultaneamente:
+   - **Aba 1 (Backend)**: Executa `npm run dev` na porta `3000`.
+   - **Aba 2 (Frontend)**: Executa `npm start` na porta `4200`.
+
+---
 
 ### Opção 2: Execução Manual
 Se preferir executar e inspecionar manualmente, siga os passos em dois terminais distintos:
@@ -68,8 +76,7 @@ Se preferir executar e inspecionar manualmente, siga os passos em dois terminais
 ```bash
 cd src/backend
 npm install
-# Preencha as variáveis de ambiente necessárias (como a porta, se desejar)
-# Inicialize o servidor em modo de desenvolvimento
+# Preencha as variáveis de ambiente necessárias no arquivo .env
 npm run dev
 ```
 
@@ -78,52 +85,44 @@ Em um novo terminal:
 ```bash
 cd src/frontend
 npm install
-# Inicialize o servidor do Angular
 npm start
 ```
 Após o build inicial, o aplicativo frontend estará acessível em `http://localhost:4200`.
 
+---
+
 ## ⚙️ Configuração Adicional
 
 ### Configuração do Arquivo `.env`
-O backend requer credenciais de acesso e a URL do sistema corporativo para que o robô possa autenticar e raspar os dados do seu BI de origem. Para configurar, duplique o arquivo `.env.example` na pasta `src/backend`, renomeie-o para `.env` e preencha as variáveis de acordo com o padrão abaixo:
+O backend requer credenciais de acesso e as URLs do sistema corporativo para que o robô Puppeteer possa autenticar e extrair os dados do seu BI de origem. Para configurar, duplique o arquivo `.env.example` localizado em `src/backend`, renomeie-o para `.env` e preencha com as informações da sua organização:
 
 ```env
-# Porta do Servidor (Opcional, Padrão: 3000)
+# Porta do Servidor API (Opcional, Padrão: 3000)
 PORT=3000
 
-# URLs da Ferramenta de BI (Substitua pelos links internos da sua empresa)
-SPOTFIRE_LOGIN_URL=http://<SEU-DOMINIO-INTERNO>:8090/spotfire/wp/login
-SPOTFIRE_ANALYSIS_URL=http://<SEU-DOMINIO-INTERNO>:8090/spotfire/wp/analysis?file=/Caminho/do/Painel
+# URLs da Ferramenta de BI (Substitua pelos links internos da sua organização)
+SPOTFIRE_LOGIN_URL=http://<SEU-DOMINIO-BI>:8090/spotfire/wp/login
+SPOTFIRE_ANALYSIS_URL=http://<SEU-DOMINIO-BI>:8090/spotfire/wp/analysis?file=/Caminho/do/Relatorio
 
 # Credenciais de Rede (Conta de serviço/usuário do robô)
-SPOTFIRE_USERNAME=seu_login_aqui
-SPOTFIRE_PASSWORD=sua_senha_aqui
+SPOTFIRE_USERNAME=seu_usuario
+SPOTFIRE_PASSWORD=sua_senha
 
-# Configurações de Comportamento do Navegador (Puppeteer)
-SPOTFIRE_HEADLESS=true # true para rodar em background invisível (servidor); false para debugar visualmente
-SPOTFIRE_DEBUG=false   # true para habilitar logs detalhados dos passos do robô
+# Título do Relatório no BI
+SPOTFIRE_DEFAULT_REPORT_TITLE=Nome do Relatorio
 
-# (Opcional) Especificar um caminho de executável ou porta remota
+# Configurações do Navegador (Puppeteer)
+SPOTFIRE_DEBUG=false
 SPOTFIRE_BROWSER_PATH=C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
-SPOTFIRE_BROWSER_URL=http://127.0.0.1:9222
 
-# Mapeamento de botões na interface (Ajuste conforme o idioma do seu Spotfire)
-SPOTFIRE_DEFAULT_REPORT_TITLE=Nome do Seu Relatorio
-SPOTFIRE_FILTER_PANEL_LABEL=Filters
-SPOTFIRE_EXPORT_MENU_LABEL=Export table
-SPOTFIRE_EXPORT_PARENT_MENU_LABEL=Export
+# Mapeamento de Tabelas a Baixar (Formato: Aba-Tabela)
+SPOTFIRE_DOWNLOAD_TABLES=Tab_Completa-Deslocamentos,Ranking-Detalhamento_Diário
 
-# Diretório de Sandbox (Opcional — automaticamente detecta e salva em scanner_analytics/src/data)
-# SPOTFIRE_OUTPUT_DIR=
-SPOTFIRE_DOWNLOAD_TABLES=Tab_Completa-Deslocamentos,Ranking-Detalhamento_Diário,Desvios-Relatório_Geral:Desvios
-
-# Geração e processamento da Engine Analítica
-REPORT_AUTO_GENERATE=true
+# Nome do Arquivo de Relatório Gerado (Opcional, Padrão: scanner-analytics-report.json)
 REPORT_OUTPUT_FILE_NAME=scanner-analytics-report.json
 ```
 
-> **Aviso de Segurança**: Por padrão, o arquivo `.env` está incluso no `.gitignore` para prevenir o vazamento acidental das credenciais e da URL corporativa em repositórios públicos. Nunca o versione!
+> **Aviso de Segurança**: Por padrão, o arquivo `.env` está incluso no `.gitignore` para prevenir o vazamento acidental de senhas e URLs corporativas em repositórios públicos. Nunca o versione!
 
 ### Configuração de Polos e Bases
 - A estrutura hierárquica de **polos** e **bases operacionais** que aparecem nos menus e no exportador é construída de maneira dinâmica e pode ser integralmente customizada através do arquivo de metadados localizado em `src/backend/bases.json`.
