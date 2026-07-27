@@ -412,7 +412,45 @@ type SavedFilterState = {
                 </div>
                 <button class="export-modal-close" (click)="closeWarningModal()" aria-label="Fechar">✕</button>
               </div>
-              <p class="export-modal-desc">Selecione o tipo de aviso que deseja enviar para as equipes com base nos dados do relatório atual.</p>
+              <p class="export-modal-desc">Selecione o grupo de equipes e o tipo de aviso que deseja enviar com base nos dados do relatório atual.</p>
+
+              <!-- Seletor de Tipo de Equipes com Bolinha Azul (Lado a Lado) -->
+              <div class="warning-type-options">
+                <label 
+                  class="warning-type-card" 
+                  [class.warning-type-card--selected]="warningTeamTypeFilter() === 'todas'"
+                  (click)="warningTeamTypeFilter.set('todas')">
+                  <div class="warning-type-radio">
+                    <div class="warning-type-radio-dot" *ngIf="warningTeamTypeFilter() === 'todas'"></div>
+                  </div>
+                  <span class="warning-type-icon">🌐</span>
+                  <span class="warning-type-label">Todas</span>
+                </label>
+
+                <label 
+                  class="warning-type-card" 
+                  [class.warning-type-card--selected]="warningTeamTypeFilter() === 'propria'"
+                  (click)="warningTeamTypeFilter.set('propria')">
+                  <div class="warning-type-radio">
+                    <div class="warning-type-radio-dot" *ngIf="warningTeamTypeFilter() === 'propria'"></div>
+                  </div>
+                  <span class="warning-type-icon">🏢</span>
+                  <span class="warning-type-label">Próprias</span>
+                </label>
+
+                <label 
+                  class="warning-type-card" 
+                  [class.warning-type-card--selected]="warningTeamTypeFilter() === 'parceira'"
+                  (click)="warningTeamTypeFilter.set('parceira')">
+                  <div class="warning-type-radio">
+                    <div class="warning-type-radio-dot" *ngIf="warningTeamTypeFilter() === 'parceira'"></div>
+                  </div>
+                  <span class="warning-type-icon">🤝</span>
+                  <span class="warning-type-label">Parceiras</span>
+                </label>
+              </div>
+
+              
               
               <div class="export-modal-options">
                 <div class="export-option-row">
@@ -2266,6 +2304,91 @@ type SavedFilterState = {
         color: #1a202c;
       }
 
+      .export-modal-desc {
+        font-size: 0.78rem;
+        color: #94a3b8;
+        margin-bottom: 12px;
+      }
+
+      /* ── Warning Type Cards com Bolinha Azul (Lado a Lado Compacto) ── */
+      .warning-type-options {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        margin-bottom: 16px;
+      }
+
+      .warning-type-card {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 8px 6px;
+        border-radius: 10px;
+        border: 1.5px solid #e2e8f0;
+        background: #f8fafc;
+        cursor: pointer;
+        transition: border-color 160ms, background 160ms, box-shadow 160ms;
+        user-select: none;
+        white-space: nowrap;
+      }
+
+      .warning-type-card:hover {
+        border-color: #cbd5e1;
+        background: #f1f5f9;
+      }
+
+      .warning-type-card--selected {
+        border-color: #2563eb !important;
+        background: #eff6ff !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+      }
+
+      .warning-type-radio {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 1.5px solid #cbd5e1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: border-color 160ms, background 160ms;
+        flex-shrink: 0;
+        background: #ffffff;
+      }
+
+      .warning-type-card--selected .warning-type-radio {
+        border-color: #2563eb;
+      }
+
+      .warning-type-radio-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #2563eb;
+        animation: radioPop 140ms ease-out;
+      }
+
+      @keyframes radioPop {
+        from { transform: scale(0); opacity: 0; }
+        to   { transform: scale(1); opacity: 1; }
+      }
+
+      .warning-type-icon {
+        font-size: 1.1rem;
+        flex-shrink: 0;
+      }
+
+      .warning-type-label {
+        font-size: 0.84rem;
+        font-weight: 600;
+        color: #334155;
+      }
+
+      .warning-type-card--selected .warning-type-label {
+        color: #1d4ed8;
+        font-weight: 700;
+      }
       .export-modal-close {
         width: 30px;
         height: 30px;
@@ -4851,6 +4974,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
   protected readonly warningModalOpen = signal(false);
+  protected readonly warningTeamTypeFilter = signal<'todas' | 'propria' | 'parceira'>('todas');
   protected readonly exportModalOpen = signal(false);
   protected readonly exportModalStep = signal<'mode' | 'bases'>('mode');
   protected readonly exportModeType = signal<'proprias' | 'parceiras'>('proprias');
@@ -5172,6 +5296,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const L3 = '  • ';
     const DIVIDER = '────────────────────';
     const CCI_DIVIDER = '════════════════════';
+    const typeFilter = this.warningTeamTypeFilter();
 
     const getBaseForTeam = (team: string) => {
       for (const polo of config.polos) {
@@ -5191,6 +5316,25 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return 'Outros';
     };
 
+    const getTeamType = (team: string): 'propria' | 'parceira' | 'outros' => {
+      for (const polo of config.polos) {
+        if (polo.matchType === 'direct_prefix') {
+          for (const base of polo.bases) {
+            if (base.propria && base.propria.some((p: string) => team.startsWith(p))) return 'propria';
+            if (base.parceira && base.parceira.some((p: string) => team.startsWith(p))) return 'parceira';
+          }
+        } else if (polo.matchType === 'infix_type_with_base_prefix') {
+          for (const base of polo.bases) {
+            if (base.prefixes && base.prefixes.some((p: string) => team.startsWith(p))) {
+              if (polo.typeIdentifiers?.propria?.some((inf: string) => team.includes(inf))) return 'propria';
+              if (polo.typeIdentifiers?.parceira?.some((inf: string) => team.includes(inf))) return 'parceira';
+            }
+          }
+        }
+      }
+      return 'outros';
+    };
+
     const baseMap: Record<string, { team: string; badness: number; problem: string }[]> = {};
     const baseEntreOsMap: Record<string, Array<{
       team: string;
@@ -5204,6 +5348,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }>> = {};
 
     for (const sc of report.teamScorecard) {
+      if (typeFilter !== 'todas') {
+        const teamType = getTeamType(sc.team);
+        if (teamType !== typeFilter) continue;
+      }
+
       const base = getBaseForTeam(sc.team);
 
       const teamDesvios: { name: string; priority: number; avgMin: number; count: number; globalAvg: number }[] = [];
@@ -5375,11 +5524,15 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       periodStr = this.periodRangeLabel() || '';
     }
 
-    let msg = `📊 *RAIO X DE GARGALOS OPERACIONAIS RECORRENTES*\n🗓️ *Período: ${daysCount} dias (${periodStr})*\n${DIVIDER}\n\n`;
+    let teamTypeSubtitle = '';
+    if (typeFilter === 'propria') teamTypeSubtitle = ' (EQUIPES PRÓPRIAS)';
+    else if (typeFilter === 'parceira') teamTypeSubtitle = ' (EQUIPES PARCEIRAS)';
+
+    let msg = `📊 *RAIO X DE GARGALOS OPERACIONAIS RECORRENTES${teamTypeSubtitle}*\n🗓️ *Período: ${daysCount} dias (${periodStr})*\n${DIVIDER}\n\n`;
 
     // Main section grouped by Base
     const sortedBaseNames = Object.keys(baseMap).filter(b => b !== 'Outros').sort();
-    sortedBaseNames.forEach((baseName, index) => {
+    sortedBaseNames.forEach((baseName) => {
       const teams = baseMap[baseName];
       if (!teams || teams.length === 0) return;
 
@@ -5397,11 +5550,15 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (Object.keys(baseEntreOsMap).length > 0) {
       msg += `${CCI_DIVIDER}\n📍 *CENTRO DE CONTROLE INTEGRADO*\n${CCI_DIVIDER}\n\n`;
       const sortedCciBases = Object.keys(baseEntreOsMap).filter(b => b !== 'Outros').sort();
-      sortedCciBases.forEach((baseName, index) => {
+      sortedCciBases.forEach((baseName) => {
         const teams = baseEntreOsMap[baseName];
         if (!teams || teams.length === 0) return;
 
         const recurrentTeams = teams.filter((t) => {
+          if (typeFilter !== 'todas') {
+            const teamType = getTeamType(t.team);
+            if (teamType !== typeFilter) return false;
+          }
           const totalOrders = t.totalOrders || 1;
           const diasTrab = t.diasTrab || 1;
           const cond1 = (t.count / totalOrders) >= 0.20;
@@ -5416,7 +5573,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
         msg += `🏢 *Base: ${baseName}*\n`;
         for (const t of top3Teams) {
-          const timesStr = `${t.count}x em ${t.totalOrders} OS (${t.distinctDaysCount} dias) > 15m`;
+          const timesStr = `${t.count}x > 15min em ${t.totalOrders} OS | Ocorreu em ${t.distinctDaysCount} de ${t.diasTrab} dias`;
           const aboveAvg = t.globalAvg > 0 ? t.avgMin - t.globalAvg : 0;
           const aboveAvgStr = aboveAvg > 0 ? ` (+${aboveAvg}m base)` : '';
           msg += `${L3}🔄 *Entre OS:* ${t.team} | ${timesStr} | ⏱️ Média: ${t.avgMin}m${aboveAvgStr}\n`;
