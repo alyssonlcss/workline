@@ -116,7 +116,7 @@ SPOTFIRE_DEBUG=false
 SPOTFIRE_BROWSER_PATH=C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
 
 # Mapeamento de Tabelas a Baixar (Formato: Aba-Tabela)
-SPOTFIRE_DOWNLOAD_TABLES=Tab_Completa-Deslocamentos,Ranking-Detalhamento_Diário
+SPOTFIRE_DOWNLOAD_TABLES=Tab_Completa-Deslocamentos
 
 # Nome do Arquivo de Relatório Gerado (Opcional, Padrão: scanner-analytics-report.json)
 REPORT_OUTPUT_FILE_NAME=scanner-analytics-report.json
