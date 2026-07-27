@@ -120,8 +120,7 @@ export function buildKpiInsightsFromDesloc(deslocRows: CsvRow[]): KpiInsight[] {
   const teamData = new Map<string, {
     osSet: Set<string>;
     dateSet: Set<string>;
-    sumTp: number;
-    sumTr: number;
+    eficMap: Map<string, { tp: number; tr: number }>;
     utilMap: Map<string, { ht: number; hd: number }>;
     sumTme: number;
     countTme: number;
@@ -140,6 +139,7 @@ export function buildKpiInsightsFromDesloc(deslocRows: CsvRow[]): KpiInsight[] {
       dateSet: new Set<string>(),
       sumTp: 0,
       sumTr: 0,
+      eficMap: new Map(),
       utilMap: new Map(),
       sumTme: 0,
       countTme: 0,
@@ -156,13 +156,12 @@ export function buildKpiInsightsFromDesloc(deslocRows: CsvRow[]): KpiInsight[] {
       if (os) current.osSet.add(os);
     }
 
-    // Eficiência
-    if (tpCol && trCol) {
+    // Eficiência (first row per date per team for CAL columns)
+    if (tpCol && trCol && !current.eficMap.has(date)) {
       const tp = parseNumber(String(row[tpCol] ?? ''));
       const tr = parseNumber(String(row[trCol] ?? ''));
       if (tp !== null && tr !== null && Number.isFinite(tp) && Number.isFinite(tr)) {
-        current.sumTp += tp;
-        current.sumTr += tr;
+        current.eficMap.set(date, { tp, tr });
       }
     }
 
@@ -260,7 +259,13 @@ export function buildKpiInsightsFromDesloc(deslocRows: CsvRow[]): KpiInsight[] {
   };
 
   addInsight(buildInsight('OS Dia', (data) => data.dateSet.size > 0 ? data.osSet.size / data.dateSet.size : null));
-  addInsight(buildInsight('Eficiência', (data) => data.sumTr > 0 ? (data.sumTp / data.sumTr) * 100 : null));
+  addInsight(buildInsight('Eficiência', (data) => {
+    let sumTp = 0, sumTr = 0;
+    for (const { tp, tr } of data.eficMap.values()) {
+      sumTp += tp; sumTr += tr;
+    }
+    return sumTr > 0 ? (sumTp / sumTr) * 100 : null;
+  }));
   addInsight(buildInsight('Utilização', (data) => {
     let sumHt = 0, sumHd = 0;
     for (const { ht, hd } of data.utilMap.values()) {
