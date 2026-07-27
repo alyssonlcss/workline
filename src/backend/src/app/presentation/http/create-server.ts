@@ -12,7 +12,7 @@ import { z } from 'zod';
 import { StartScannerJobUseCase } from '../../application/use-cases/start-scanner-job.use-case.js';
 import { GetScannerJobUseCase } from '../../application/use-cases/get-scanner-job.use-case.js';
 import { PostDownloadReportService } from '../../application/services/post-download-report.service.js';
-import { environment } from '../../infrastructure/config/env.js';
+import { environment, resolveDefaultDataDir } from '../../infrastructure/config/env.js';
 import { InMemoryJobStore } from '../../infrastructure/runtime/in-memory-job-store.js';
 import { PuppeteerSpotfireAutomation } from '../../infrastructure/spotfire/puppeteer-spotfire-automation.js';
 
@@ -489,8 +489,10 @@ function resolveDownloadedFiles(
 }
 
 function resolveDataDirectoryCandidates(configuredOutputDirectory: string): string[] {
+  const defaultDir = resolveDefaultDataDir();
   const candidates = [
-    resolve(process.cwd(), configuredOutputDirectory),
+    configuredOutputDirectory ? resolve(process.cwd(), configuredOutputDirectory) : defaultDir,
+    defaultDir,
     resolve(process.cwd(), 'src/data'),
     resolve(process.cwd(), 'data'),
     resolve(process.cwd(), '../data'),

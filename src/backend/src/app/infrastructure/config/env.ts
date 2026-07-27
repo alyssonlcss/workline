@@ -30,6 +30,18 @@ const booleanFromEnvironment = z
     return z.NEVER;
   });
 
+export function resolveDefaultDataDir(): string {
+  const cwd = process.cwd();
+  const normalized = cwd.replace(/\\/g, '/');
+  if (normalized.endsWith('/src/backend') || normalized.endsWith('/src/frontend')) {
+    return join(cwd, '..', 'data');
+  }
+  if (normalized.endsWith('/src')) {
+    return join(cwd, 'data');
+  }
+  return join(cwd, 'src', 'data');
+}
+
 const environmentSchema = z.object({
   PORT: z.coerce.number().default(3000),
   SPOTFIRE_LOGIN_URL: z.string().min(1),
@@ -41,11 +53,11 @@ const environmentSchema = z.object({
   SPOTFIRE_BROWSER_WS_ENDPOINT: z.string().url().optional(),
   SPOTFIRE_USER_DATA_DIR: z.string().optional().default(''),
   SPOTFIRE_PROFILE_DIRECTORY: z.string().optional().default(''),
-  SPOTFIRE_DEFAULT_REPORT_TITLE: z.string().default('Scanner 4.0 - CE'),
-  SPOTFIRE_FILTER_PANEL_LABEL: z.string().default('Filters'),
-  SPOTFIRE_EXPORT_MENU_LABEL: z.string().default('Export table'),
-  SPOTFIRE_EXPORT_PARENT_MENU_LABEL: z.string().default('Export'),
-  SPOTFIRE_OUTPUT_DIR: z.string().default('../../data'),
+  SPOTFIRE_DEFAULT_REPORT_TITLE: z.string().optional().default(''),
+  SPOTFIRE_FILTER_PANEL_LABEL: z.string().optional().default('Filters').transform(v => v && v.trim().length > 0 ? v : 'Filters'),
+  SPOTFIRE_EXPORT_MENU_LABEL: z.string().optional().default('Export table').transform(v => v && v.trim().length > 0 ? v : 'Export table'),
+  SPOTFIRE_EXPORT_PARENT_MENU_LABEL: z.string().optional().default('Export').transform(v => v && v.trim().length > 0 ? v : 'Export'),
+  SPOTFIRE_OUTPUT_DIR: z.string().optional().default(''),
   SPOTFIRE_DOWNLOAD_TABLES: z.string().default('Tab_Completa-Deslocamentos,Desvios-Relatório_Geral:Desvios'),
   SPOTFIRE_DEBUG: booleanFromEnvironment.default(false),
   REPORT_OUTPUT_FILE_NAME: z.string().default('scanner-analytics-report.json'),
@@ -129,7 +141,9 @@ export const environment = {
     filterPanelLabel: parsedEnvironment.SPOTFIRE_FILTER_PANEL_LABEL,
     exportMenuLabel: parsedEnvironment.SPOTFIRE_EXPORT_MENU_LABEL,
     exportParentMenuLabel: parsedEnvironment.SPOTFIRE_EXPORT_PARENT_MENU_LABEL,
-    outputDirectory: parsedEnvironment.SPOTFIRE_OUTPUT_DIR,
+    outputDirectory: parsedEnvironment.SPOTFIRE_OUTPUT_DIR && parsedEnvironment.SPOTFIRE_OUTPUT_DIR.trim().length > 0
+      ? parsedEnvironment.SPOTFIRE_OUTPUT_DIR
+      : resolveDefaultDataDir(),
     downloadTargets: parseDownloadTargets(parsedEnvironment.SPOTFIRE_DOWNLOAD_TABLES),
     debug: parsedEnvironment.SPOTFIRE_DEBUG,
   },

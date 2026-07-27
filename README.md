@@ -114,8 +114,8 @@ SPOTFIRE_FILTER_PANEL_LABEL=Filters
 SPOTFIRE_EXPORT_MENU_LABEL=Export table
 SPOTFIRE_EXPORT_PARENT_MENU_LABEL=Export
 
-# Diretório de Sandbox e nomes exatos das tabelas que o robô deve exportar
-SPOTFIRE_OUTPUT_DIR=../../data
+# Diretório de Sandbox (Opcional — automaticamente detecta e salva em scanner_analytics/src/data)
+# SPOTFIRE_OUTPUT_DIR=
 SPOTFIRE_DOWNLOAD_TABLES=Tab_Completa-Deslocamentos,Ranking-Detalhamento_Diário,Desvios-Relatório_Geral:Desvios
 
 # Geração e processamento da Engine Analítica
