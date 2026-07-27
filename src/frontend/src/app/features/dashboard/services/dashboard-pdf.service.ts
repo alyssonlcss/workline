@@ -130,13 +130,18 @@ export class DashboardPdfService {
       }
     }
 
-    const barRow = segs.map((s) => ({
-      stack: [
-          { text: s.label, fontSize: 5.5, bold: true, color: getTxtColor(s), alignment: 'center' as const },
-          { text: `${s.overrideDuration ?? `${s.durationMin}min`}${s.subtitle ? ` | ${s.subtitle}` : ''}`, fontSize: 5, bold: true, color: getTxtColor(s), alignment: 'center' as const },
-        ],
-      fillColor: getFill(s),
-    }));
+    const barRow = segs.map((s) => {
+      const durStr = s.overrideDuration ?? `${s.durationMin}min`;
+      const stack: any[] = [];
+      if (s.subtitle) {
+        stack.push({ text: `${s.label} — ${durStr}`, fontSize: 6, bold: true, color: getTxtColor(s), alignment: 'center' as const });
+        stack.push({ text: s.subtitle, fontSize: 5.1, bold: true, color: getTxtColor(s), alignment: 'center' as const });
+      } else {
+        stack.push({ text: s.label, fontSize: 5.5, bold: true, color: getTxtColor(s), alignment: 'center' as const });
+        stack.push({ text: durStr, fontSize: 5, bold: true, color: getTxtColor(s), alignment: 'center' as const });
+      }
+      return { stack, fillColor: getFill(s) };
+    });
 
     const LINE_H = 14;
     const mkLineCol = () => ({ canvas: [{ type: 'line', x1: 1, y1: 0, x2: 1, y2: LINE_H, lineWidth: 0.8, lineColor: '#9ca3af' }], width: 2 });

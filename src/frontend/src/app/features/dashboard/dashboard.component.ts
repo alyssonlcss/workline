@@ -29,6 +29,7 @@ import {
   BasesConfig
 } from '../../core/api/scanner-api.service';
 import { DashboardPdfService } from './services/dashboard-pdf.service';
+import { getDashboardChips, getDashboardAlerts, DashboardChip, DashboardAlert } from '../../shared/utils/dashboard-presentation.utils';
 import { DashboardChartService } from './services/dashboard-chart.service';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { TocNavComponent } from '../../shared/toc/toc-nav.component';
@@ -620,35 +621,8 @@ type SavedFilterState = {
                               </p>
                               <app-timeline-visual [ev]="ev"></app-timeline-visual>
                               <ul class="osdia-ev-alerts">
-                                <li *ngIf="ev.flags.includes('tr_excede_hd')" class="osdia-ev-alert">
-                                  <strong>Tempo de Reparo alto:</strong> <span [innerHTML]="highlightMin(osDiaAlertBody('tr_excede_hd', ev))"></span>
-                                </li>
-                                <li *ngIf="ev.flags.includes('tl_excede_hd')" class="osdia-ev-alert">
-                                  <strong>Tempo de Deslocamento alto:</strong> <span [innerHTML]="highlightMin(osDiaAlertBody('tl_excede_hd', ev))"></span>
-                                </li>
-                                <li *ngIf="ev.flags.includes('temp_prep_alto')" class="osdia-ev-alert">
-                                  <strong>Tempo de Partida/OS:</strong> <span [innerHTML]="highlightMin(tempPrepAltoText(ev))"></span>
-                                </li>
-                                <li *ngIf="ev.flags.includes('triagem_alto')" class="osdia-ev-alert">
-                                  <strong>2º Desp.:</strong> <span [innerHTML]="highlightMin(triagemAltoText(ev))"></span>
-                                </li>
-                                <li *ngIf="ev.flags.includes('primeiro_desloc_alto')" class="osdia-ev-alert">
-                                  <strong>1º Desloc.:</strong> <span [innerHTML]="highlightMin(ev.alertTexts?.['primeiro_desloc_alto'] ?? '')"></span>
-                                </li>
-                                <li *ngIf="ev.flags.includes('sem_os_alto') || entreOsAfterIntervalo(ev)" class="osdia-ev-alert">
-                                  <strong>Sem Ordem/OS:</strong> <span [innerHTML]="highlightMin(osDiaAlertBody('sem_os_alto', ev))"></span>
-                                  <ol class="osdia-sem-os-list">
-                                    <li *ngFor="let d of alertSemOsDetails(ev.sem_os_details)"><em class="osdia-sem-os-label">{{ semOsDetailLabel(d, ev.nr_ordem_despacho_anterior) }}:</em> <span [innerHTML]="highlightMin(semOsDetailBody(d, ev.nr_ordem_despacho_anterior))"></span></li>
-                                    <li *ngIf="entreOsAfterIntervalo(ev) as eo"><em class="osdia-sem-os-label">Entre OS:</em> <span [innerHTML]="highlightMin(formatEntreOsText(eo))"></span></li>
-                                  </ol>
-                                </li>
-                                <li *ngIf="ev.flags.includes('retorno_excedente')" class="osdia-ev-alert">
-                                  <strong>Retorno Excedente:</strong> <span [innerHTML]="highlightMin(ev.alertTexts?.['retorno_excedente'] ?? '')"></span><ng-container *ngIf="ev.retorno_excedente_details?.body"> &mdash; <span [innerHTML]="highlightMin(ev.retorno_excedente_details.body)"></span></ng-container>
-                                </li>
-                                
-                                
-                                <li *ngIf="ev.nr_ordem_despacho_anterior" class="osdia-ev-alert osdia-ev-alert--warn">
-                                  <strong>Despacho anterior da 1ªOS:</strong> a OS <strong>{{ ev.nr_ordem_despacho_anterior }}</strong> foi despachada em {{ formatDespachoHora(ev.hora_despacho_anterior) }} antes do deslocamento da 1ª OS desta equipe, provavelmente por motivo de prioridade, dessa forma o despacho da 1ªOS pode ficar elevado.
+                                <li *ngFor="let alert of getAlerts('OS Dia', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
+                                  <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                                 </li>
                               </ul>
                             </ng-template>
@@ -827,19 +801,9 @@ type SavedFilterState = {
                         </button>
                       </div>
                       <div class="rpt-osdia-card-meta">
-                        <span class="rpt-osdia-chip">Utilização <strong>{{ analysis.utilizacaoValue }}%</strong></span>
-                        <span class="rpt-osdia-chip">Meta <strong>{{ analysis.metaTarget }}%</strong></span>
-                        <span class="rpt-osdia-chip" *ngIf="analysis.summary.countTempPrepAlto > 0">
-                          Temp. Partida≥10min: <strong>{{ analysis.summary.countTempPrepAlto }}</strong>
+                        <span class="rpt-osdia-chip" *ngFor="let chip of getChips('Eficiência', analysis)">
+                          {{ chip.label }} <strong [innerHTML]="chip.value"></strong>
                         </span>
-                        <span class="rpt-osdia-chip" *ngIf="analysis.summary.countSemOsAlto > 0">
-                          SemOS≥10min: <strong>{{ analysis.summary.countSemOsAlto }}</strong>
-                        </span>
-                        <span class="rpt-osdia-chip" *ngIf="analysis.jornadasAbaixoMeta > 0">
-                          Jornadas &lt; meta: <strong>{{ analysis.jornadasAbaixoMeta }}/{{ analysis.totalJornadas }}</strong>
-                        </span>
-                        <span class="rpt-osdia-chip">Total OS: <strong>{{ analysis.totalOrders }} em {{ analysis.totalJornadas }} dias</strong></span>
-                        <span class="rpt-osdia-chip">Ocioso: <strong>{{ calcIdleMin(analysis) | number:'1.0-0' }} min — {{ analysis.idleDays }} dias</strong></span>
                       </div>
                       <!-- Card único de warnings: ociosidade + ordens flagadas -->
                       <ng-container *ngIf="analysis.idleAnalysis || analysis.flaggedOrders.length > 0; else noUtilizacaoEvidence">
@@ -879,32 +843,8 @@ type SavedFilterState = {
                               </p>
                               <app-timeline-visual [ev]="ev"></app-timeline-visual>
                               <ul class="osdia-ev-alerts">
-                                <li *ngIf="ev.flags.includes('tr_excede_hd')" class="osdia-ev-alert">
-                                  <strong>Tempo de Reparo alto:</strong> <span [innerHTML]="highlightMin(osDiaAlertBody('tr_excede_hd', ev))"></span>
-                                </li>
-                                <li *ngIf="ev.flags.includes('temp_prep_alto')" class="osdia-ev-alert">
-                                  <strong>Tempo de Partida/OS:</strong> <span [innerHTML]="highlightMin(tempPrepAltoText(ev))"></span>
-                                </li>
-                                <li *ngIf="ev.flags.includes('triagem_alto')" class="osdia-ev-alert">
-                                  <strong>2º Desp.:</strong> <span [innerHTML]="highlightMin(triagemAltoText(ev))"></span>
-                                </li>
-                                <li *ngIf="ev.flags.includes('primeiro_desloc_alto')" class="osdia-ev-alert">
-                                  <strong>1º Desloc.:</strong> <span [innerHTML]="highlightMin(ev.alertTexts?.['primeiro_desloc_alto'] ?? '')"></span>
-                                </li>
-                                <li *ngIf="ev.flags.includes('sem_os_alto') || entreOsAfterIntervalo(ev)" class="osdia-ev-alert">
-                                  <strong>Sem Ordem/OS:</strong> <span [innerHTML]="highlightMin(osDiaAlertBody('sem_os_alto', ev))"></span>
-                                  <ol class="osdia-sem-os-list">
-                                    <li *ngFor="let d of alertSemOsDetails(ev.sem_os_details)"><em class="osdia-sem-os-label">{{ semOsDetailLabel(d) }}:</em> <span [innerHTML]="highlightMin(semOsDetailBody(d))"></span></li>
-                                    <li *ngIf="entreOsAfterIntervalo(ev) as eo"><em class="osdia-sem-os-label">Entre OS:</em> <span [innerHTML]="highlightMin(formatEntreOsText(eo))"></span></li>
-                                  </ol>
-                                </li>
-                                <li *ngIf="ev.flags.includes('retorno_excedente')" class="osdia-ev-alert">
-                                  <strong>Retorno Excedente:</strong> <span [innerHTML]="highlightMin(ev.alertTexts?.['retorno_excedente'] ?? '')"></span><ng-container *ngIf="ev.retorno_excedente_details?.body"> &mdash; <span [innerHTML]="highlightMin(ev.retorno_excedente_details.body)"></span></ng-container>
-                                </li>
-                                
-                                
-                                <li *ngIf="ev.nr_ordem_despacho_anterior" class="osdia-ev-alert osdia-ev-alert--warn">
-                                  <strong>Despacho anterior da 1ªOS:</strong> a OS <strong>{{ ev.nr_ordem_despacho_anterior }}</strong> foi despachada em {{ formatDespachoHora(ev.hora_despacho_anterior) }} antes do deslocamento da 1ª OS desta equipe, provavelmente por motivo de prioridade, dessa forma o despacho da 1ªOS pode ficar elevado.
+                                <li *ngFor="let alert of getAlerts('OS Dia', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
+                                  <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                                 </li>
                               </ul>
                             </ng-template>
@@ -965,13 +905,9 @@ type SavedFilterState = {
                         </button>
                       </div>
                       <div class="rpt-osdia-card-meta">
-                        <span class="rpt-osdia-chip">TME IMP <strong>{{ analysis.tmeImpValue | number:'1.1-1' }} min</strong></span>
-                        <span class="rpt-osdia-chip">Meta <strong>{{ analysis.metaTarget }} min</strong></span>
-                        <span class="rpt-osdia-chip">Média equipe <strong>{{ analysis.avgTmeImpMin | number:'1.1-1' }} min</strong></span>
-                        <span class="rpt-osdia-chip">Média global <strong>{{ analysis.globalAvgTmeImpMin | number:'1.1-1' }} min</strong></span>
-                        <span class="rpt-osdia-chip">Total OS <strong>{{ analysis.totalOrders }}</strong></span>
-                        <span class="rpt-osdia-chip" *ngIf="analysis.summary.countTmeMuitoAlto > 0">TME≥1.5×avg: <strong>{{ analysis.summary.countTmeMuitoAlto }}</strong></span>
-                        <span class="rpt-osdia-chip" *ngIf="analysis.summary.countSemDeslocamento > 0">Sem desloc.: <strong>{{ analysis.summary.countSemDeslocamento }}</strong></span>
+                        <span class="rpt-osdia-chip" *ngFor="let chip of getChips('TME Improdutivo', analysis)">
+                          {{ chip.label }} <strong [innerHTML]="chip.value"></strong>
+                        </span>
                       </div>
                       <div class="osdia-ev-list" *ngIf="analysis.flaggedOrders.length > 0; else noTmeImpEvidence">
                         <ng-template #tmeImpEvTpl let-ev>
@@ -1019,14 +955,8 @@ type SavedFilterState = {
                             </span>
                           </div>
                           <ul class="osdia-ev-alerts">
-                            <li *ngIf="ev.flags.includes('tme_muito_alto')" class="osdia-ev-alert">
-                              <strong>TME IMP elevado:</strong> <span [innerHTML]="highlightMin(tmeImpAlertBody('tme_muito_alto', ev))"></span>
-                            </li>
-                            <li *ngIf="ev.flags.includes('sem_deslocamento')" class="osdia-ev-alert">
-                              <strong>Sem registro de deslocamento:</strong> <span [innerHTML]="highlightMin(tmeImpAlertBody('sem_deslocamento', ev))"></span>
-                            </li>
-                            <li *ngIf="ev.flags.includes('sem_execucao')" class="osdia-ev-alert">
-                              <strong>Sem TR Ordem:</strong> <span [innerHTML]="highlightMin(tmeImpAlertBody('sem_execucao', ev))"></span>
+                            <li *ngFor="let alert of getAlerts('TME Improdutivo', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
+                              <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                             </li>
                           </ul>
                         </ng-template>
@@ -1085,12 +1015,9 @@ type SavedFilterState = {
                         </button>
                       </div>
                       <div class="rpt-osdia-card-meta">
-                        <span class="rpt-osdia-chip">1º Login <strong>{{ analysis.primeiroLoginValue | number:'1.1-1' }} min</strong></span>
-                        <span class="rpt-osdia-chip">Meta <strong>{{ analysis.metaTarget }} min</strong></span>
-                        <span class="rpt-osdia-chip">Média equipe <strong>{{ analysis.avgLoginMin | number:'1.1-1' }} min</strong></span>
-                        <span class="rpt-osdia-chip">Média global <strong>{{ analysis.globalAvgLoginMin | number:'1.1-1' }} min</strong></span>
-                        <span class="rpt-osdia-chip">Dias com atraso <strong>{{ analysis.diasAcimaMetaCount }}/{{ analysis.totalDays }}</strong></span>
-                        <span class="rpt-osdia-chip" *ngIf="analysis.summary.countLoginMuitoTardio > 0">Login&gt;16min: <strong>{{ analysis.summary.countLoginMuitoTardio }}</strong></span>
+                        <span class="rpt-osdia-chip" *ngFor="let chip of getChips('1º Login', analysis)">
+                          {{ chip.label }} <strong [innerHTML]="chip.value"></strong>
+                        </span>
                       </div>
                       <div class="osdia-ev-list" *ngIf="analysis.flaggedDays.length > 0; else noLoginEvidence">
                         <ng-template #loginEvTpl let-ev>
@@ -1110,11 +1037,8 @@ type SavedFilterState = {
                             </span>
                           </div>
                           <ul class="osdia-ev-alerts">
-                            <li *ngIf="ev.flags.includes('login_muito_tardio')" class="osdia-ev-alert">
-                              <strong>Login muito tardio:</strong> <span [innerHTML]="highlightMin(loginAlertBody('login_muito_tardio', ev))"></span>
-                            </li>
-                            <li *ngIf="ev.flags.includes('login_tardio') && !ev.flags.includes('login_muito_tardio')" class="osdia-ev-alert">
-                              <strong>Login tardio:</strong> <span [innerHTML]="highlightMin(loginAlertBody('login_tardio', ev))"></span>
+                            <li *ngFor="let alert of getAlerts('1º Login', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
+                              <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                             </li>
                           </ul>
                         </ng-template>
@@ -1165,15 +1089,9 @@ type SavedFilterState = {
                         </button>
                       </div>
                       <div class="rpt-osdia-card-meta">
-                        <span class="rpt-osdia-chip">1º Desloc. <strong>{{ analysis.primeiroDeslocValue | number:'1.1-1' }} min</strong></span>
-                        <span class="rpt-osdia-chip">Meta <strong>{{ analysis.metaTarget }} min</strong></span>
-                        <span class="rpt-osdia-chip">Média equipe <strong>{{ analysis.avgDeslocMin | number:'1.1-1' }} min</strong></span>
-                        <span class="rpt-osdia-chip">Média global <strong>{{ analysis.globalAvgDeslocMin | number:'1.1-1' }} min</strong></span>
-                        <span class="rpt-osdia-chip">Dias c/ atraso <strong>{{ analysis.diasAcimaMetaCount }}/{{ analysis.totalDays }}</strong></span>
-                        <span class="rpt-osdia-chip" *ngIf="analysis.summary.countDeslocMuitoLento > 0">Desloc.&gt;37min: <strong>{{ analysis.summary.countDeslocMuitoLento }}</strong></span>
-                        <span class="rpt-osdia-chip" *ngIf="analysis.summary.countSemDeslocRegistrado > 0">Sem registro: <strong>{{ analysis.summary.countSemDeslocRegistrado }}</strong></span>
-                        <span class="rpt-osdia-chip" *ngIf="analysis.summary.countDespachoTardio > 0">Despacho tardio: <strong>{{ analysis.summary.countDespachoTardio }}</strong></span>
-                        <span class="rpt-osdia-chip" *ngIf="analysis.summary.countLoginAtrasado > 0">Log In atrasado: <strong>{{ analysis.summary.countLoginAtrasado }}</strong></span>
+                        <span class="rpt-osdia-chip" *ngFor="let chip of getChips('1º Desloc.', analysis)">
+                          {{ chip.label }} <strong [innerHTML]="chip.value"></strong>
+                        </span>
                       </div>
                       <div class="osdia-ev-list" *ngIf="analysis.flaggedDays.length > 0; else noDeslocEvidence">
                         <ng-template #deslocEvTpl let-ev>
@@ -1184,27 +1102,8 @@ type SavedFilterState = {
                           </div>
                           <app-timeline-visual [ev]="ev"></app-timeline-visual>
                           <ul class="osdia-ev-alerts">
-                            <li *ngIf="ev.flags.includes('despacho_tardio')" class="osdia-ev-alert">
-                              <strong>{{ ev.flags.includes('login_atrasado') ? 'Despacho tardio após login atrasado:' : 'Despacho tardio:' }}</strong> <span [innerHTML]="highlightMin(deslocAlertBody('despacho_tardio', ev))"></span>
-                            </li>
-                            <li *ngIf="ev.flags.includes('login_atrasado')" class="osdia-ev-alert">
-                              <strong>Log In atrasado:</strong> <span [innerHTML]="highlightMin(deslocAlertBody('login_atrasado', ev))"></span>
-                            </li>
-                            <li *ngIf="ev.flags.includes('desloc_muito_lento')" class="osdia-ev-alert">
-                              <strong>1º Desloc.:</strong> <span [innerHTML]="highlightMin(deslocAlertBody('desloc_muito_lento', ev))"></span>
-                            </li>
-                            <li *ngIf="ev.flags.includes('desloc_lento') && !ev.flags.includes('desloc_muito_lento')" class="osdia-ev-alert">
-                              <strong>1º Desloc.:</strong> <span [innerHTML]="highlightMin(deslocAlertBody('desloc_lento', ev))"></span>
-                            </li>
-                            <li *ngIf="ev.flags.includes('sem_desloc_registrado')" class="osdia-ev-alert">
-                              <strong>Sem deslocamento registrado:</strong> <span [innerHTML]="highlightMin(deslocAlertBody('sem_desloc_registrado', ev))"></span>
-                            </li>
-                            <li *ngIf="ev.flags.includes('triagem_alto')" class="osdia-ev-alert">
-                              <strong>2º Desp.:</strong> <span [innerHTML]="highlightMin(triagemAltoText(ev))"></span>
-                            </li>
-                            
-                                <li *ngIf="ev.nr_ordem_despacho_anterior" class="osdia-ev-alert osdia-ev-alert--warn">
-                              <strong>Despacho anterior da 1ªOS:</strong> a OS <strong>{{ ev.nr_ordem_despacho_anterior }}</strong> foi despachada em {{ formatDespachoHora(ev.hora_despacho_anterior) }} antes do deslocamento da 1ª OS desta equipe, provavelmente por motivo de prioridade, dessa forma o despacho da 1ªOS pode ficar elevado.
+                            <li *ngFor="let alert of getAlerts('1º Desloc.', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
+                              <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                             </li>
                           </ul>
                         </ng-template>
@@ -1255,12 +1154,9 @@ type SavedFilterState = {
                         </button>
                       </div>
                       <div class="rpt-osdia-card-meta">
-                        <span class="rpt-osdia-chip">Retorno Base <strong>{{ analysis.retornoBaseValue | number:'1.1-1' }} min</strong></span>
-                        <span class="rpt-osdia-chip">Meta <strong>{{ analysis.metaTarget }} min</strong></span>
-                        <span class="rpt-osdia-chip">Média equipe <strong>{{ analysis.avgRetornoMin | number:'1.1-1' }} min</strong></span>
-                        <span class="rpt-osdia-chip">Média global <strong>{{ analysis.globalAvgRetornoMin | number:'1.1-1' }} min</strong></span>
-                        <span class="rpt-osdia-chip">Dias c/ atraso <strong>{{ analysis.diasAcimaMetaCount }}/{{ analysis.totalDays }}</strong></span>
-                        <span class="rpt-osdia-chip" *ngIf="analysis.summary.countRetornoMuitoAlto > 0">Retorno&gt;60min: <strong>{{ analysis.summary.countRetornoMuitoAlto }}</strong></span>
+                        <span class="rpt-osdia-chip" *ngFor="let chip of getChips('Retorno Base', analysis)">
+                          {{ chip.label }} <strong [innerHTML]="chip.value"></strong>
+                        </span>
                       </div>
                       <div class="osdia-ev-list" *ngIf="analysis.flaggedDays.length > 0; else noRetornoEvidence">
                         <ng-template #retornoEvTpl let-ev>
@@ -1280,14 +1176,8 @@ type SavedFilterState = {
                             </span>
                           </div>
                           <ul class="osdia-ev-alerts">
-                            <li *ngIf="ev.flags.includes('retorno_muito_alto')" class="osdia-ev-alert">
-                              <strong>Retorno muito alto:</strong> <span [innerHTML]="highlightMin(retornoAlertBody('retorno_muito_alto', ev))"></span>
-                            </li>
-                            <li *ngIf="ev.flags.includes('retorno_alto') && !ev.flags.includes('retorno_muito_alto')" class="osdia-ev-alert">
-                              <strong>Retorno acima da meta:</strong> <span [innerHTML]="highlightMin(retornoAlertBody('retorno_alto', ev))"></span>
-                            </li>
-                            <li *ngIf="ev.flags.includes('retorno_divergente')" class="osdia-ev-alert osdia-ev-alert--warn">
-                              <strong>Divergência:</strong> <span [innerHTML]="highlightMin(retornoAlertBody('retorno_divergente', ev))"></span>
+                            <li *ngFor="let alert of getAlerts('Retorno Base', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
+                              <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                             </li>
                           </ul>
                         </ng-template>
@@ -4914,6 +4804,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly chartService = inject(DashboardChartService);
   private readonly sanitizer = inject(DomSanitizer);
   protected readonly allOption = ALL_OPTION;
+
+  protected getChips(kpi: string, analysis: any): DashboardChip[] {
+    return getDashboardChips(kpi, analysis);
+  }
+
+  protected getAlerts(kpi: string, ev: any): DashboardAlert[] {
+    return getDashboardAlerts(kpi, ev);
+  }
 
   @ViewChild('sliderFill') private sliderFillRef?: ElementRef<HTMLDivElement>;
   @ViewChild('sliderThumbMin') private sliderThumbMinRef?: ElementRef<HTMLInputElement>;

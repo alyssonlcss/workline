@@ -24,8 +24,14 @@ import { TimelineSegment, buildTimelineSegments, tlFlexGrow } from '../../utils/
           <div class="segment-bar-content">
 
             <span class="seg-two-line">
-              <span class="seg-name">{{ seg.label }}</span>
-              <span class="seg-dur">{{ seg.overrideDuration ?? (seg.durationMin + 'min') }}<ng-container *ngIf="seg.subtitle"> | {{ seg.subtitle }}</ng-container></span>
+              <ng-container *ngIf="seg.subtitle; else defaultSeg">
+                <span class="seg-name">{{ seg.label }} — {{ seg.overrideDuration ?? (seg.durationMin + 'min') }}</span>
+                <span class="seg-sub">{{ seg.subtitle }}</span>
+              </ng-container>
+              <ng-template #defaultSeg>
+                <span class="seg-name">{{ seg.label }}</span>
+                <span class="seg-dur">{{ seg.overrideDuration ?? (seg.durationMin + 'min') }}</span>
+              </ng-template>
             </span>
 
           </div>
@@ -143,11 +149,15 @@ import { TimelineSegment, buildTimelineSegments, tlFlexGrow } from '../../utils/
       line-height: 1.2;
     }
     .seg-name {
-      font-size: 0.72rem;
+      font-size: 0.75rem;
       font-weight: 700;
     }
     .seg-dur {
-      font-size: 0.62rem;
+      font-size: 0.68rem;
+      font-weight: 700;
+    }
+    .seg-sub {
+      font-size: 0.64rem;
       font-weight: 700;
     }
     .interval-icon {
