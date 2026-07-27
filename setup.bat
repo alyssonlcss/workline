@@ -15,6 +15,19 @@ echo       Iniciando Setup do Scanner Analytics
 echo ===================================================
 echo.
 
+:: Verificacao e instalacao do Node.js se necessario (no sistema como um todo)
+echo [0/3] Verificando instalacao do Node.js...
+where node >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Node.js nao foi encontrado no sistema.
+    echo Iniciando instalacao automatica do Node.js v24.16.0...
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%PROJECT_DIR%\install-node.ps1"
+    set "PATH=%USERPROFILE%\Documents\NodeJS;%APPDATA%\npm;%PATH%"
+) else (
+    echo Node.js ja esta instalado no sistema. Ignorando instalacao...
+)
+
+echo.
 echo [1/3] Instalando dependencias do Backend...
 cd /d "%PROJECT_DIR%\src\backend"
 if not exist "node_modules\" (
