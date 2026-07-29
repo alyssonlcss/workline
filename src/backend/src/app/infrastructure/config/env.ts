@@ -44,7 +44,6 @@ export function resolveDefaultDataDir(): string {
 
 const environmentSchema = z.object({
   PORT: z.coerce.number().default(3000),
-  SPOTFIRE_LOGIN_URL: z.string().min(1),
   SPOTFIRE_ANALYSIS_URL: z.string().min(1).optional(),
   SPOTFIRE_REPORT_URL: z.string().min(1).optional(),
   SPOTFIRE_USERNAME: z.string().min(1),
@@ -128,7 +127,6 @@ try {
 export const environment = {
   port: parsedEnvironment.PORT,
   spotfire: {
-    loginUrl: parsedEnvironment.SPOTFIRE_LOGIN_URL,
     analysisUrl: resolvedAnalysisUrl,
     username: parsedEnvironment.SPOTFIRE_USERNAME,
     password: parsedEnvironment.SPOTFIRE_PASSWORD,

@@ -4078,7 +4078,6 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
     this.info('Login detectado, autenticando...');
     this.log('login page detected, filling credentials', {
       currentUrl: page.url(),
-      loginUrl: this.environment.spotfire.loginUrl,
     });
 
     await page.locator("input[type='text']").fill(this.environment.spotfire.username);

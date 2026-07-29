@@ -17,7 +17,6 @@ ENV/
 # Distribution / packaging
 build/
 dist/
-*.egg-info/
 node_modules/
 .angular/
 
@@ -57,3 +56,12 @@ htmlcov/
 
 # vscode settings.json
 .vscode/settings.json
+
+# Test & Scratch scripts
+test*
+test_*
+clean.js
+fix.js
+refactor*.js
+wa*.js
+report_*.json
