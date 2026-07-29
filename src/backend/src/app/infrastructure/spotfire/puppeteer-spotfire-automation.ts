@@ -4080,45 +4080,70 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
       currentUrl: page.url(),
     });
 
-    const username = req?.userCredentials?.username || this.environment.spotfire.username;
-    const password = req?.userCredentials?.password || this.environment.spotfire.password;
+    const modalUsername = req?.userCredentials?.username?.trim();
+    const modalPassword = req?.userCredentials?.password?.trim();
+
+    // Prioridade total para as credenciais enviadas no modal do frontend
+    const username = modalUsername || this.environment.spotfire.username;
+    const password = modalPassword || this.environment.spotfire.password;
 
     if (!username || !password) {
       if (req) this.emitProgress(req, 'Erro: Credenciais do Spotfire não foram fornecidas!');
       throw new Error('Spotfire login required but no username/password was provided in request or environment.');
     }
 
-    this.info(`Autenticando no Spotfire com usuário: ${username}`);
+    if (modalUsername) {
+      this.info(`Prioridade Ativa: Autenticando com usuário enviado pelo modal (${username})`);
+    } else {
+      this.info(`Autenticando com usuário de fallback do servidor (${username})`);
+    }
+
     await page.locator("input[type='text']").fill(username);
     await page.locator("input[type='password']").fill(password);
 
+    const LOGIN_TIMEOUT_MS = 30000;
+    const userFriendlyErrorMessage = 'Credenciais inválidas ou o sistema do Spotfire está instável. Por favor, verifique usuário e senha ou tente novamente em alguns instantes.';
+
+    let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
+
     try {
-      await this.submitLogin(page);
+      await Promise.race([
+        (async () => {
+          await this.submitLogin(page);
+          if (await this.isLoginPage(page)) {
+            this.log('still on login page after submit, checking analysis URL');
+            await page.goto(this.environment.spotfire.analysisUrl, {
+              waitUntil: 'domcontentloaded',
+              timeout: 10000,
+            }).catch(() => undefined);
+          }
+          if (await this.isLoginPage(page)) {
+            throw new Error(userFriendlyErrorMessage);
+          }
+        })(),
+        new Promise<never>((_, reject) => {
+          timeoutTimer = setTimeout(() => {
+            reject(new Error(userFriendlyErrorMessage));
+          }, LOGIN_TIMEOUT_MS);
+        }),
+      ]);
     } catch (err) {
-      if (req) this.emitProgress(req, `Erro ao realizar o login: ${err instanceof Error ? err.message : String(err)}`);
-      throw err;
-    }
-
-    this.info('Login concluído');
-    this.log('login submit completed, checking resulting page', {
-      currentUrl: page.url(),
-    });
-
-    if (await this.isLoginPage(page)) {
-      this.log('still on login page after submit, retrying by navigating back to analysis URL', {
-        currentUrl: page.url(),
-      });
-
-      await page.goto(this.environment.spotfire.analysisUrl, {
-        waitUntil: 'domcontentloaded',
-        timeout: 120000,
-      });
-
-      if (await this.isLoginPage(page)) {
-        if (req) this.emitProgress(req, 'Erro ao realizar o login: credenciais inválidas ou erro no portal.');
-        throw new Error(`Spotfire stayed on login page after submit. Current URL: ${page.url()}`);
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logStep('login', 'FAIL', `Login failed or timed out (30s): ${msg}`);
+      if (req) {
+        this.emitProgress(req, `Erro no login: ${userFriendlyErrorMessage}`);
+      }
+      throw new Error(userFriendlyErrorMessage);
+    } finally {
+      if (timeoutTimer) {
+        clearTimeout(timeoutTimer);
       }
     }
+
+    this.info('Login concluído ✓');
+    this.log('login submit completed successfully', {
+      currentUrl: page.url(),
+    });
   }
 
   private async submitLogin(page: Page): Promise<void> {
