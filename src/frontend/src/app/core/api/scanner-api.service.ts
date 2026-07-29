@@ -647,6 +647,10 @@ export class ScannerApiService {
         max: number;
       };
     };
+    userCredentials?: {
+      username?: string;
+      password?: string;
+    };
   }): Observable<ScannerDataDownloadResult> {
     return this.http.post<ScannerDataDownloadResult>(`${this.baseUrl}/scanner/data-download`, payload);
   }
@@ -659,6 +663,10 @@ export class ScannerApiService {
         year?: string[];
         month?: string[];
         dayRange?: { min: number; max: number };
+      };
+      userCredentials?: {
+        username?: string;
+        password?: string;
       };
     },
     callbacks: DataDownloadCallbacks,

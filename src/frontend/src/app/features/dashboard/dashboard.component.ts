@@ -189,6 +189,55 @@ type SavedFilterState = {
 
           <div class="drawer-body">
 
+            <article class="drawer-card drawer-card-credentials">
+              <div class="drawer-card-head">
+                <h3>Credenciais Spotfire</h3>
+              </div>
+              <div class="cred-inputs" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 2px 0;">
+                <div class="cred-field" style="display: grid; gap: 2px;">
+                  <span class="select-caption">Usuário</span>
+                  <input
+                    id="sf-username"
+                    type="text"
+                    class="cred-input"
+                    style="width: 100%; padding: 5px 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.76rem; font-family: inherit; color: var(--text); background: rgba(255,255,255,0.7); box-sizing: border-box;"
+                    placeholder="seu.usuario"
+                    [value]="spotfireUsername()"
+                    (input)="onSpotfireUsernameInput($event)"
+                  />
+                </div>
+                <div class="cred-field" style="display: grid; gap: 2px;">
+                  <span class="select-caption">Senha</span>
+                  <div style="position: relative; width: 100%;">
+                    <input
+                      id="sf-password"
+                      [type]="showPassword() ? 'text' : 'password'"
+                      class="cred-input"
+                      style="width: 100%; padding: 5px 26px 5px 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.76rem; font-family: inherit; color: var(--text); background: rgba(255,255,255,0.7); box-sizing: border-box;"
+                      placeholder="••••••••"
+                      [value]="spotfirePassword()"
+                      (input)="onSpotfirePasswordInput($event)"
+                    />
+                    <button
+                      type="button"
+                      (click)="toggleShowPassword()"
+                      style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; padding: 2px 4px; cursor: pointer; color: var(--muted-strong); display: flex; align-items: center; justify-content: center;"
+                      [title]="showPassword() ? 'Ocultar senha' : 'Exibir senha'"
+                      aria-label="Alternar visibilidade da senha">
+                      <svg *ngIf="!showPassword()" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                      <svg *ngIf="showPassword()" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </article>
+
             <article class="drawer-card drawer-card-period">
               <div class="drawer-card-head">
                 <h3>Período</h3>
@@ -1958,7 +2007,8 @@ type SavedFilterState = {
         cursor: pointer;
       }
 
-      .drawer-body .day-input {
+      .drawer-body .day-input,
+      .drawer-body .cred-input {
         cursor: text;
         user-select: text;
         -webkit-user-select: text;
@@ -4962,6 +5012,26 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   protected readonly filterDrawerOpen = signal(false);
   protected readonly selectedTrendLine = signal<string | null>(null);
 
+  protected readonly spotfireUsername = signal<string>(localStorage.getItem('spotfire_user') || '');
+  protected readonly spotfirePassword = signal<string>(localStorage.getItem('spotfire_pass') || '');
+  protected readonly showPassword = signal(false);
+
+  protected toggleShowPassword(): void {
+    this.showPassword.update((v) => !v);
+  }
+
+  protected onSpotfireUsernameInput(event: Event): void {
+    const val = (event.target as HTMLInputElement).value;
+    this.spotfireUsername.set(val);
+    localStorage.setItem('spotfire_user', val);
+  }
+
+  protected onSpotfirePasswordInput(event: Event): void {
+    const val = (event.target as HTMLInputElement).value;
+    this.spotfirePassword.set(val);
+    localStorage.setItem('spotfire_pass', val);
+  }
+
   toggleTrendLine(base: string, teamType: string) {
     const id = `${base}|${teamType}`;
     if (this.selectedTrendLine() === id) {
@@ -7280,6 +7350,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         reportTitle: this.reportTitle(),
         selectedFilters,
         periodSelection: this.buildPeriodSelection(),
+        userCredentials: {
+          username: this.spotfireUsername(),
+          password: this.spotfirePassword(),
+        },
       },
       {
         onProgress: (message) => {

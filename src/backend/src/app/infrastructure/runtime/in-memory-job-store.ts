@@ -18,4 +18,13 @@ export class InMemoryJobStore implements ScannerJobStorePort {
     const job = this.jobs.get(id);
     return job ? structuredClone(job) : null;
   }
-}
+
+  public purgeStaleJobs(maxAgeMs = 60 * 60 * 1000): void {
+    const now = Date.now();
+    for (const [id, job] of this.jobs.entries()) {
+      if (now - new Date(job.createdAt).getTime() > maxAgeMs) {
+        this.jobs.delete(id);
+      }
+    }
+  }
+}

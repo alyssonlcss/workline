@@ -4,17 +4,26 @@ import { createReadStream } from 'node:fs';
 import { access, mkdir, readdir, rename, rm } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, extname, join, resolve } from 'node:path';
+import { randomUUID } from 'node:crypto';
 
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import cookie from '@fastify/cookie';
+import rateLimit from '@fastify/rate-limit';
 import { z } from 'zod';
 
 import { StartScannerJobUseCase } from '../../application/use-cases/start-scanner-job.use-case.js';
 import { GetScannerJobUseCase } from '../../application/use-cases/get-scanner-job.use-case.js';
 import { PostDownloadReportService } from '../../application/services/post-download-report.service.js';
+import { SessionService } from '../../application/services/session.service.js';
 import { environment, resolveDefaultDataDir } from '../../infrastructure/config/env.js';
 import { InMemoryJobStore } from '../../infrastructure/runtime/in-memory-job-store.js';
+import { ExtractionQueueManager } from '../../infrastructure/runtime/extraction-queue.manager.js';
+import { ExtractionCacheService } from '../../infrastructure/cache/extraction-cache.service.js';
+import { TempStorageService } from '../../infrastructure/storage/temp-storage.service.js';
+import { FileGarbageCollector } from '../../infrastructure/storage/file-garbage-collector.js';
 import { PuppeteerSpotfireAutomation } from '../../infrastructure/spotfire/puppeteer-spotfire-automation.js';
+import { registerAuthRoutes } from './auth.controller.js';
 
 const filterSchema = z.object({
   title: z.string().trim().min(1),
@@ -47,6 +56,10 @@ const dataDownloadSchema = z.object({
     year: z.union([z.string().trim(), z.array(z.string().trim())]).optional(),
     month: z.union([z.string().trim(), z.array(z.string().trim())]).optional(),
   }).optional(),
+  userCredentials: z.object({
+    username: z.string().optional(),
+    password: z.string().optional(),
+  }).optional(),
 });
 
 const reportGenerationSchema = z.object({
@@ -65,6 +78,13 @@ export async function createServer() {
   const automation = new PuppeteerSpotfireAutomation(environment);
   const downloadTargets = environment.spotfire.downloadTargets;
 
+  const sessionService = new SessionService();
+  const queueManager = new ExtractionQueueManager(3); // Max 3 concurrent Puppeteer workers
+  const cacheService = new ExtractionCacheService();
+  const tempStorage = new TempStorageService();
+  const garbageCollector = new FileGarbageCollector(tempStorage.getBaseDataDir());
+  garbageCollector.start();
+
   server.log.info(
     `SPOTFIRE_DOWNLOAD_TABLES: ${downloadTargets.length} table(s) → ${downloadTargets.map(t => `${t.analysisTab}/${t.tableTitle}`).join(', ')}`,
   );
@@ -72,11 +92,18 @@ export async function createServer() {
   const startScannerJob = new StartScannerJobUseCase(automation, jobStore);
   const getScannerJob = new GetScannerJobUseCase(jobStore);
   const postDownloadReport = new PostDownloadReportService(environment);
-  let activeDataDownloadController: AbortController | null = null;
 
   await server.register(cors, {
     origin: true,
   });
+
+  await server.register(cookie);
+  await server.register(rateLimit, {
+    max: 100,
+    timeWindow: '1 minute',
+  });
+
+  registerAuthRoutes(server, sessionService);
 
   server.decorate('config', {
     port: environment.port,
@@ -102,18 +129,16 @@ export async function createServer() {
   server.post('/api/scanner/data-download', async (request, reply) => {
     const payload = dataDownloadSchema.parse(request.body);
     const reportTitle = payload.reportTitle ?? environment.spotfire.defaultReportTitle;
-    const dataDirectory = resolve(process.cwd(), environment.spotfire.outputDirectory);
     const controller = new AbortController();
     const userAgent = request.headers['user-agent'] ?? '';
     const clientBrowserType = userAgent.includes('Edg/') ? 'edge' : userAgent.includes('Chrome/') ? 'chrome' : undefined;
 
-    activeDataDownloadController?.abort(createAbortError('data download superseded by a newer request'));
-    activeDataDownloadController = controller;
+    const sessionId = request.cookies.scanner_session_id || (request.headers['x-session-id'] as string) || 'default-session';
+    const session = sessionService.getSession(sessionId);
+    const jobId = randomUUID();
 
     request.raw.once('aborted', () => {
-      if (activeDataDownloadController === controller) {
-        controller.abort(createAbortError('client disconnected during data download'));
-      }
+      controller.abort(createAbortError('client disconnected during data download'));
     });
 
     reply.hijack();
@@ -134,97 +159,109 @@ export async function createServer() {
       sendEvent('progress', { message });
     };
 
+    // Check In-Memory Cache first
+    const cacheKey = cacheService.generateKey({
+      reportTitle,
+      selectedFilters: payload.selectedFilters,
+      periodSelection: payload.periodSelection,
+    });
+
+    const cachedResult = cacheService.get(cacheKey);
+    if (cachedResult) {
+      onProgress('Dados recuperados instantaneamente do cache em memória!');
+      sendEvent('result', cachedResult);
+      reply.raw.end();
+      return;
+    }
+
     try {
       throwIfAborted(controller.signal);
-      onProgress('Preparando diretório de dados...');
-      await resetDataDirectory(dataDirectory);
 
-      const tableNames = downloadTargets.map(t => t.tableTitle).join(' e ');
-      onProgress(`Baixando tabelas: ${tableNames}...`);
-
-      server.log.info('starting data download for %d table(s)', downloadTargets.length);
-
-      const result = await automation.runExtraction({
-        reportTitle,
-        analysisTab: downloadTargets[0].analysisTab,
-        tableTitle: downloadTargets[0].tableTitle,
-        tablesToExport: downloadTargets.map(t => ({ tab: t.analysisTab, tableTitle: t.tableTitle })),
-        selectedFilters: payload.selectedFilters,
-        periodSelection: payload.periodSelection,
-        clientBrowserType,
-        signal: controller.signal,
+      const resultData = await queueManager.enqueue({
+        id: jobId,
         onProgress,
+        task: async () => {
+          throwIfAborted(controller.signal);
+          const jobDirectory = await tempStorage.prepareJobDirectory(sessionId, jobId);
+          onProgress('Diretório isolado preparado. Iniciando extração no Spotfire...');
+
+          const userCredentials = payload.userCredentials?.username
+            ? payload.userCredentials
+            : session?.spotfirePassword
+              ? { username: session.username, password: session.spotfirePassword }
+              : undefined;
+
+          const result = await automation.runExtraction({
+            reportTitle,
+            analysisTab: downloadTargets[0].analysisTab,
+            tableTitle: downloadTargets[0].tableTitle,
+            tablesToExport: downloadTargets.map(t => ({ tab: t.analysisTab, tableTitle: t.tableTitle })),
+            selectedFilters: payload.selectedFilters,
+            periodSelection: payload.periodSelection,
+            clientBrowserType,
+            customOutputDir: jobDirectory,
+            userCredentials,
+            signal: controller.signal,
+            onProgress,
+          });
+
+          throwIfAborted(controller.signal);
+
+          const allExportedFiles = result.exportedFiles;
+          const downloadedFiles: Array<{
+            analysisTab: string;
+            tableTitle: string;
+            fileName: string;
+            filePath: string;
+          }> = [];
+
+          const skippedTables: Array<{ analysisTab: string; tableTitle: string; reason: string }> = [];
+
+          for (let i = 0; i < downloadTargets.length; i++) {
+            const target = downloadTargets[i];
+            const exportedFile = allExportedFiles[i];
+
+            if (!exportedFile) {
+              const reason = `no file generated (index ${i})`;
+              server.log.warn(`[${i + 1}/${downloadTargets.length}] SKIPPED — ${target.tableTitle}: ${reason}`);
+              skippedTables.push({ analysisTab: target.analysisTab, tableTitle: target.tableTitle, reason });
+              continue;
+            }
+
+            const tabSlug = target.analysisTab.replace(/\s+/g, '_');
+            const tableSlug = target.tableTitle.replace(/\s+/g, '_');
+            const fileLabel = target.fileAlias ?? `${tabSlug}-${tableSlug}`;
+            const fileName = `${fileLabel}.csv`;
+            const filePath = await moveDownloadedFile(exportedFile, jobDirectory, fileName);
+
+            downloadedFiles.push({
+              analysisTab: target.analysisTab,
+              tableTitle: target.tableTitle,
+              fileName,
+              filePath,
+            });
+          }
+
+          if (downloadedFiles.length === 0) {
+            throw new Error('none of the configured tables were downloaded — check Spotfire tab/table names');
+          }
+
+          return {
+            status: 'completed',
+            reportTitle,
+            updatedAt: new Date().toISOString(),
+            files: downloadedFiles,
+            filters: result.filters ?? [],
+            availableTabs: result.availableTabs ?? [],
+            availableTables: result.availableTables ?? [],
+          };
+        },
       });
 
-      throwIfAborted(controller.signal);
+      // Save to cache for subsequent requests
+      cacheService.set(cacheKey, resultData);
 
-      const allExportedFiles = result.exportedFiles;
-
-      const downloadedFiles: Array<{
-        analysisTab: string;
-        tableTitle: string;
-        fileName: string;
-        filePath: string;
-      }> = [];
-
-      const skippedTables: Array<{ analysisTab: string; tableTitle: string; reason: string }> = [];
-
-      for (let i = 0; i < downloadTargets.length; i++) {
-        const target = downloadTargets[i];
-        const exportedFile = allExportedFiles[i];
-
-        if (!exportedFile) {
-          const reason = `no file generated (index ${i})`;
-          server.log.warn(`[${i + 1}/${downloadTargets.length}] SKIPPED — ${target.tableTitle}: ${reason}`);
-          skippedTables.push({ analysisTab: target.analysisTab, tableTitle: target.tableTitle, reason });
-          continue;
-        }
-
-        const tabSlug = target.analysisTab.replace(/\s+/g, '_');
-        const tableSlug = target.tableTitle.replace(/\s+/g, '_');
-        const fileLabel = target.fileAlias ?? `${tabSlug}-${tableSlug}`;
-        const fileName = `${fileLabel}.csv`;
-        const filePath = await moveDownloadedFile(exportedFile, dataDirectory, fileName);
-
-        server.log.info(`[${i + 1}/${downloadTargets.length}] OK — "${target.tableTitle}" -> ${fileName}`);
-
-        downloadedFiles.push({
-          analysisTab: target.analysisTab,
-          tableTitle: target.tableTitle,
-          fileName,
-          filePath,
-        });
-      }
-
-      // --- Summary ---
-      server.log.info(
-        `download summary: ${downloadedFiles.length}/${downloadTargets.length} tables downloaded` +
-          (skippedTables.length > 0 ? `, ${skippedTables.length} skipped` : ''),
-      );
-
-      if (downloadedFiles.length === 0) {
-        throw new Error('none of the configured tables were downloaded — check SPOTFIRE_DOWNLOAD_TABLES and Spotfire tab/table names');
-      }
-
-      onProgress(
-        skippedTables.length > 0
-          ? `${downloadedFiles.length}/${downloadTargets.length} tabelas baixadas (${skippedTables.length} falharam). Finalizando...`
-          : 'Todas as tabelas baixadas! Finalizando...',
-      );
-
-      throwIfAborted(controller.signal);
-      await cleanupDataDirectory(dataDirectory, downloadedFiles.map((file) => file.fileName));
-
-      sendEvent('result', {
-        status: 'completed',
-        reportTitle,
-        updatedAt: new Date().toISOString(),
-        files: downloadedFiles,
-        filters: result.filters ?? [],
-        availableTabs: result.availableTabs ?? [],
-        availableTables: result.availableTables ?? [],
-      });
-
+      sendEvent('result', resultData);
       reply.raw.end();
     } catch (error) {
       if (isAbortError(error)) {
@@ -236,10 +273,6 @@ export async function createServer() {
       const errorMessage = error instanceof Error ? error.message : 'unknown error';
       sendEvent('error', { message: errorMessage });
       reply.raw.end();
-    } finally {
-      if (activeDataDownloadController === controller) {
-        activeDataDownloadController = null;
-      }
     }
   });
 

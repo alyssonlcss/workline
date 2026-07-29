@@ -21,6 +21,11 @@ export interface ScannerRunRequest {
   periodSelection?: ScannerPeriodSelection;
   skipFilterReset?: boolean;
   clientBrowserType?: 'edge' | 'chrome';
+  customOutputDir?: string;
+  userCredentials?: {
+    username?: string;
+    password?: string;
+  };
   signal?: AbortSignal;
   onProgress?: (message: string) => void;
 }

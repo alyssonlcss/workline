@@ -166,7 +166,7 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
     return this.runSerialized(async (combinedSignal) => {
       // Overlay the combined (external + supersede) signal so all inner raceAbort calls react.
       const req: ScannerRunRequest = { ...request, signal: combinedSignal };
-      const outputDirectory = await this.raceAbort(this.prepareOutputDirectory(), req.signal);
+      const outputDirectory = await this.raceAbort(this.prepareOutputDirectory(req.customOutputDir), req.signal);
       this.emitProgress(req, 'Iniciando extração de dados...');
       this.logStep('data-download', 'START', 'starting extraction run', {
         reportTitle: request.reportTitle ?? this.environment.spotfire.defaultReportTitle,
@@ -4080,8 +4080,17 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
       currentUrl: page.url(),
     });
 
-    await page.locator("input[type='text']").fill(this.environment.spotfire.username);
-    await page.locator("input[type='password']").fill(this.environment.spotfire.password);
+    const username = req?.userCredentials?.username || this.environment.spotfire.username;
+    const password = req?.userCredentials?.password || this.environment.spotfire.password;
+
+    if (!username || !password) {
+      if (req) this.emitProgress(req, 'Erro: Credenciais do Spotfire não foram fornecidas!');
+      throw new Error('Spotfire login required but no username/password was provided in request or environment.');
+    }
+
+    this.info(`Autenticando no Spotfire com usuário: ${username}`);
+    await page.locator("input[type='text']").fill(username);
+    await page.locator("input[type='password']").fill(password);
 
     try {
       await this.submitLogin(page);
@@ -5650,7 +5659,11 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
     return finalPath;
   }
 
-  private async prepareOutputDirectory(): Promise<string> {
+  private async prepareOutputDirectory(customDir?: string): Promise<string> {
+    if (customDir) {
+      await mkdir(customDir, { recursive: true });
+      return customDir;
+    }
     const baseOutputDirectory = resolve(process.cwd(), this.environment.spotfire.outputDirectory);
     const runDirectory = join(baseOutputDirectory, new Date().toISOString().replace(/[.:]/g, '-'));
     await mkdir(runDirectory, { recursive: true });
