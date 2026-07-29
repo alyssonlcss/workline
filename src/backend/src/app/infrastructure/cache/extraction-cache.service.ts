@@ -17,6 +17,7 @@ export class ExtractionCacheService {
     tableTitle?: string;
     selectedFilters?: unknown;
     periodSelection?: unknown;
+    userCredentials?: { username?: string; password?: string };
   }): string {
     const rawStr = JSON.stringify({
       title: params.reportTitle ?? '',
@@ -24,6 +25,8 @@ export class ExtractionCacheService {
       table: params.tableTitle ?? '',
       filters: params.selectedFilters ?? [],
       period: params.periodSelection ?? {},
+      user: params.userCredentials?.username ?? '',
+      pass: params.userCredentials?.password ?? '',
     });
     return createHash('sha256').update(rawStr).digest('hex');
   }

@@ -105,22 +105,49 @@ type SavedFilterState = {
   imports: [CommonModule, TocNavComponent, TimelineVisualComponent],
   template: `
     <main class="shell">
-      <div class="report-loading" *ngIf="loading()" aria-live="polite" aria-busy="true">
-        <div class="loading-success-icon" *ngIf="!errorMessage() && generatingReport()">
-          <svg viewBox="0 0 52 52" aria-hidden="true">
-            <circle class="loading-success-circle" cx="26" cy="26" r="23" fill="none" stroke-width="3"/>
-            <polyline class="loading-success-check" points="14,27 22,35 38,18" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <div class="loading-spinner" *ngIf="!errorMessage() && !generatingReport()"></div>
-        <div class="loading-error-icon" *ngIf="errorMessage()">⚠</div>
-        <p *ngIf="!errorMessage()">{{ progressMessage() || 'Aplicando filtros e baixando tabelas' }}</p>
-        <p *ngIf="errorMessage()" class="loading-error-text">{{ errorMessage() }}</p>
-        <button *ngIf="errorMessage()" type="button" class="loading-retry-btn" (click)="dismissError()">Fechar</button>
+      <div class="report-loading" *ngIf="loading()" aria-live="polite" aria-busy="true" style="pointer-events: auto;">
+        
+        <!-- Loading State -->
+        <ng-container *ngIf="!errorMessage()">
+          <div class="loading-success-icon" *ngIf="generatingReport()">
+            <svg viewBox="0 0 52 52" aria-hidden="true">
+              <circle class="loading-success-circle" cx="26" cy="26" r="23" fill="none" stroke-width="3"/>
+              <polyline class="loading-success-check" points="14,27 22,35 38,18" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="loading-spinner" *ngIf="!generatingReport()"></div>
+          <p style="margin: 0; color: var(--accent); font-size: 0.92rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;">
+            {{ displayProgressMessage() }}
+          </p>
+        </ng-container>
+
+        <!-- Error State (Directly on the natural blur backdrop — no white card) -->
+        <ng-container *ngIf="errorMessage()">
+          <h4 style="margin: 0 0 10px; font-size: 1.15rem; font-weight: 800; color: #991b1b; letter-spacing: -0.01em; display: inline-flex; align-items: center; gap: 8px;">
+            <svg style="width: 1.25em; height: 1.25em; color: currentColor; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span>Atenção</span>
+          </h4>
+          <p style="color: #1e1a17; font-size: 0.94rem; font-weight: 600; text-align: center; max-width: 480px; padding: 0 20px; margin: 0 0 22px; line-height: 1.5; text-transform: none; letter-spacing: normal;">
+            {{ errorMessage() }}
+          </p>
+          <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; pointer-events: auto;">
+            <button type="button" class="loading-retry-btn" (click)="retryFromError()" style="background: rgba(192, 18, 45, 0.08); color: var(--accent); border: 2px solid var(--accent); padding: 7px 18px; border-radius: 999px; font-weight: 600; font-size: 0.78rem; letter-spacing: normal; text-transform: none; cursor: pointer; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 4px 14px rgba(192, 18, 45, 0.08); transition: background 0.15s ease;">
+              Tentar Novamente
+            </button>
+            <button type="button" class="loading-dismiss-btn" (click)="dismissError()" style="background: rgba(255, 255, 255, 0.25); color: #1e1a17; border: 2px solid #1e1a17; padding: 7px 18px; border-radius: 999px; font-weight: 600; font-size: 0.78rem; letter-spacing: normal; text-transform: none; cursor: pointer; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); transition: background 0.15s ease;">
+              Fechar
+            </button>
+          </div>
+        </ng-container>
+
       </div>
 
       <ng-container *ngIf="filtersVisible()">
-        <header class="report-filter-bar" [class.report-filter-bar-hidden]="reportBarHidden()">
+        <header class="report-filter-bar" [class.report-filter-bar-hidden]="reportBarHidden() && !openDropdownKey()" (mouseenter)="onFilterBarMouseEnter()" (mouseleave)="onFilterBarMouseLeave()">
           <div class="report-filter-groups">
             <div class="rf-chip" (click)="toggleDropdown('reportType', $event)">
               <span class="rf-chip-label">Tipo de Relatório</span>
@@ -152,7 +179,10 @@ type SavedFilterState = {
                 <div class="rf-dropdown-list">
                   <button *ngFor="let option of filteredDropdownOptions(filter)"
                           class="rf-dropdown-option" [class.rf-dropdown-option-active]="isReportOptionSelected(filter, option)"
-                          type="button" (click)="selectDropdownOption(filter.key, option, $event)">
+                          type="button"
+                          (mousedown)="beginReportDropdownDrag(filter, option, $event)"
+                          (mouseenter)="continueReportDropdownDrag(filter, option, $event)"
+                          (click)="$event.stopPropagation()">
                     <span class="rf-opt-check">
                       <svg *ngIf="isReportOptionSelected(filter, option)" viewBox="0 0 12 10" aria-hidden="true"><path d="M1 5.5l3 3 7-7" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </span>
@@ -169,12 +199,14 @@ type SavedFilterState = {
           type="button"
           class="filter-fab"
           (click)="openFilterDrawer()"
-          aria-label="Abrir filtros">
+          aria-label="Abrir filtros"
+          title="Filtros de extração">
             <span class="filter-fab-icon">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M3 5h18l-7 8v5l-4 2v-7L3 5z"></path>
               </svg>
             </span>
+            <span class="filter-fab-text">Extrair</span>
         </button>
 
         <div class="drawer-backdrop" *ngIf="filterDrawerOpen()" (click)="closeFilterDrawer()"></div>
@@ -1809,7 +1841,8 @@ type SavedFilterState = {
         align-content: center;
         justify-items: center;
         background: rgba(200, 190, 180, 0.35);
-        backdrop-filter: blur(6px);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
       }
 
       .report-loading p {
@@ -1908,23 +1941,33 @@ type SavedFilterState = {
         top: 18px;
         right: 24px;
         z-index: 1102;
-        width: 42px;
         height: 42px;
-        border: 0;
-        border-radius: 14px;
+        width: 42px;
+        border-radius: 999px;
         padding: 0;
-        display: grid;
-        place-items: center;
-        background: rgba(255, 255, 255, 0.88);
-        border: 1px solid var(--border);
-        box-shadow: 0 4px 18px rgba(60, 40, 30, 0.12), 0 0 0 1px rgba(192,18,45,0.12);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        background: rgba(192, 18, 45, 0.08);
+        border: 2px solid var(--accent);
+        box-shadow: 0 4px 18px rgba(60, 40, 30, 0.12);
         color: var(--accent);
         cursor: pointer;
-        transition: transform 0.18s ease, opacity 0.18s ease;
+        transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1), padding 0.28s cubic-bezier(0.4, 0, 0.2, 1), gap 0.28s cubic-bezier(0.4, 0, 0.2, 1), background 0.18s ease, transform 0.18s ease;
         backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        overflow: hidden;
+        white-space: nowrap;
+        box-sizing: border-box;
       }
 
       .filter-fab:hover {
+        width: 106px;
+        padding: 0 16px 0 13px;
+        gap: 7px;
+        justify-content: flex-start;
+        background: rgba(192, 18, 45, 0.16);
         transform: translateY(-1px);
       }
 
@@ -1934,10 +1977,41 @@ type SavedFilterState = {
         transform: none;
       }
 
+      .filter-fab-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+      }
+
       .filter-fab-icon svg {
         width: 16px;
         height: 16px;
         fill: currentColor;
+      }
+
+      .filter-fab-text {
+        font-family: inherit;
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: normal;
+        text-transform: none;
+        color: var(--accent);
+        opacity: 0;
+        max-width: 0;
+        overflow: hidden;
+        transform: translateX(-4px);
+        transition: opacity 0.22s ease, max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s ease;
+        white-space: nowrap;
+        pointer-events: none;
+      }
+
+      .filter-fab:hover .filter-fab-text {
+        opacity: 1;
+        max-width: 60px;
+        transform: translateX(0);
       }
 
       .filter-drawer {
@@ -1972,16 +2046,23 @@ type SavedFilterState = {
       }
 
       .drawer-submit {
-        border: 0;
+        border: 2px solid var(--accent);
         border-radius: 999px;
-        padding: 10px 16px;
+        padding: 6px 16px;
         font-size: 0.78rem;
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: white;
-        background: linear-gradient(135deg, var(--accent) 0%, #7a0912 100%);
+        font-weight: 700;
+        letter-spacing: normal;
+        text-transform: none;
+        color: var(--accent);
+        background: rgba(192, 18, 45, 0.08);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         cursor: pointer;
+        transition: background 0.15s ease;
+      }
+
+      .drawer-submit:hover {
+        background: rgba(192, 18, 45, 0.16);
       }
 
       .drawer-submit:disabled {
@@ -2276,32 +2357,35 @@ type SavedFilterState = {
       }
 
       .rpt-export-btn {
-        padding: 9px 18px;
-        border-radius: 12px;
-        border: 1px solid rgba(230, 57, 80, 0.35);
-        background: rgba(230, 57, 80, 0.1);
+        padding: 7px 18px;
+        border-radius: 999px;
+        border: 2px solid var(--accent);
+        background: rgba(192, 18, 45, 0.08);
         color: var(--accent);
-        font-weight: 700;
-        font-size: 0.82rem;
+        font-family: inherit;
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: normal;
+        text-transform: none;
         cursor: pointer;
-        transition: background 160ms ease, border-color 160ms ease;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        transition: background 140ms ease, border-color 140ms ease;
         white-space: nowrap;
       }
 
       .rpt-export-btn:hover {
-        background: rgba(230, 57, 80, 0.18);
-        border-color: rgba(230, 57, 80, 0.6);
+        background: rgba(192, 18, 45, 0.16);
       }
 
       .rpt-export-btn-blue {
-        border: 1px solid rgba(37, 99, 235, 0.4) !important;
-        background: rgba(37, 99, 235, 0.12) !important;
-        color: #2563eb !important;
+        border: 2px solid #1d4ed8 !important;
+        background: rgba(29, 78, 216, 0.08) !important;
+        color: #1d4ed8 !important;
       }
 
       .rpt-export-btn-blue:hover {
-        background: rgba(37, 99, 235, 0.22) !important;
-        border-color: rgba(37, 99, 235, 0.7) !important;
+        background: rgba(29, 78, 216, 0.16) !important;
       }
 
       /* ── Export Modal ── */
@@ -2501,13 +2585,18 @@ type SavedFilterState = {
         display: inline-flex;
         align-items: center;
         gap: 4px;
-        padding: 6px 12px;
-        border-radius: 8px;
-        border: 1.5px solid transparent;
+        padding: 5px 14px;
+        border-radius: 999px;
+        border: 2px solid transparent;
+        font-family: inherit;
         font-size: 0.78rem;
         font-weight: 600;
+        letter-spacing: normal;
+        text-transform: none;
         cursor: pointer;
         white-space: nowrap;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         transition: background 140ms, border-color 140ms, box-shadow 140ms;
       }
 
@@ -2517,26 +2606,37 @@ type SavedFilterState = {
       }
 
       .export-action-btn--download {
-        background: #f1f5f9;
-        border-color: #cbd5e1;
+        background: rgba(51, 65, 85, 0.08);
+        border: 2.2px solid #334155;
         color: #334155;
+        font-weight: 700;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 999px;
+        padding: 5px 14px;
+        transition: background 140ms ease;
       }
 
       .export-action-btn--download:hover:not(:disabled) {
-        background: #e2e8f0;
-        border-color: #94a3b8;
+        background: rgba(51, 65, 85, 0.16);
+        border-color: #0f172a;
       }
 
       .export-action-btn--share {
-        background: #eff6ff;
-        border-color: #bfdbfe;
+        background: rgba(29, 78, 216, 0.08);
+        border: 2.2px solid #1d4ed8;
         color: #1d4ed8;
+        font-weight: 700;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 999px;
+        padding: 5px 14px;
+        transition: background 140ms ease;
       }
 
       .export-action-btn--share:hover:not(:disabled) {
-        background: #dbeafe;
-        border-color: #93c5fd;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        background: rgba(29, 78, 216, 0.16);
+        border-color: #1e40af;
       }
 
       .export-loading-row {
@@ -2654,18 +2754,24 @@ type SavedFilterState = {
       }
 
       .export-modal-back {
-        background: none;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 4px 10px;
+        background: transparent;
+        border: 2.2px solid #64748b;
+        border-radius: 999px;
+        padding: 4px 14px;
         font-size: 0.78rem;
-        font-weight: 600;
+        font-weight: 700;
         color: #64748b;
         cursor: pointer;
         white-space: nowrap;
-        transition: background 140ms, color 140ms;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        transition: background 140ms, color 140ms, border-color 140ms;
       }
-      .export-modal-back:hover { background: #f1f5f9; color: #1a202c; }
+      .export-modal-back:hover {
+        background: rgba(100, 116, 139, 0.1);
+        color: #1a202c;
+        border-color: #1a202c;
+      }
 
       .export-base-grid {
         display: grid;
@@ -5008,6 +5114,42 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     return log.length > 0 ? log[log.length - 1] : '';
   });
   protected readonly generatingReport = computed(() => this.progressMessage().toLowerCase().startsWith('gerando relat'));
+  protected readonly loginCountdown = signal<number | null>(null);
+  private countdownTimer?: ReturnType<typeof setInterval>;
+
+  protected readonly displayProgressMessage = computed(() => {
+    const msg = this.progressMessage();
+    const seconds = this.loginCountdown();
+    if (msg.includes('Autenticando no Spotfire') && seconds !== null) {
+      const cleanMsg = msg.replace(/\s*Até\s*\d+s.*/i, '');
+      return `${cleanMsg} Até ${seconds}s`;
+    }
+    return msg || 'Aplicando filtros e baixando tabelas...';
+  });
+
+  private startLoginCountdown(): void {
+    if (this.countdownTimer) return;
+    this.loginCountdown.set(30);
+    this.countdownTimer = setInterval(() => {
+      this.zone.run(() => {
+        const current = this.loginCountdown();
+        if (current !== null && current > 1) {
+          this.loginCountdown.set(current - 1);
+        } else {
+          this.stopLoginCountdown();
+        }
+      });
+    }, 1000);
+  }
+
+  private stopLoginCountdown(): void {
+    if (this.countdownTimer) {
+      clearInterval(this.countdownTimer);
+      this.countdownTimer = undefined;
+    }
+    this.loginCountdown.set(null);
+  }
+
   protected readonly errorMessage = signal('');
   protected readonly filterDrawerOpen = signal(false);
   protected readonly selectedTrendLine = signal<string | null>(null);
@@ -5130,10 +5272,18 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   private hasLoadedDownloadData = false;
   private availableTeams: string[] = [];
   private dragSelectionState: { key: FilterKey; mode: 'add' | 'remove'; anchorIndex: number; baseline: Set<string> } | null = null;
+  private reportDropdownDragState: {
+    key: ReportFilterKey;
+    mode: 'add' | 'remove';
+    anchorIndex: number;
+    baseline: Set<string>;
+    optionsList: string[];
+  } | null = null;
   private dragScrollTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly boundEndFilterDrag = () => {
     this.dragSelectionState = null;
     this.dragScrollTimer = null;
+    this.reportDropdownDragState = null;
   };
   private readonly boundKeyDown = (_event: KeyboardEvent) => {
     // F5 reloads the page normally, which triggers submit() via ngOnInit
@@ -5149,11 +5299,40 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     }
   };
-  private readonly boundWindowMouseMove = (event: MouseEvent) => {
-    const topRevealZonePx = 42;
-    const isInTopZone = event.clientY <= topRevealZonePx;
 
-    if (isInTopZone) {
+  protected onFilterBarMouseEnter(): void {
+    if (this.reportBarHideTimer) {
+      clearTimeout(this.reportBarHideTimer);
+      this.reportBarHideTimer = null;
+    }
+    this.reportBarHidden.set(false);
+  }
+
+  protected onFilterBarMouseLeave(): void {
+    if (this.openDropdownKey()) return;
+    if (this.reportBarHideTimer) {
+      clearTimeout(this.reportBarHideTimer);
+    }
+    this.reportBarHideTimer = setTimeout(() => {
+      if (!this.openDropdownKey()) {
+        this.reportBarHidden.set(true);
+      }
+      this.reportBarHideTimer = null;
+    }, 2000);
+  }
+
+  private readonly boundWindowMouseMove = (event: MouseEvent) => {
+    const filterGroupsEl = document.querySelector('.report-filter-groups');
+    if (!filterGroupsEl) return;
+
+    const rect = filterGroupsEl.getBoundingClientRect();
+    const revealTopPx = 36;
+    const isDirectlyAboveFilterChips =
+      event.clientY <= revealTopPx &&
+      event.clientX >= rect.left - 10 &&
+      event.clientX <= rect.right + 10;
+
+    if (isDirectlyAboveFilterChips) {
       this.isPointerInTopRevealZone = true;
       if (this.reportBarHideTimer) {
         clearTimeout(this.reportBarHideTimer);
@@ -5171,9 +5350,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       }
 
       this.reportBarHideTimer = setTimeout(() => {
-        this.reportBarHidden.set(true);
+        if (!this.openDropdownKey()) {
+          this.reportBarHidden.set(true);
+        }
         this.reportBarHideTimer = null;
-      }, 7000);
+      }, 1500);
     }
   };
 
@@ -7182,6 +7363,84 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.toggleReportFilterOption(key, option, true);
   }
 
+  protected beginReportDropdownDrag(filter: ReportSelectFilterState, option: string, event: MouseEvent): void {
+    if (event.button !== 0) return;
+    event.preventDefault();
+
+    const optionsList = this.filteredDropdownOptions(filter);
+    const anchorIndex = optionsList.indexOf(option);
+    if (anchorIndex < 0) return;
+
+    if (option === ALL_OPTION) {
+      this.toggleReportFilterOption(filter.key, ALL_OPTION);
+      this.reportDropdownDragState = null;
+      return;
+    }
+
+    const currentSelected = new Set(filter.value.filter((v) => v !== ALL_OPTION));
+    const isSelected = currentSelected.has(option);
+    const mode: 'add' | 'remove' = isSelected ? 'remove' : 'add';
+
+    const baseline = new Set(currentSelected);
+    if (mode === 'add') {
+      baseline.add(option);
+    } else {
+      baseline.delete(option);
+    }
+
+    const updatedValue = Array.from(baseline);
+    this.applyReportFilterSelection(filter.key, updatedValue.length > 0 ? updatedValue : [ALL_OPTION]);
+
+    this.reportDropdownDragState = {
+      key: filter.key,
+      mode,
+      anchorIndex,
+      baseline: new Set(currentSelected),
+      optionsList,
+    };
+  }
+
+  protected continueReportDropdownDrag(filter: ReportSelectFilterState, option: string, event: MouseEvent): void {
+    if (
+      !this.reportDropdownDragState ||
+      this.reportDropdownDragState.key !== filter.key ||
+      (event.buttons & 1) !== 1 ||
+      option === ALL_OPTION
+    ) {
+      return;
+    }
+
+    const { mode, anchorIndex, baseline, optionsList } = this.reportDropdownDragState;
+    const currentIndex = optionsList.indexOf(option);
+    if (currentIndex < 0) return;
+
+    const startIndex = Math.min(anchorIndex, currentIndex);
+    const endIndex = Math.max(anchorIndex, currentIndex);
+
+    const nextSelected = new Set(baseline);
+    for (let i = startIndex; i <= endIndex; i++) {
+      const opt = optionsList[i];
+      if (opt && opt !== ALL_OPTION) {
+        if (mode === 'add') {
+          nextSelected.add(opt);
+        } else {
+          nextSelected.delete(opt);
+        }
+      }
+    }
+
+    const updatedValue = Array.from(nextSelected);
+    this.applyReportFilterSelection(filter.key, updatedValue.length > 0 ? updatedValue : [ALL_OPTION]);
+  }
+
+  private applyReportFilterSelection(key: ReportFilterKey, value: string[]): void {
+    const filters = this.reportFilterStates();
+    const updated = filters.map((f) => (f.key === key ? { ...f, value } : f));
+    this.setReportFilterStates(this.cascadeReportFilters(updated, this.reportType()), this.reportType());
+    this.saveToStorage();
+    this.scheduleInstantReportRefresh();
+  }
+
   protected beginOptionSelection(key: FilterKey, value: string, event: MouseEvent): void {
     if (event.button !== 0) {
       return;
@@ -7336,6 +7595,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.filterDrawerOpen.set(false);
     this.cancelActiveDownloadRequest();
+    this.stopLoginCountdown();
     this.loading.set(true);
     this.progressMessage.set('');
     this.progressLog.set([]);
@@ -7359,6 +7619,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         onProgress: (message) => {
           this.zone.run(() => {
             this.progressMessage.set(message);
+            if (message.includes('Autenticando no Spotfire')) {
+              this.startLoginCountdown();
+            } else if (!message.includes('Autenticando')) {
+              this.stopLoginCountdown();
+            }
             if (message.startsWith('✓ Filtro')) {
               this.progressLog.update((log) => [...log, message]);
             }
@@ -7366,6 +7631,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         },
         onResult: () => {
           this.zone.run(() => {
+            this.stopLoginCountdown();
             this.activeDownloadAbort = undefined;
             this.progressMessage.set('Gerando relatório analítico...');
           });
@@ -7389,6 +7655,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
               });
             },
             error: () => {
+              this.stopLoginCountdown();
               this.loading.set(false);
               this.progressMessage.set('');
               this.errorMessage.set('Falha ao gerar relatório após o download');
@@ -7397,6 +7664,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         },
         onError: (message) => {
           this.zone.run(() => {
+            this.stopLoginCountdown();
             this.progressMessage.set('');
             this.errorMessage.set(message ?? 'Erro desconhecido ao processar filtros');
             this.activeDownloadAbort = undefined;
@@ -7407,6 +7675,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     ).catch((err) => {
       if (err?.name === 'AbortError') return;
       this.zone.run(() => {
+        this.stopLoginCountdown();
         this.progressMessage.set('');
         this.errorMessage.set('Erro de conexão com o servidor');
         this.activeDownloadAbort = undefined;
@@ -7415,9 +7684,15 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   protected dismissError(): void {
+    this.stopLoginCountdown();
     this.loading.set(false);
     this.errorMessage.set('');
     this.progressMessage.set('');
+  }
+
+  protected retryFromError(): void {
+    this.dismissError();
+    this.openFilterDrawer();
   }
 
   private regenerateReport(): void {

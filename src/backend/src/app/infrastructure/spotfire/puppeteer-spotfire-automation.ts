@@ -28,6 +28,8 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
   private persistentPage?: Page;
 
   private readonly verbose: boolean;
+  private lastAuthenticatedUser?: string;
+  private lastAuthenticatedPassword?: string;
 
   public constructor(private readonly environment: Environment) {
     this.verbose = environment.spotfire.debug;
@@ -367,8 +369,15 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
         } catch (err) {
           lastExtractionError = err;
 
-          // Abort errors are never retried — propagate immediately
-          if ((err instanceof Error && err.name === 'AbortError') || req.signal?.aborted) {
+          // Abort errors and authentication errors are never retried automatically — propagate immediately
+          const errMessage = err instanceof Error ? err.message : String(err);
+          const isAuthError = errMessage.includes('Credenciais inválidas') ||
+                              errMessage.includes('Spotfire login required') ||
+                              errMessage.includes('sistema do Spotfire está instável') ||
+                              errMessage.includes('login did not complete');
+
+          if (isAuthError || (err instanceof Error && err.name === 'AbortError') || req.signal?.aborted) {
+            this.logStep('data-download', 'FAIL', `extraction stopped without retry: ${errMessage}`);
             throw err;
           }
 
@@ -4066,20 +4075,6 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
   }
 
   private async completeLoginIfRequired(page: Page, req?: ScannerRunRequest): Promise<void> {
-    if (!await this.isLoginPage(page)) {
-      if (req) this.emitProgress(req, 'Sessão ativa detectada, pulando login e indo direto para o scanner...');
-      this.log('login step skipped because page is already authenticated', {
-        currentUrl: page.url(),
-      });
-      return;
-    }
-
-    if (req) this.emitProgress(req, 'Iniciando processo de login...');
-    this.info('Login detectado, autenticando...');
-    this.log('login page detected, filling credentials', {
-      currentUrl: page.url(),
-    });
-
     const modalUsername = req?.userCredentials?.username?.trim();
     const modalPassword = req?.userCredentials?.password?.trim();
 
@@ -4092,11 +4087,48 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
       throw new Error('Spotfire login required but no username/password was provided in request or environment.');
     }
 
+    // Se a requisição contiver credenciais do modal e elas forem diferentes do usuário
+    // que foi autenticado anteriormente (ou se for uma nova verificação), forçamos o encerramento
+    // da sessão no navegador Puppeteer para garantir que os dados de login informados sejam validados no Spotfire.
+    const isCredentialsChange = Boolean(modalUsername || modalPassword) && (
+      this.lastAuthenticatedUser !== username ||
+      this.lastAuthenticatedPassword !== password
+    );
+
+    if (isCredentialsChange && !await this.isLoginPage(page)) {
+      this.log('alteração de usuário ou senha detectada — limpando cookies da sessão anterior para validação', {
+        previousUser: this.lastAuthenticatedUser,
+        newUser: username,
+      });
+      if (req) this.emitProgress(req, `Validando credenciais do usuário ${username}...`);
+
+      const client = await page.target().createCDPSession();
+      await client.send('Network.clearBrowserCookies').catch(() => undefined);
+      await client.detach().catch(() => undefined);
+
+      // Redireciona para forçar exibição da tela de login
+      await page.goto(this.environment.spotfire.analysisUrl, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      }).catch(() => undefined);
+    }
+
+    if (!await this.isLoginPage(page)) {
+      if (req) this.emitProgress(req, 'Sessão ativa detectada no Spotfire...');
+      this.log('login step skipped because page is already authenticated', {
+        currentUrl: page.url(),
+        user: username,
+      });
+      return;
+    }
+
     if (modalUsername) {
       this.info(`Prioridade Ativa: Autenticando com usuário enviado pelo modal (${username})`);
     } else {
       this.info(`Autenticando com usuário de fallback do servidor (${username})`);
     }
+
+    if (req) this.emitProgress(req, `Autenticando no Spotfire (${username})...`);
 
     await page.locator("input[type='text']").fill(username);
     await page.locator("input[type='password']").fill(password);
@@ -4128,11 +4160,10 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
         }),
       ]);
     } catch (err) {
+      this.lastAuthenticatedUser = undefined;
+      this.lastAuthenticatedPassword = undefined;
       const msg = err instanceof Error ? err.message : String(err);
       this.logStep('login', 'FAIL', `Login failed or timed out (30s): ${msg}`);
-      if (req) {
-        this.emitProgress(req, `Erro no login: ${userFriendlyErrorMessage}`);
-      }
       throw new Error(userFriendlyErrorMessage);
     } finally {
       if (timeoutTimer) {
@@ -4140,9 +4171,12 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
       }
     }
 
+    this.lastAuthenticatedUser = username;
+    this.lastAuthenticatedPassword = password;
     this.info('Login concluído ✓');
     this.log('login submit completed successfully', {
       currentUrl: page.url(),
+      user: username,
     });
   }
 

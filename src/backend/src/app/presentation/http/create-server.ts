@@ -164,6 +164,7 @@ export async function createServer() {
       reportTitle,
       selectedFilters: payload.selectedFilters,
       periodSelection: payload.periodSelection,
+      userCredentials: payload.userCredentials,
     });
 
     const cachedResult = cacheService.get(cacheKey);
