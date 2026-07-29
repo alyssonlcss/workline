@@ -3,6 +3,22 @@
 Todos os recursos notáveis, correções e melhorias neste projeto serão documentados neste arquivo.
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [1.2.0] - 2026-07-29
+
+Esta release introduz a nova **Arquitetura Multi-Usuário em Alta Concorrência (Sem Banco de Dados)** e o módulo de **Credenciais Dinâmicas Spotfire Per-User**.
+
+### Adicionado
+- **Credenciais Spotfire no Modal de Filtros (Frontend):** Painel lateral de filtros atualizado com campos compactos para Usuário e Senha do Spotfire em 2 colunas lado a lado, salvamento automático isolado no `localStorage` por usuário e botão com alternador de visibilidade de senha (olhinho 👁️).
+- **Fila de Execução Concorrente (`ExtractionQueueManager`):** Orquestrador de requisições concorrentes com limitação configurável de trabalhadores Puppeteer via `p-limit` e feedback ao vivo da posição na fila em tempo real via Server-Sent Events (SSE).
+- **Gerenciamento de Sessões em Memória (`SessionService`):** Sistema de sessões de usuário com UUIDs e TTL configurável de 8 horas, integrado com cookies HTTP-only e endpoints de autenticação `/api/auth/*`.
+- **Isolamento de Arquivos & Garbage Collection (`TempStorageService` e `FileGarbageCollector`):** Estrutura de diretórios temporários isolados por sessão/job (`src/data/sessions/<sessionId>/<jobId>/`) com serviço automatizado de limpeza de arquivos com mais de 30 minutos.
+- **Cache de Extração por Hash SHA-256 (`ExtractionCacheService`):** Mecanismo de cache em memória que identifica consultas idênticas e responde em menos de 100ms sem reabrir instâncias do navegador.
+
+### Alterado
+- **Segurança e Validação de Ambiente (`env.ts`):** As variáveis `SPOTFIRE_USERNAME` e `SPOTFIRE_PASSWORD` no `.env` do backend tornaram-se opcionais, permitindo a inicialização limpa do servidor e a autenticação com as credenciais dinâmicas do usuário enviadas pelo modal.
+- **Automação do Puppeteer (`PuppeteerSpotfireAutomation`):** O fluxo de login agora prioriza as credenciais dinâmicas passadas na requisição do usuário (`req.userCredentials`), com fallback para `.env`.
+- **Fim dos Cancelamentos Globais entre Usuários:** As requisições de extração de múltiplos usuários ocorrem de forma concorrente sem que uma nova extração cancele as automações em andamento de outros usuários.
+
 ## [1.1.0] - 2026-07-10
 
 Esta release consolida o novo módulo analítico "Relatório de Despacho", agregando algoritmos de inteligência para detecção avançada de ociosidades operacionais.

@@ -91,10 +91,21 @@ Após o build inicial, o aplicativo frontend estará acessível em `http://local
 
 ---
 
+## 👥 Arquitetura Multi-Usuário e Alta Concorrência (Sem Banco de Dados)
+
+O Scanner Analytics foi desenhado para operar na rede interna corporativa sem necessidade de infraestrutura pesada de banco de dados SQL/NoSQL. O sistema gerencia múltiplos acessos concorrentes através dos seguintes mecanismos:
+
+- **Credenciais Per-User no Frontend**: Cada usuário insere seu **Usuário** e **Senha** do Spotfire no painel lateral de extração. O frontend salva localmente no navegador (`localStorage`) de forma isolada, possui um alternador de visibilidade de senha (olhinho 👁️) e transmite as credenciais na requisição de extração.
+- **Fila de Execução Concorrente (`ExtractionQueueManager`)**: Orquestra as requisições com um limite de navegações simultâneas via `p-limit`. Quando o número de requisições excede a capacidade do servidor, o usuário recebe um evento SSE com sua posição exata na fila (*ex: "Solicitação na fila — Posição 2"*).
+- **Isolamento de Sessões e Arquivos Temporários**: Cada extração é processada em um diretório temporário exclusivo (`src/data/sessions/<sessionId>/<jobId>/`). Um **Garbage Collector** periódico elimina automaticamente arquivos temporários com mais de 30 minutos.
+- **Cache de Extrações em Memória (`ExtractionCacheService`)**: Requisições com filtros idênticos reutilizam os resultados recentemente extraídos (hash SHA-256), retornando dados em menos de 100ms sem abrir instâncias desnecessárias do Puppeteer.
+
+---
+
 ## ⚙️ Configuração Adicional
 
 ### Configuração do Arquivo `.env`
-O backend requer credenciais de acesso e as URLs do sistema corporativo para que o robô Puppeteer possa autenticar e extrair os dados do seu BI de origem. Para configurar, duplique o arquivo `.env.example` localizado em `src/backend`, renomeie-o para `.env` e preencha com as informações da sua organização:
+O backend requer as URLs do sistema corporativo para que o robô Puppeteer possa navegar e extrair os dados. Para configurar, duplique o arquivo `.env.example` localizado em `src/backend`, renomeie-o para `.env` e preencha com as informações da sua organização:
 
 ```env
 # Porta do Servidor API (Opcional, Padrão: 3000)
@@ -104,9 +115,9 @@ PORT=3000
 SPOTFIRE_LOGIN_URL=http://<SEU-DOMINIO-BI>:8090/spotfire/wp/login
 SPOTFIRE_ANALYSIS_URL=http://<SEU-DOMINIO-BI>:8090/spotfire/wp/analysis?file=/Caminho/do/Relatorio
 
-# Credenciais de Rede (Conta de serviço/usuário do robô)
-SPOTFIRE_USERNAME=seu_usuario
-SPOTFIRE_PASSWORD=sua_senha
+# Credenciais do Robô / Fallback (Opcional - usuários informam no modal da interface)
+SPOTFIRE_USERNAME=
+SPOTFIRE_PASSWORD=
 
 # Título do Relatório no BI
 SPOTFIRE_DEFAULT_REPORT_TITLE=Nome do Relatorio
