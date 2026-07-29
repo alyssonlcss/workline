@@ -824,103 +824,100 @@ type SavedFilterState = {
                   <p class="kpi-meta-ok">✅ Todas as equipes atingiram a meta esperada.</p>
                 </ng-container>
                 <!-- Utilização drill-down (3 abaixo do padrão) -->
-                <ng-container *ngIf="kpi.kpi === 'Utilização' && report.specialAnalysis.utilizacaoAnalysis && report.specialAnalysis.utilizacaoAnalysis.length > 0">
+                <ng-container *ngIf="kpi.kpi === 'Utilização'">
                   <div class="kpi-osdia-drill-head">
                     🔍 Análise Detalhada — 3 Abaixo do Padrão
                     <span class="rpt-osdia-src-inline">Fonte: Scanner 4.0 CE - M300</span>
                   </div>
-                  <div class="rpt-osdia-grid">
-                    <div class="rpt-osdia-card" *ngFor="let analysis of filterOsDiaEvidence(report.specialAnalysis.utilizacaoAnalysis)">
-                      <div class="rpt-osdia-card-head">
-                        <span class="rpt-osdia-team">{{ analysis.team }}<ng-container *ngIf="isTeamInBottomOsDia(analysis.team)"> *</ng-container></span>
-                        <span class="rpt-osdia-badge rpt-osdia-badge--gap">Gap {{ analysis.gap | number:'1.1-1' }}%</span>
-                        <button class="export-png-btn" (click)="exportTeamCardToPng($event, analysis.team)" title="Copiar imagem">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                        </button>
-                      </div>
-                      <div class="rpt-osdia-card-meta">
-                        <span class="rpt-osdia-chip" *ngFor="let chip of getChips('Eficiência', analysis)">
-                          {{ chip.label }} <strong [innerHTML]="chip.value"></strong>
-                        </span>
-                      </div>
-                      <!-- Card único de warnings: ociosidade + ordens flagadas -->
-                      <ng-container *ngIf="analysis.idleAnalysis || analysis.flaggedOrders.length > 0; else noUtilizacaoEvidence">
-                        <div class="osdia-idle-notice">
-                          <!-- Ociosidade -->
-                          <ng-container *ngIf="analysis.idleAnalysis">
-                            <div class="osdia-idle-header">
-                              <span class="osdia-idle-icon">⚠️</span>
-                              <strong>Ociosidade elevada — {{ analysis.idleAnalysis.idlePct | number:'1.1-1' }}% da jornada sem trabalho registrado</strong>
-                            </div>
-                            <div class="osdia-idle-metrics">
-                              <span class="osdia-idle-chip osdia-idle-chip--hd">HD {{ analysis.totalJornadas === 1 ? 'Total' : 'Médio/dia' }} <strong>{{ analysis.hdTotalMin | number:'1.0-0' }} min</strong></span>
-                              <span class="osdia-idle-chip osdia-idle-chip--prep">Temp. Partida {{ analysis.totalJornadas === 1 ? 'Total' : 'Médio/dia' }} <strong>{{ analysis.tempPrepTotalMin | number:'1.0-0' }} min</strong></span>
-                              <span class="osdia-idle-chip osdia-idle-chip--sem">SemOrdem {{ analysis.totalJornadas === 1 ? 'Total' : 'Médio/dia' }} <strong>{{ analysis.semOrdemTotalMin | number:'1.0-0' }} min</strong></span>
-                              <span class="osdia-idle-chip osdia-idle-chip--idle">Ocioso {{ analysis.totalJornadas === 1 ? 'Total' : 'Médio/dia' }} <strong>{{ analysis.idleAnalysis.idleMin | number:'1.0-0' }} min ({{ analysis.idleAnalysis.idlePct | number:'1.1-1' }}%) — limite: 10%</strong></span>
-                              <span class="osdia-idle-chip osdia-idle-chip--he" *ngIf="analysis.idleAnalysis!.horasExtras! > 0">Horas Extras {{ analysis.totalJornadas === 1 ? 'Total' : 'Méd/dia' }} <strong>{{ analysis.idleAnalysis!.horasExtras | number:'1.0-0' }} min</strong></span>
-                            </div>
-                          </ng-container>
-                          <!-- Ordens flagadas agrupadas por data referência -->
-                          <div class="osdia-ev-list" *ngIf="analysis.flaggedOrders.length > 0">
-                            <ng-template #utilizacaoEvTpl let-ev>
-                              <div class="osdia-ev-header">
-                                <span class="osdia-ev-ordem">OS {{ ev.nr_ordem }}</span>
-                                <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngIf="!ev.prev_liberada">1ª OS</span>
-                                <span class="rpt-osdia-flag" *ngFor="let f of ev.flags">{{ osDiaFlagLabel(f) }}</span>
-                                <span class="rpt-osdia-flag" *ngIf="entreOsAfterIntervalo(ev)">Entre OS≥10min</span>
-                                <span class="rpt-osdia-flag" *ngIf="getOciosoTotal(ev) != null">Ocioso: {{ getOciosoTotal(ev) | number:'1.0-0' }} min</span>
-                              </div>
-                              <p class="osdia-ev-causa" *ngIf="ev.classe || ev.causa || evDespAfterPrevLib(ev)">
-                                <span *ngIf="ev.classe"><strong>Classe:</strong> {{ ev.classe }}</span>
-                                <span class="osdia-ev-causa-sep" *ngIf="ev.classe && ev.causa"> · </span>
-                                <span *ngIf="ev.causa"><strong>Causa:</strong> {{ ev.causa }}</span>
-                                <ng-container *ngIf="evDespAfterPrevLib(ev) as despTime">
-                                  <span class="osdia-ev-causa-sep" *ngIf="ev.classe || ev.causa"> · </span>
-                                  <span><strong>Desp.:</strong> {{ despTime }}</span>
-                                </ng-container>
-                              </p>
-                              <app-timeline-visual [ev]="ev"></app-timeline-visual>
-                              <ul class="osdia-ev-alerts">
-                                <li *ngFor="let alert of getAlerts('OS Dia', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
-                                  <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
-                                </li>
-                              </ul>
-                            </ng-template>
-                            <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.flaggedOrders, undefined); trackBy: trackByDateRef">
-                              <div class="ev-date-group-header">{{ grp.dateRef }}</div>
-                              <div class="osdia-ev-item" *ngFor="let ev of grp.items">
-                                <ng-container *ngTemplateOutlet="utilizacaoEvTpl; context: {$implicit: ev}"></ng-container>
-                              </div>
-                            </ng-container>
-                            <ng-container *ngIf="analysis.extraFlaggedOrders?.length">
-                              <button class="ev-ver-mais-btn team-ver-mais" style="background-color: lightblue; color: #000; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" (click)="toggleTeamExpanded('Utilização', analysis.team)">
-                                {{ isTeamExpanded('Utilização', analysis.team) ? '▲ Ver menos' : '▼ Ver mais ' + (analysis.extraFlaggedOrders?.length || 0) + ' OS(s) com baixo tempo' }}
-                              </button>
-                              <div *ngIf="isTeamExpanded('Utilização', analysis.team)" class="extra-orders-container" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
-                                <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.extraFlaggedOrders || [], []); trackBy: trackByDateRef">
-                                  <div class="ev-date-group-header" style="opacity: 0.8">{{ grp.dateRef }} (Extra)</div>
-                                  <div class="osdia-ev-item osdia-ev-item--extra" *ngFor="let ev of grp.items">
-                                    <ng-container *ngTemplateOutlet="utilizacaoEvTpl; context: {$implicit: ev}"></ng-container>
-                                  </div>
-                                </ng-container>
-                              </div>
-                            </ng-container>
-                          </div>
+                  <ng-container *ngIf="report.specialAnalysis.utilizacaoAnalysis && report.specialAnalysis.utilizacaoAnalysis.length > 0 && filterOsDiaEvidence(report.specialAnalysis.utilizacaoAnalysis).length > 0; else noUtilizacaoAnalysis">
+                    <div class="rpt-osdia-grid">
+                      <div class="rpt-osdia-card" *ngFor="let analysis of filterOsDiaEvidence(report.specialAnalysis.utilizacaoAnalysis)">
+                        <div class="rpt-osdia-card-head">
+                          <span class="rpt-osdia-team">{{ analysis.team }}<ng-container *ngIf="isTeamInBottomKpi(analysis.team, 'Utilização')"> *</ng-container></span>
+                          <span class="rpt-osdia-badge rpt-osdia-badge--gap">Gap {{ analysis.gap | number:'1.1-1' }}%</span>
+                          <button class="export-png-btn" (click)="exportTeamCardToPng($event, analysis.team)" title="Copiar imagem">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                          </button>
                         </div>
-                      </ng-container>
-                      <ng-template #noUtilizacaoEvidence>
-                        <p class="rpt-no-data">Nenhuma ordem com alertas nos dados filtrados.</p>
-                      </ng-template>
+                        <div class="rpt-osdia-card-meta">
+                          <span class="rpt-osdia-chip" *ngFor="let chip of getChips('Utilização', analysis)">
+                            {{ chip.label }} <strong [innerHTML]="chip.value"></strong>
+                          </span>
+                        </div>
+                        <!-- Card único de warnings: ociosidade + ordens flagadas -->
+                        <ng-container *ngIf="analysis.idleAnalysis || (analysis.flaggedOrders && analysis.flaggedOrders.length > 0); else noUtilizacaoEvidence">
+                          <div class="osdia-idle-notice">
+                            <!-- Ociosidade -->
+                            <ng-container *ngIf="analysis.idleAnalysis">
+                              <div class="osdia-idle-header">
+                                <span class="osdia-idle-icon">⚠️</span>
+                                <strong>Ociosidade elevada — {{ analysis.idleAnalysis.idlePct | number:'1.1-1' }}% da jornada sem trabalho registrado</strong>
+                              </div>
+                              <div class="osdia-idle-metrics">
+                                <span class="osdia-idle-chip osdia-idle-chip--hd">HD {{ analysis.totalJornadas === 1 ? 'Total' : 'Médio/dia' }} <strong>{{ analysis.hdTotalMin | number:'1.0-0' }} min</strong></span>
+                                <span class="osdia-idle-chip osdia-idle-chip--prep">Temp. Partida {{ analysis.totalJornadas === 1 ? 'Total' : 'Médio/dia' }} <strong>{{ analysis.tempPrepTotalMin | number:'1.0-0' }} min</strong></span>
+                                <span class="osdia-idle-chip osdia-idle-chip--sem">SemOrdem {{ analysis.totalJornadas === 1 ? 'Total' : 'Médio/dia' }} <strong>{{ analysis.semOrdemTotalMin | number:'1.0-0' }} min</strong></span>
+                                <span class="osdia-idle-chip osdia-idle-chip--idle">Ocioso {{ analysis.totalJornadas === 1 ? 'Total' : 'Médio/dia' }} <strong>{{ analysis.idleAnalysis.idleMin | number:'1.0-0' }} min ({{ analysis.idleAnalysis.idlePct | number:'1.1-1' }}%) — limite: 10%</strong></span>
+                                <span class="osdia-idle-chip osdia-idle-chip--he" *ngIf="analysis.idleAnalysis.horasExtras && analysis.idleAnalysis.horasExtras > 0">Horas Extras {{ analysis.totalJornadas === 1 ? 'Total' : 'Méd/dia' }} <strong>{{ analysis.idleAnalysis.horasExtras | number:'1.0-0' }} min</strong></span>
+                              </div>
+                            </ng-container>
+                            <!-- Ordens flagadas agrupadas por data referência -->
+                            <div class="osdia-ev-list" *ngIf="analysis.flaggedOrders && analysis.flaggedOrders.length > 0">
+                              <ng-template #utilizacaoEvTpl let-ev>
+                                <div class="osdia-ev-header">
+                                  <span class="osdia-ev-ordem">OS {{ ev.nr_ordem }}</span>
+                                  <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngIf="!ev.prev_liberada">1ª OS</span>
+                                  <span class="rpt-osdia-flag" *ngFor="let f of ev.flags">{{ osDiaFlagLabel(f) }}</span>
+                                  <span class="rpt-osdia-flag" *ngIf="entreOsAfterIntervalo(ev)">Entre OS≥10min</span>
+                                  <span class="rpt-osdia-flag" *ngIf="getOciosoTotal(ev) != null">Ocioso: {{ getOciosoTotal(ev) | number:'1.0-0' }} min</span>
+                                </div>
+                                <p class="osdia-ev-causa" *ngIf="ev.classe || ev.causa || evDespAfterPrevLib(ev)">
+                                  <span *ngIf="ev.classe"><strong>Classe:</strong> {{ ev.classe }}</span>
+                                  <span class="osdia-ev-causa-sep" *ngIf="ev.classe && ev.causa"> · </span>
+                                  <span *ngIf="ev.causa"><strong>Causa:</strong> {{ ev.causa }}</span>
+                                  <ng-container *ngIf="evDespAfterPrevLib(ev) as despTime">
+                                    <span class="osdia-ev-causa-sep" *ngIf="ev.classe || ev.causa"> · </span>
+                                    <span><strong>Desp.:</strong> {{ despTime }}</span>
+                                  </ng-container>
+                                </p>
+                                <app-timeline-visual [ev]="ev"></app-timeline-visual>
+                                <ul class="osdia-ev-alerts">
+                                  <li *ngFor="let alert of getAlerts('Utilização', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
+                                    <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
+                                  </li>
+                                </ul>
+                              </ng-template>
+                              <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.flaggedOrders, undefined); trackBy: trackByDateRef">
+                                <div class="ev-date-group-header">{{ grp.dateRef }}</div>
+                                <div class="osdia-ev-item" *ngFor="let ev of grp.items">
+                                  <ng-container *ngTemplateOutlet="utilizacaoEvTpl; context: {$implicit: ev}"></ng-container>
+                                </div>
+                              </ng-container>
+                              <ng-container *ngIf="analysis.extraFlaggedOrders?.length">
+                                <button class="ev-ver-mais-btn team-ver-mais" style="background-color: lightblue; color: #000; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" (click)="toggleTeamExpanded('Utilização', analysis.team)">
+                                  {{ isTeamExpanded('Utilização', analysis.team) ? '▲ Ver menos' : '▼ Ver mais ' + (analysis.extraFlaggedOrders?.length || 0) + ' OS(s) com baixo tempo' }}
+                                </button>
+                                <div *ngIf="isTeamExpanded('Utilização', analysis.team)" class="extra-orders-container" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
+                                  <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.extraFlaggedOrders || [], []); trackBy: trackByDateRef">
+                                    <div class="ev-date-group-header" style="opacity: 0.8">{{ grp.dateRef }} (Extra)</div>
+                                    <div class="osdia-ev-item osdia-ev-item--extra" *ngFor="let ev of grp.items">
+                                      <ng-container *ngTemplateOutlet="utilizacaoEvTpl; context: {$implicit: ev}"></ng-container>
+                                    </div>
+                                  </ng-container>
+                                </div>
+                              </ng-container>
+                            </div>
+                          </div>
+                        </ng-container>
+                        <ng-template #noUtilizacaoEvidence>
+                          <p class="rpt-no-data">Nenhuma ordem com alertas nos dados filtrados.</p>
+                        </ng-template>
+                      </div>
                     </div>
-                  </div>
-                </ng-container>
-                <!-- Utilização: all teams at meta -->
-                <ng-container *ngIf="kpi.kpi === 'Utilização' && (!report.specialAnalysis.utilizacaoAnalysis || report.specialAnalysis.utilizacaoAnalysis.length === 0)">
-                  <div class="kpi-osdia-drill-head">
-                    🔍 Análise Detalhada — 3 Abaixo do Padrão
-                    <span class="rpt-osdia-src-inline">Fonte: Scanner 4.0 CE - M300</span>
-                  </div>
-                  <p class="kpi-meta-ok">✅ Todas as equipes atingiram a meta esperada.</p>
+                  </ng-container>
+                  <ng-template #noUtilizacaoAnalysis>
+                    <p class="kpi-meta-ok">✅ Todas as equipes atingiram a meta esperada.</p>
+                  </ng-template>
                 </ng-container>
                 <!-- TME IMP drill-down -->
                 <ng-container *ngIf="kpi.kpi === 'TME IMP' && kpi.tmeImpAnalysis && kpi.tmeImpAnalysis.length > 0">
@@ -6611,11 +6608,15 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   protected isTeamInBottomOsDia(teamName: string): boolean {
+    return this.isTeamInBottomKpi(teamName, 'OS Dia');
+  }
+
+  protected isTeamInBottomKpi(teamName: string, kpiName: string = 'OS Dia'): boolean {
     const report = this.reportData();
     if (!report || !report.kpis) return false;
-    const osDiaKpi = report.kpis.find((k: any) => k.kpi === 'OS Dia');
-    if (!osDiaKpi || !osDiaKpi.opportunityTeams) return false;
-    return osDiaKpi.opportunityTeams.some((t: any) => t.team === teamName);
+    const kpiObj = report.kpis.find((k: any) => k.kpi === kpiName);
+    if (!kpiObj || !kpiObj.opportunityTeams) return false;
+    return kpiObj.opportunityTeams.some((t: any) => t.team === teamName);
   }
 
   protected getFilteredDestaques(kpi: any, cd: any): { top: any[]; bottom: any[]; selectedDay: string | null; selectedDayAvg?: number | null } {
@@ -6696,7 +6697,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         if (kpi.kpi === 'OS Dia' && report.specialAnalysis.osDiaAnalysis) {
           validBottomTeams = new Set(this.filterOsDiaEvidence(report.specialAnalysis.osDiaAnalysis as any).map((a: any) => a.team));
         } else if (kpi.kpi === 'Utilização' && report.specialAnalysis.utilizacaoAnalysis) {
-          validBottomTeams = new Set(report.specialAnalysis.utilizacaoAnalysis.filter((a: any) => a.flaggedOrders && a.flaggedOrders.length > 0).map((a: any) => a.team));
+          validBottomTeams = new Set(this.filterOsDiaEvidence(report.specialAnalysis.utilizacaoAnalysis as any).map((a: any) => a.team));
         } else if (kpi.kpi === 'TME IMP' && report.specialAnalysis.tmeImpAnalysis) {
           validBottomTeams = new Set(this.filterTmeImpEvidence(report.specialAnalysis.tmeImpAnalysis).map((a: any) => a.team));
         } else if (kpi.kpi === '1º Login' && report.specialAnalysis.primeiroLoginAnalysis) {

@@ -33,13 +33,15 @@ export function getDashboardChips(kpi: string, analysis: any): DashboardChip[] {
       break;
 
     case 'Eficiência':
+    case 'Utilização':
       add('Utilização', `${analysis.utilizacaoValue}%`);
       add('Meta', `${analysis.metaTarget}%`);
       if (analysis.summary?.countTempPrepAlto > 0) add('Temp. Partida≥10min', analysis.summary.countTempPrepAlto);
       if (analysis.summary?.countSemOsAlto > 0) add('SemOS≥10min', analysis.summary.countSemOsAlto);
+      if (analysis.summary?.countRetornoExcedente > 0) add('Retorno Base>meta', analysis.summary.countRetornoExcedente);
       if (analysis.jornadasAbaixoMeta > 0) add('Abaixo da meta', `${analysis.jornadasAbaixoMeta} dias`);
       add('Total OS', `${analysis.totalOrders} em ${analysis.totalJornadas} dias`);
-      add('Ocioso', `${fmtMin(analysis.idleAvgMin * analysis.idleDays)} min - ${analysis.idleDays} dias`);
+      if (analysis.idleDays > 0) add('Ocioso', `${fmtMin(analysis.idleAvgMin * analysis.idleDays)} min - ${analysis.idleDays} dias`);
       break;
 
     case 'TME Improdutivo':
@@ -110,6 +112,15 @@ export function getDashboardAlerts(kpi: string, ev: any): DashboardAlert[] {
     
     case 'Eficiência':
       addFlag('baixa_eficiencia', 'Baixa Eficiência:');
+      break;
+
+    case 'Utilização':
+      addFlag('temp_prep_alto', 'Tempo de Partida elevado:');
+      addFlag('sem_os_alto', 'Tempo Sem OS elevado:');
+      addFlag('tr_excede_hd', 'Tempo de Reparo alto:');
+      addFlag('triagem_alto', '2º Desp.:');
+      addFlag('primeiro_desloc_alto', '1º Deslocamento alto:');
+      addFlag('retorno_excedente', 'Retorno à Base excedente:');
       break;
     
     case 'TME Improdutivo':
