@@ -300,6 +300,13 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
           // New multi-table export logic
           if (req.tablesToExport && req.tablesToExport.length > 0) {
             this.logStep('export', 'START', `starting multi-table export for ${req.tablesToExport.length} tables`);
+            
+            // --- INÍCIO TESTE DE SINCRONIA ---
+            this.info('Aguardando Spotfire processar os filtros completamente no backend (5s)...');
+            this.emitProgress(req, 'Aguardando sincronização de dados do Spotfire (5s)...');
+            await new Promise(r => setTimeout(r, 5000));
+            // --- FIM TESTE DE SINCRONIA ---
+
             const est = this.estimateExtraction(req);
             if (est) {
               this.logStep('export', 'START', `estimated size: ${est.size}, time: ${est.time}`);
@@ -397,11 +404,9 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
 
           if (this.isSupersededAbort(req.signal)) {
             this.logStep('browser', 'OK', 'keeping browser and page open because job was superseded — next job will reuse this session');
-          } else if (extractionResult !== undefined) {
-            this.logStep('browser', 'OK', 'keeping browser and page open to reuse in future extractions');
           } else {
-            const reason = `closing browser after failed extraction attempt ${extractionAttempt}`;
-            this.logStep('browser', 'WARN', reason);
+            const reason = 'closing browser to ensure a clean session (cache clear) for the next extraction';
+            this.logStep('browser', 'OK', reason);
             await this.disposeAutomationSession().catch(() => undefined);
           }
         }
@@ -5328,15 +5333,18 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
 
       const menuInfo = getMenuInfo();
 
-      // Step 1: Try to click "Export table" directly
-      const exportTableDirect = findMenuItem('Export table');
-      if (exportTableDirect) {
-        exportTableDirect.click();
-        return { clicked: true, step: 'direct Export table', menuInfo };
+      // Step 1: Prioritize "Data to file" (exports raw data without visual limits)
+      const dataToFileFallbacks = ['Data to file', 'Data to file...', 'Dados para arquivo', 'Dados para arquivo...'];
+      for (const label of dataToFileFallbacks) {
+        const item = findMenuItem(label);
+        if (item) {
+          item.click();
+          return { clicked: true, step: `direct Data to file: ${label}`, menuInfo };
+        }
       }
 
       // Step 2: Look for "Export" parent menu (has submenu arrow)
-      const exportParent = findMenuItem('Export');
+      const exportParent = findMenuItem('Export') || findMenuItem('Exportar');
       if (exportParent) {
         // Hover to open submenu
         exportParent.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
@@ -5344,8 +5352,17 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
         
         await new Promise((resolveWait) => window.setTimeout(resolveWait, 300));
 
-        // Now look for "Export table" in the submenu
-        const exportTableInSubmenu = findMenuItem('Export table');
+        // Now look for Data to file first inside submenu
+        for (const label of dataToFileFallbacks) {
+          const item = findMenuItem(label);
+          if (item) {
+            item.click();
+            return { clicked: true, step: `Export -> ${label}`, menuInfo };
+          }
+        }
+
+        // Then fallback to Export table
+        const exportTableInSubmenu = findMenuItem('Export table') || findMenuItem('Exportar tabela');
         if (exportTableInSubmenu) {
           exportTableInSubmenu.click();
           return { clicked: true, step: 'Export -> Export table', menuInfo };
@@ -5355,17 +5372,17 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
         exportParent.click();
         await new Promise((resolveWait) => window.setTimeout(resolveWait, 300));
 
-        const exportTableAfterClick = findMenuItem('Export table');
+        const exportTableAfterClick = findMenuItem('Export table') || findMenuItem('Exportar tabela');
         if (exportTableAfterClick) {
           exportTableAfterClick.click();
           return { clicked: true, step: 'Export click -> Export table', menuInfo };
         }
 
-        return { clicked: false, step: 'Export parent found but no Export table in submenu', menuInfo: getMenuInfo() };
+        return { clicked: false, step: 'Export parent found but no valid export option in submenu', menuInfo: getMenuInfo() };
       }
 
       // Step 3: Fallback - try other common export labels
-      const fallbacks = ['Data to file', 'Data to file...', 'Export data', 'CSV'];
+      const fallbacks = ['Export table', 'Exportar tabela', 'Export data', 'Exportar dados', 'CSV'];
       for (const label of fallbacks) {
         const item = findMenuItem(label);
         if (item) {
@@ -6012,34 +6029,31 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
 
   private parseReferenceDate(label: string): Date | undefined {
     const normalizedLabel = label.trim();
-    const usParts = normalizedLabel.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    
+    // Primary format for Brazil: DD/MM/YYYY or DD-MM-YYYY
+    const brParts = normalizedLabel.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+    if (brParts) {
+      let day = Number(brParts[1]);
+      let month = Number(brParts[2]) - 1;
+      let year = Number(brParts[3]);
+      
+      // If month > 11, it might actually be US format MM/DD/YYYY. Swap them.
+      if (month > 11 && day <= 12) {
+        const temp = day;
+        day = month + 1;
+        month = temp - 1;
+      }
 
-    if (usParts) {
-      const month = Number(usParts[1]) - 1;
-      const day = Number(usParts[2]);
-      const year = Number(usParts[3]);
       const parsedDate = new Date(year, month, day);
-
       return Number.isNaN(parsedDate.getTime()) ? undefined : parsedDate;
     }
 
     const directDate = new Date(normalizedLabel);
-
     if (!Number.isNaN(directDate.getTime())) {
       return directDate;
     }
 
-    const parts = normalizedLabel.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
-    if (!parts) {
-      return undefined;
-    }
-
-    const day = Number(parts[1]);
-    const month = Number(parts[2]) - 1;
-    const year = Number(parts[3]);
-    const parsedDate = new Date(year, month, day);
-
-    return Number.isNaN(parsedDate.getTime()) ? undefined : parsedDate;
+    return undefined;
   }
 
   private async clickByText(page: Page, text: string, exact = true): Promise<void> {

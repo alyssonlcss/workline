@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Alysson Pinheiro. Todos os direitos reservados.
 // Software proprietário e confidencial. Uso não autorizado é proibido.
 import { createReadStream } from 'node:fs';
-import { access, mkdir, readdir, rename, rm } from 'node:fs/promises';
+import { access, copyFile, mkdir, readdir, rename, rm } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, extname, join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -234,6 +234,12 @@ export async function createServer() {
             const fileLabel = target.fileAlias ?? `${tabSlug}-${tableSlug}`;
             const fileName = `${fileLabel}.csv`;
             const filePath = await moveDownloadedFile(exportedFile, jobDirectory, fileName);
+
+            // Copy to the main output directory so it is accessible outside the job session
+            const mainOutputDir = environment.spotfire.outputDirectory;
+            await mkdir(mainOutputDir, { recursive: true });
+            const mainFilePath = join(mainOutputDir, fileName);
+            await copyFile(filePath, mainFilePath);
 
             downloadedFiles.push({
               analysisTab: target.analysisTab,
@@ -527,6 +533,9 @@ function resolveDataDirectoryCandidates(configuredOutputDirectory: string): stri
   const candidates = [
     configuredOutputDirectory ? resolve(process.cwd(), configuredOutputDirectory) : defaultDir,
     defaultDir,
+    resolve(process.cwd(), 'Data'),
+    resolve(process.cwd(), '../Data'),
+    resolve(process.cwd(), '../../Data'),
     resolve(process.cwd(), 'src/data'),
     resolve(process.cwd(), 'data'),
     resolve(process.cwd(), '../data'),

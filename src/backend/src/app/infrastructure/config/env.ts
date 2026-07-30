@@ -34,12 +34,12 @@ export function resolveDefaultDataDir(): string {
   const cwd = process.cwd();
   const normalized = cwd.replace(/\\/g, '/');
   if (normalized.endsWith('/src/backend') || normalized.endsWith('/src/frontend')) {
-    return join(cwd, '..', 'data');
+    return join(cwd, '..', '..', 'Data');
   }
   if (normalized.endsWith('/src')) {
-    return join(cwd, 'data');
+    return join(cwd, '..', 'Data');
   }
-  return join(cwd, 'src', 'data');
+  return join(cwd, 'Data');
 }
 
 const environmentSchema = z.object({
