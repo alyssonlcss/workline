@@ -95,11 +95,11 @@ export class DashboardPdfService {
     const isIdleLabel = (s: TimelineSegment): boolean => IDLE.has(s.label) || s.label.startsWith('1º Desp.') || s.label.startsWith('2º Desp.');
     const isRetornoBaseAlarm = (s: TimelineSegment): boolean => s.label === 'Retorno a base' && (s.flags?.length ?? 0) > 0;
     const getFill = (s: TimelineSegment): string =>
-      s.isInterval ? '#fde68a' : isRepairAlarm(s) || isDeslocAlarm(s) || isRetornoBaseAlarm(s) ? '#fca5a5' :
-      s.label === 'Deslocamento p/OS' ? '#dbeafe' :
-      isIdleLabel(s) ? ((s.flags?.length ?? 0) > 0 ? '#fca5a5' : '#fee2e2') : '#dbeafe';
+      s.isInterval ? '#dbeafe' : isRepairAlarm(s) || isDeslocAlarm(s) || isRetornoBaseAlarm(s) ? '#fca5a5' :
+      s.label === 'Deslocamento p/OS' ? '#dcfce7' :
+      isIdleLabel(s) ? ((s.flags?.length ?? 0) > 0 ? '#fca5a5' : '#fef9c3') : '#dcfce7';
     const getTxtColor = (s: TimelineSegment): string =>
-      s.isInterval ? '#78350f' : (isRepairAlarm(s) || isDeslocAlarm(s) || isRetornoBaseAlarm(s) || (isIdleLabel(s) && s.label !== 'Deslocamento p/OS' && (s.flags?.length ?? 0) > 0)) ? '#7f1d1d' : (isIdleLabel(s) && s.label !== 'Deslocamento p/OS') ? '#7f1d1d' : '#1e3a8a';
+      s.isInterval ? '#1e3a8a' : (isRepairAlarm(s) || isDeslocAlarm(s) || isRetornoBaseAlarm(s) || (isIdleLabel(s) && s.label !== 'Deslocamento p/OS' && (s.flags?.length ?? 0) > 0)) ? '#7f1d1d' : (isIdleLabel(s) && s.label !== 'Deslocamento p/OS') ? '#78350f' : '#14532d';
 
     // 1. Larguras proporcionais puras (mesma lógica do flex-grow da web).
     const CHAR_W = 3.6;   // pt/char estimado para Roboto bold 5.5pt

@@ -92,8 +92,8 @@ import { TimelineSegment, buildTimelineSegments, tlFlexGrow } from '../../utils/
       align-items: center;
       justify-content: center;
       border-right: 2px solid #fff;
-      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-      color: #1e3a8a;
+      background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+      color: #14532d;
       font-size: 0.8rem;
       font-weight: 600;
       min-width: max(85px, max-content);
@@ -114,13 +114,13 @@ import { TimelineSegment, buildTimelineSegments, tlFlexGrow } from '../../utils/
       border-bottom-right-radius: 8px;
     }
     .segment-interval {
-      background: linear-gradient(135deg, #fef9c3 0%, #fde68a 100%) !important;
-      color: #78350f !important;
-      border: 2px dashed #fbbf24 !important;
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+      color: #1e3a8a !important;
+      border: 2px dashed #93c5fd !important;
     }
     .segment-idle {
-      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;
-      color: #7f1d1d !important;
+      background: linear-gradient(135deg, #fef9c3 0%, #fde68a 100%) !important;
+      color: #78350f !important;
       border-right-color: #fff !important;
     }
     .segment-idle--high {

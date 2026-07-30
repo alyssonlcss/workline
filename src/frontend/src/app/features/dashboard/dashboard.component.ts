@@ -708,7 +708,7 @@ type SavedFilterState = {
                           <!-- Ociosidade -->
                           <ng-container *ngIf="analysis.idleAnalysis">
                             <div class="osdia-idle-header">
-                              <span class="osdia-idle-icon">⚠️</span>
+                              <span class="osdia-idle-icon"><svg style="width: 1.1em; height: 1.1em; color: currentColor; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>
                               <strong>Ociosidade elevada — {{ analysis.idleAnalysis.idlePct | number:'1.1-1' }}% da jornada sem trabalho registrado</strong>
                             </div>
                             <div class="osdia-idle-metrics">
@@ -810,7 +810,7 @@ type SavedFilterState = {
                       <ng-container *ngIf="analysis.flaggedOrders.length > 0 || (analysis.tempoPadraoVazioOrders && analysis.tempoPadraoVazioOrders.length > 0); else noEficienciaEvidence">
                         <div class="osdia-idle-notice">
                           <div class="osdia-idle-header">
-                            <span class="osdia-idle-icon">⚠️</span>
+                            <span class="osdia-idle-icon"><svg style="width: 1.1em; height: 1.1em; color: currentColor; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>
                             <strong>Alertas detectados</strong>
                           </div>
 
@@ -931,7 +931,7 @@ type SavedFilterState = {
                             <!-- Ociosidade -->
                             <ng-container *ngIf="analysis.idleAnalysis">
                               <div class="osdia-idle-header">
-                                <span class="osdia-idle-icon">⚠️</span>
+                                <span class="osdia-idle-icon"><svg style="width: 1.1em; height: 1.1em; color: currentColor; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>
                                 <strong>Ociosidade elevada — {{ analysis.idleAnalysis.idlePct | number:'1.1-1' }}% da jornada sem trabalho registrado</strong>
                               </div>
                               <div class="osdia-idle-metrics">
@@ -3576,8 +3576,8 @@ type SavedFilterState = {
         margin-top: 10px;
         padding: 14px 16px;
         border-radius: 12px;
-        background: rgba(234, 179, 8, 0.07);
-        border: 1px solid rgba(234, 179, 8, 0.28);
+        background: rgba(220, 38, 38, 0.07);
+        border: 1px solid rgba(220, 38, 38, 0.28);
         display: grid;
         gap: 8px;
       }
@@ -3588,15 +3588,15 @@ type SavedFilterState = {
         gap: 8px;
         font-size: 0.82rem;
         font-weight: 700;
-        color: #92400e;
+        color: #991b1b;
       }
 
-      .osdia-idle-icon { font-size: 1rem; line-height: 1; }
+      .osdia-idle-icon { font-size: 1rem; line-height: 1; display: flex; align-items: center; justify-content: center; }
 
       .osdia-idle-desc {
         margin: 0;
         font-size: 0.76rem;
-        color: #78350f;
+        color: #7f1d1d;
         line-height: 1.45;
       }
 
