@@ -59,7 +59,7 @@ export interface SemOsDetail {
 export class DashboardPdfService {
 
   private static readonly TIMELINE_IDLE_LABELS = new Set([
-    'Entre OS', 'Desl. Intervalo', 'Partida', '1º Desloc.', 'Deslocamento p/OS', 'Retorno Vazio',
+    'Sem OS', 'Desl. Intervalo: sem OS', 'Partida', '1º Desloc.', 'Deslocamento p/OS', 'Retorno Vazio',
   ]);
 
   private getOciosoTotal(ev: any): number | null {
@@ -72,8 +72,8 @@ export class DashboardPdfService {
       } else if (
         lbl.startsWith('1º Desp.') ||
         lbl.startsWith('2º Desp.') ||
-        lbl === 'Entre OS' ||
-        lbl === 'Desl. Intervalo' ||
+        lbl === 'Sem OS' ||
+        lbl === 'Desl. Intervalo: sem OS' ||
         lbl === 'Partida' ||
         lbl === '1º Desloc.'
       ) {
@@ -394,7 +394,7 @@ export class DashboardPdfService {
 
         content.push({
           stack: [
-            { text: `${idx + 1}. Faixa: ${insight.rangeStart} - ${insight.rangeEnd} | Média Sem Ordem(${insight.totalIncidences}): ${fmt(insight.averageEntreOsMin)} min`, style: 'insightTitle' },
+            { text: `${idx + 1}. Faixa: ${insight.rangeStart} - ${insight.rangeEnd} | Média Sem Ordem(${insight.totalIncidences}): ${fmt(insight.averageSemOsMin)} min`, style: 'insightTitle' },
             { 
               text: `Próprias mais afetadas: ${insight.mostAffectedProprias.length > 0 ? insight.mostAffectedProprias.join(', ') : 'Nenhuma'}`, 
               style: 'affectedText'
@@ -1021,17 +1021,12 @@ export class DashboardPdfService {
               if (osDiaTl) orderItems.push(osDiaTl);
               if (ev.flags?.includes('tr_excede_hd')) orderItems.push(alertItem(`Tempo de Reparo alto: ${helpers.osDiaAlertBody('tr_excede_hd', ev)}`));
               if (ev.flags?.includes('tl_excede_hd')) orderItems.push(alertItem(`Tempo de Deslocamento alto: ${helpers.osDiaAlertBody('tl_excede_hd', ev)}`));
-              if (ev.flags?.includes('temp_prep_alto')) orderItems.push(alertItem(`Tempo de Partida/OS: ${helpers.osDiaAlertBody('temp_prep_alto', ev)}`));
+              if (ev.flags?.includes('temp_prep_alto')) orderItems.push(alertItem(`Tempo de Partida elevado: ${helpers.osDiaAlertBody('temp_prep_alto', ev)}`));
               if (ev.flags?.includes('triagem_alto')) orderItems.push(alertItem(`2º Desp.: ${helpers.osDiaAlertBody('triagem_alto', ev)}`));
               if (ev.flags?.includes('primeiro_desloc_alto')) orderItems.push(alertItem(`1º Desloc.: ${helpers.osDiaAlertBody('primeiro_desloc_alto', ev)}`));
-              if (ev.flags?.includes('sem_os_alto') && ev.sem_os_details?.length) {
-                orderItems.push(alertItem(`Sem Ordem/OS: ${helpers.osDiaAlertBody('sem_os_alto', ev)}`));
-                (ev.sem_os_details as any[]).filter((d: any) => d.type !== 'fim_jornada').forEach((d: any, di: number) => {
-                  const semLabel = helpers.semOsDetailLabel(d, ev.nr_ordem_despacho_anterior);
-                  const semBody = helpers.semOsDetailBody(d, ev.nr_ordem_despacho_anterior);
-                  orderItems.push({ text: [{ text: `${di + 1}. `, color: RED, bold: true, italics: true }, { text: semLabel, color: RED, italics: true }, ...(semBody ? [{ text: ': ', color: DARK }, ...minRuns(semBody)] : [])], fontSize: 6.5, margin: [10, 0, 0, 1] });
-                });
-              }
+              if (ev.flags?.includes('inicio_jornada_alto')) orderItems.push(alertItem(`1º Desp.: ${helpers.osDiaAlertBody('inicio_jornada_alto', ev)}`));
+              if (ev.flags?.includes('desloc_intervalo_alto')) orderItems.push(alertItem(`Desl. Intervalo: sem OS: ${helpers.osDiaAlertBody('desloc_intervalo_alto', ev)}`));
+              if (ev.flags?.includes('sem_os_alto')) orderItems.push(alertItem(`Sem OS: ${helpers.osDiaAlertBody('sem_os_alto', ev)}`));
               if (ev.nr_ordem_despacho_anterior) {
                 const horaFmt = (ev.hora_despacho_anterior || '').replace(/^(\d{2}\/\d{2})\/\d{4}\s+(\d{2}:\d{2}).*$/, '$1 $2');
                 orderItems.push(alertWarnItemRuns('Despacho anterior da 1ªOS', [
@@ -1049,7 +1044,7 @@ export class DashboardPdfService {
               }
               const customFlags: string[] = [];
               if (ev.sem_os_details?.find((d: any) => d.type === 'entre_os' && d.interval_discounted && d.min >= 10)) {
-                customFlags.push('Entre OS\u226510min');
+                customFlags.push('Sem OS\u226510min');
               }
               const ociosoTotal = this.getOciosoTotal(ev);
               if (ociosoTotal != null) {
@@ -1182,17 +1177,12 @@ export class DashboardPdfService {
             const utilTl = this.buildTimelinePdfBlock(ev);
             if (utilTl) orderItems.push(utilTl);
             if (ev.flags?.includes('tr_excede_hd')) orderItems.push(alertItem(`Tempo de Reparo alto: ${helpers.osDiaAlertBody('tr_excede_hd', ev)}`));
-            if (ev.flags?.includes('temp_prep_alto')) orderItems.push(alertItem(`Tempo de Partida/OS: ${helpers.osDiaAlertBody('temp_prep_alto', ev)}`));
+            if (ev.flags?.includes('temp_prep_alto')) orderItems.push(alertItem(`Tempo de Partida elevado: ${helpers.osDiaAlertBody('temp_prep_alto', ev)}`));
             if (ev.flags?.includes('triagem_alto')) orderItems.push(alertItem(`2º Desp.: ${helpers.osDiaAlertBody('triagem_alto', ev)}`));
             if (ev.flags?.includes('primeiro_desloc_alto')) orderItems.push(alertItem(`1º Desloc.: ${helpers.osDiaAlertBody('primeiro_desloc_alto', ev)}`));
-            if (ev.flags?.includes('sem_os_alto') && ev.sem_os_details?.length) {
-              orderItems.push(alertItem(`Sem Ordem/OS: ${helpers.osDiaAlertBody('sem_os_alto', ev)}`));
-              (ev.sem_os_details as any[]).filter((d: any) => d.type !== 'fim_jornada').forEach((d: any, di: number) => {
-                const semLabel = helpers.semOsDetailLabel(d, ev.nr_ordem_despacho_anterior);
-                const semBody = helpers.semOsDetailBody(d, ev.nr_ordem_despacho_anterior);
-                orderItems.push({ text: [{ text: `${di + 1}. `, color: RED, bold: true, italics: true }, { text: semLabel, color: RED, italics: true }, ...(semBody ? [{ text: ': ', color: DARK }, ...minRuns(semBody)] : [])], fontSize: 6.5, margin: [10, 0, 0, 1] });
-              });
-            }
+            if (ev.flags?.includes('inicio_jornada_alto')) orderItems.push(alertItem(`1º Desp.: ${helpers.osDiaAlertBody('inicio_jornada_alto', ev)}`));
+            if (ev.flags?.includes('desloc_intervalo_alto')) orderItems.push(alertItem(`Desl. Intervalo: sem OS: ${helpers.osDiaAlertBody('desloc_intervalo_alto', ev)}`));
+            if (ev.flags?.includes('sem_os_alto')) orderItems.push(alertItem(`Sem OS: ${helpers.osDiaAlertBody('sem_os_alto', ev)}`));
             if (ev.nr_ordem_despacho_anterior) {
               const obsHoraFmt = (ev.hora_despacho_anterior || '').replace(/^(\d{2}\/\d{2})\/\d{4}\s+(\d{2}:\d{2}).*$/, '$1 $2');
               orderItems.push(alertWarnItemRuns('Despacho anterior da 1ªOS', [
@@ -1210,7 +1200,7 @@ export class DashboardPdfService {
             }
             const customFlags: string[] = [];
             if (ev.sem_os_details?.find((d: any) => d.type === 'entre_os' && d.interval_discounted && d.min >= 10)) {
-              customFlags.push('Entre OS\u226510min');
+              customFlags.push('Sem OS\u226510min');
             }
             const ociosoTotal = this.getOciosoTotal(ev);
             if (ociosoTotal != null) {
@@ -1801,3 +1791,4 @@ export class DashboardPdfService {
     };
   }
 }
+

@@ -30,7 +30,7 @@ export function analyzeDespacho(
     return [];
   }
 
-  // 1. Collect all "Sem Ordem" incidents (including 1st order of the day and Entre OS)
+  // 1. Collect all "Sem Ordem" incidents (including 1st order of the day and Sem OS)
   const allIncidences: DespachoIncidence[] = [];
 
   const groupedByTeamDate = new Map<string, CsvRow[]>();
@@ -231,7 +231,7 @@ export function analyzeDespacho(
       rangeId: r.id,
       rangeStart: r.startH.toString().padStart(2, '0') + ':00',
       rangeEnd: r.endH.toString().padStart(2, '0') + ':00',
-      averageEntreOsMin: avgMin,
+      averageSemOsMin: avgMin,
       totalIncidences: bucket.length,
       mostAffectedProprias: sortedProprias.slice(0, 3).map(t => t.team),
       mostAffectedParceiras: sortedParceiras.slice(0, 3).map(t => t.team),
@@ -239,7 +239,7 @@ export function analyzeDespacho(
     });
   }
 
-  // 4. Sort ranges by averageEntreOsMin descending and pick top 5
-  insights.sort((a, b) => b.averageEntreOsMin - a.averageEntreOsMin);
+  // 4. Sort ranges by averageSemOsMin descending and pick top 5
+  insights.sort((a, b) => b.averageSemOsMin - a.averageSemOsMin);
   return insights.slice(0, 5);
 }

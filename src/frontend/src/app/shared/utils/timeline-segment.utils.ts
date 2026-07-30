@@ -113,13 +113,13 @@ export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACami
     'inicio_calendario_despachada': '1º Desp.',
     'log_in_despachada': '1º Desp.',
     'hora_despacho_anterior_despachada': '2º Desp.',
-    'prev_liberada_despachada': 'Entre OS',
-    'liberada_despachada': 'Entre OS',
-    'prev_liberada_inicio_intervalo': 'Desl. Intervalo',
-    'liberada_inicio_intervalo': 'Desl. Intervalo',
-    'despachada_inicio_intervalo': 'Desl. Intervalo',
-    'no_local_inicio_intervalo': 'Desl. Intervalo',
-    'fim_intervalo_despachada': 'Entre OS',
+    'prev_liberada_despachada': 'Sem OS',
+    'liberada_despachada': 'Sem OS',
+    'prev_liberada_inicio_intervalo': 'Desl. Intervalo: sem OS',
+    'liberada_inicio_intervalo': 'Desl. Intervalo: sem OS',
+    'despachada_inicio_intervalo': 'Desl. Intervalo: sem OS',
+    'no_local_inicio_intervalo': 'Desl. Intervalo: sem OS',
+    'fim_intervalo_despachada': 'Sem OS',
     'liberada_log_off': 'Retorno Vazio',
     'fim_intervalo_log_off': 'Retorno Vazio',
     'despachada_a_caminho': 'Partida',
@@ -176,9 +176,9 @@ export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACami
         durationMin = Math.max(ev.temp_prep_os_min, 1);
         if (ev.flags?.includes('temp_prep_alto')) flags.push('Temp. Partida ≥10min');
       }
-    } else if (label === 'Entre OS' && ev.entre_ordens_min !== undefined && ev.entre_ordens_min > 0) {
+    } else if (label === 'Sem OS' && ev.entre_ordens_min !== undefined && ev.entre_ordens_min > 0) {
       durationMin = Math.max(ev.entre_ordens_min, 1);
-      if (ev.flags?.includes('entre_ordens_alto')) flags.push('Entre OS ≥15min');
+      if (ev.flags?.includes('entre_ordens_alto')) flags.push('Sem OS ≥15min');
     } else if (label === 'Log In') {
       if (p1.key === 'inicio_calendario') {
         const hdMin = ev.hd_total_min;
@@ -218,13 +218,13 @@ export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACami
         }
         flags.push(fText + '.');
       }
-    } else if (label.startsWith('1º Desp.') || ['Entre OS', 'Desl. Intervalo', 'Retorno Vazio', 'Retorno a Base'].includes(label)) {
+    } else if (label.startsWith('1º Desp.') || ['Sem OS', 'Desl. Intervalo: sem OS', 'Retorno Vazio', 'Retorno a Base'].includes(label)) {
       let md: any = null;
       if (label === 'Retorno Vazio' || label === 'Retorno a Base') {
         const r = ev.retorno_excedente_details || ev.sem_os_details?.find((s: any) => s.type === 'fim_jornada');
         if (r && r.to === p2.raw) md = r;
       } else if (ev.sem_os_details) {
-        const detType: Record<string, string> = { 'Desl. Intervalo': 'intervalo_deslocamento' };
+        const detType: Record<string, string> = { 'Desl. Intervalo: sem OS': 'intervalo_deslocamento' };
         md = ev.sem_os_details.find((s: any) => {
           const is1st = label.startsWith('1º Desp.');
           const lType = is1st ? 'inicio_jornada' : detType[label];

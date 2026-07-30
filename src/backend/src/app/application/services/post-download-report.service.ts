@@ -300,6 +300,8 @@ export class PostDownloadReportService {
           triagem_alto:           'Desp. Prioritário ≥10min',
           primeiro_desloc_alto:   '1º Desloc. ≥25min',
           sem_os_alto:           'Sem Ordem ≥ 10min',
+          inicio_jornada_alto:   '1º Desp. ≥ 10min',
+          desloc_intervalo_alto: 'Desl. Intervalo ≥ 10min',
           retorno_excedente: 'Retorno Excedente',
           deslocamento_curto:    'Deslocamento Curto',
           tempo_padrao_vazio:    'Tempo Padrão Vazio',

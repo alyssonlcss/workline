@@ -245,7 +245,14 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
       } else {
         ocisoValues.push(undefined);
       }
-      semOsValues.push(   firstDespachoCol ? (parseNumber(String(firstRow[firstDespachoCol] ?? '')) ?? Number.NaN) : Number.NaN);
+      let firstSemOsMin = firstDespachoCol ? (parseNumber(String(firstRow[firstDespachoCol] ?? '')) ?? Number.NaN) : Number.NaN;
+      if (!Number.isFinite(firstSemOsMin)) {
+        const inicioCalFirst = inicioCalendarioCol ? parseDateTimeBr(String(firstRow[inicioCalendarioCol] ?? '')) : null;
+        if (inicioCalFirst && despachadaFirst && despachadaFirst.getTime() > inicioCalFirst.getTime()) {
+          firstSemOsMin = round2(minutesBetween(despachadaFirst, inicioCalFirst));
+        }
+      }
+      semOsValues.push(firstSemOsMin);
       semOsIntervalApplied.push(false);
 
       for (let i = 1; i < ordered.length; i++) {
@@ -737,12 +744,24 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
 
         const semOsTotalMin = semOsDetails.length > 0 ? round2(semOsDetails.reduce((s, d) => s + d.min, 0)) : undefined;
 
-        // If no sem_os sub-flag qualified individually, suppress sem_os_alto to avoid an
-        // empty "Sem Ordem/OS:" header in the report.
-        if (semOsDetails.length === 0 && uniqueFlags.includes('sem_os_alto')) {
-          uniqueFlags = uniqueFlags.filter((f) => f !== 'sem_os_alto') as UtilizacaoOrderEvidence['flags'];
-          if (uniqueFlags.length === 0 && !hasOcioso) continue;
+        if (uniqueFlags.includes('sem_os_alto')) {
+          const idx = uniqueFlags.indexOf('sem_os_alto');
+          uniqueFlags.splice(idx, 1);
+          let addedSemOs = false;
+          for (const detail of semOsDetails) {
+            if (detail.type === 'inicio_jornada' && detail.min >= SEM_OS_THRESHOLD_MIN + TOLERANCE_MIN) {
+              if (!uniqueFlags.includes('inicio_jornada_alto' as any)) uniqueFlags.push('inicio_jornada_alto' as any);
+            } else if (detail.type === 'intervalo_deslocamento' && detail.min >= SEM_OS_THRESHOLD_MIN + TOLERANCE_MIN) {
+              if (!uniqueFlags.includes('desloc_intervalo_alto' as any)) uniqueFlags.push('desloc_intervalo_alto' as any);
+            } else if (detail.type === 'entre_ordens' && detail.min >= SEM_OS_THRESHOLD_MIN + TOLERANCE_MIN) {
+              if (!addedSemOs) {
+                uniqueFlags.push('sem_os_alto');
+                addedSemOs = true;
+              }
+            }
+          }
         }
+        if (uniqueFlags.length === 0 && !hasOcioso) continue;
 
         // Detect prior-dispatch conflict for the first OS of the day (i === 0).
         // NOTE: detection already done above (before flags) — skip duplicate block.
@@ -824,8 +843,8 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
             existingEvidence.sem_os_details = details.length > 0 ? details : undefined;
             if (semOsAbove) {
               existingEvidence.sem_os_total_min = round2(details.reduce((s, d) => s + d.min, 0));
-              if (!existingEvidence.flags.includes('sem_os_alto')) {
-                existingEvidence.flags.push('sem_os_alto');
+              if (!existingEvidence.flags.includes('desloc_intervalo_alto' as any)) {
+                existingEvidence.flags.push('desloc_intervalo_alto' as any);
               }
             }
             if (retornoExcedenteThreshold) {
@@ -878,7 +897,7 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
               ocioso_min:        ocisoValues[i],
               temp_prep_os_min:  tempPrepValues[i],
               flags:             [
-                ...(semOsAbove ? ['sem_os_alto' as const] : []),
+                ...(semOsAbove ? ['desloc_intervalo_alto' as any] : []),
                 ...(retornoExcedenteThreshold ? ['retorno_excedente' as const] : []),
                 ...((
                   hdTotalMin > 0 && trOrdemMin > hdTotalMin * OS_DIA_PCT_THRESHOLD &&

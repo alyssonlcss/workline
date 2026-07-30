@@ -113,7 +113,7 @@ export interface DespachoRangeInsight {
   rangeId: string;
   rangeStart: string;
   rangeEnd: string;
-  averageEntreOsMin: number;
+  averageSemOsMin: number;
   totalIncidences: number;
   mostAffectedProprias: string[];
   mostAffectedParceiras: string[];
@@ -236,7 +236,7 @@ export interface OsDiaOrderEvidence {
   };
   retorno_excedente_min?: number;
   sem_os_total_min?: number;
-  flags: Array<'tr_excede_hd' | 'tl_excede_hd' | 'temp_prep_alto' | 'sem_os_alto' | 'retorno_excedente' | 'antes_log_off_alto' | 'triagem_alto' | 'primeiro_desloc_alto'>;
+  flags: Array<'tr_excede_hd' | 'tl_excede_hd' | 'temp_prep_alto' | 'sem_os_alto' | 'inicio_jornada_alto' | 'desloc_intervalo_alto' | 'retorno_excedente' | 'antes_log_off_alto' | 'triagem_alto' | 'primeiro_desloc_alto'>;
   /** Pre-computed alert text per flag code. */
   alertTexts?: Record<string, string>;
   /** True when TR exceeds the global average repair time AND exceeds the M300 standard time. */
@@ -392,7 +392,7 @@ export interface UtilizacaoOrderEvidence {
   };
   retorno_excedente_min?: number;
   sem_os_total_min?: number;
-  flags: Array<'temp_prep_alto' | 'sem_os_alto' | 'retorno_excedente' | 'antes_log_off_alto' | 'tr_excede_hd' | 'triagem_alto' | 'primeiro_desloc_alto'>;
+  flags: Array<'temp_prep_alto' | 'sem_os_alto' | 'inicio_jornada_alto' | 'desloc_intervalo_alto' | 'retorno_excedente' | 'antes_log_off_alto' | 'tr_excede_hd' | 'triagem_alto' | 'primeiro_desloc_alto'>;
   alertTexts?: Record<string, string>;
   /**
    * When set, another OS (this nr_ordem) was dispatched to the team BEFORE this OS's

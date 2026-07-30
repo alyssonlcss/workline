@@ -5630,10 +5630,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         if (entreOsOver10.length > 0) {
           const avg = Math.round(entreOsAll.reduce((acc: number, val: any) => acc + val.min, 0) / (entreOsAll.length || 1));
           const globalAvg = Math.round(entreOsAll.reduce((acc: number, val: any) => acc + (val.global_avg_min || 0), 0) / (entreOsAll.length || 1));
-          teamDesvios.push({ name: 'Entre OS', priority: 3, avgMin: avg, count: entreOsOver10.length, globalAvg });
+          teamDesvios.push({ name: 'Sem OS', priority: 3, avgMin: avg, count: entreOsOver10.length, globalAvg });
         }
 
-        // Collect Entre OS > 15min for CCI section with distinct days count
+        // Collect Sem OS > 15min for CCI section with distinct days count
         const entreOsOrders = util.flaggedOrders.filter((o: any) =>
           o.sem_os_details?.some((d: any) => d.type === 'entre_ordens' && d.min > 15)
         );
@@ -5689,7 +5689,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
       // Filter recurrent desvios (excluding Entre OS which belongs only to CCI)
       const recurrentDesvios = teamDesvios.filter(d => {
-        if (d.name === 'Entre OS') return false;
+        if (d.name === 'Sem OS') return false;
         const showOS = d.name === 'Partida';
         const baseCount = showOS ? totalOrders : diasTrab;
         if (baseCount === 0) return false;
@@ -5794,7 +5794,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       msg += `${DIVIDER}\n\n`;
     });
 
-    // Add CCI section for Entre OS > 15min grouped by Base
+    // Add CCI section for Sem OS > 15min grouped by Base
     if (Object.keys(baseEntreOsMap).length > 0) {
       msg += `${CCI_DIVIDER}\n📍 *CENTRO DE CONTROLE INTEGRADO*\n${CCI_DIVIDER}\n\n`;
       const sortedCciBases = Object.keys(baseEntreOsMap).filter(b => b !== 'Outros').sort();
@@ -5824,7 +5824,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const timesStr = `${t.count}x > 15min em ${t.totalOrders} OS | Ocorreu em ${t.distinctDaysCount} de ${t.diasTrab} dias`;
           const aboveAvg = t.globalAvg > 0 ? t.avgMin - t.globalAvg : 0;
           const aboveAvgStr = aboveAvg > 0 ? ` (+${aboveAvg}m base)` : '';
-          msg += `${L3}🔄 *Entre OS:* ${t.team} | ${timesStr} | ⏱️ Média: ${t.avgMin}m${aboveAvgStr}\n`;
+          msg += `${L3}🔄 *Sem OS:* ${t.team} | ${timesStr} | ⏱️ Média: ${t.avgMin}m${aboveAvgStr}\n`;
         }
         msg += `\n`;
       });
@@ -5836,7 +5836,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     msg += `  📱 *1º Login:* Atraso no 1º login do dia\n`;
     msg += `  🚐 *1º Desloc.:* Atraso na partida do 1º deslocamento\n`;
     msg += `  ⏸️ *Desl. Intervalo:* Parada em deslocamento > 10m\n`;
-    msg += `  🔄 *Entre OS:* Ociosidade entre ordens > 15m\n`;
+    msg += `  🔄 *Sem OS:* Ociosidade entre ordens > 15m\n`;
     msg += `  🏠 *Retorno a Base:* Tempo elevado de retorno\n`;
     msg += `  ⏱️ *TME IMP:* Tempo de reparo em improdutivas acima do padrão\n`;
 
@@ -6053,7 +6053,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
                 maxSemOsSubFlagLabel = maxDetail.label || '';
                 if (!maxSemOsSubFlagLabel) {
                   if (maxDetail.type === 'inicio_jornada') maxSemOsSubFlagLabel = 'Início de Jornada';
-                  else if (maxDetail.type === 'entre_ordens') maxSemOsSubFlagLabel = 'Entre OS';
+                  else if (maxDetail.type === 'entre_ordens') maxSemOsSubFlagLabel = 'Sem OS';
                   else if (maxDetail.type === 'intervalo_deslocamento') maxSemOsSubFlagLabel = 'Intervalo em Deslocamento';
                   else maxSemOsSubFlagLabel = maxDetail.type || '';
                 }
@@ -6108,7 +6108,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
                 subFlag = maxDetail.label || '';
                 if (!subFlag) {
                   if (maxDetail.type === 'inicio_jornada') subFlag = 'Início de Jornada';
-                  else if (maxDetail.type === 'entre_ordens') subFlag = 'Entre OS';
+                  else if (maxDetail.type === 'entre_ordens') subFlag = 'Sem OS';
                   else if (maxDetail.type === 'fim_jornada') subFlag = 'Fim de Jornada';
                   else if (maxDetail.type === 'intervalo_deslocamento') subFlag = 'Int. Desloc.';
                   else subFlag = maxDetail.type || '';
@@ -6513,7 +6513,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return p.length >= 3 ? +p[2] * 10000 + +p[1] * 100 + +p[0] : 0;
     };
     return Array.from(map.entries())
-      .map(([dateRef, grpItems]) => ({ dateRef, items: grpItems }))
+      .map(([dateRef, grpItems]) => {
+        const sortedItems = [...grpItems].sort((a, b) => {
+          const ocA = this.getOciosoTotal(a) ?? 0;
+          const ocB = this.getOciosoTotal(b) ?? 0;
+          return ocB - ocA;
+        });
+        return { dateRef, items: sortedItems };
+      })
       .sort((a, b) => parseDate(a.dateRef) - parseDate(b.dateRef));
   }
 
@@ -7061,7 +7068,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       } else if (
         lbl.startsWith('1º Desp.') ||
         lbl.startsWith('2º Desp.') ||
-        lbl === 'Entre OS' ||
+        lbl === 'Sem OS' ||
         lbl === 'Desl. Intervalo' ||
         lbl === 'Partida' ||
         lbl === '1º Desloc.'
@@ -7152,11 +7159,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     };
     switch (d.type) {
       case 'inicio_jornada': {
-        return `1º Despacho: ${d.min} min do Início Calendário (${d.from ?? '—'}) até o primeiro despacho (${d.to ?? '—'}) — ${pctAbove(d.min)}% acima do limite (${SEM_OS_LIMIT} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
+        return `1º Desp.: ${d.min} min do Início Calendário (${d.from ?? '—'}) até o primeiro despacho (${d.to ?? '—'}) — ${pctAbove(d.min)}% acima do limite (${SEM_OS_LIMIT} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
       }
       case 'entre_ordens': {
         const mEO = Math.round(d.min);
-        return `Entre OS: ${mEO} min sem nova OS — Lib. Anterior (${d.from ?? '—'})${d.desp_anterior ? ' · Desp. Anterior (' + d.desp_anterior + ')' : ''} até Despachada (${d.to ?? '—'})${d.interval_discounted ? ' — intervalo descontado' : ''} — ${pctAbove(mEO)}% acima do limite (${SEM_OS_LIMIT} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
+        return `Sem OS: ${mEO} min sem nova OS — Lib. Anterior (${d.from ?? '—'})${d.desp_anterior ? ' · Desp. Anterior (' + d.desp_anterior + ')' : ''} até Despachada (${d.to ?? '—'})${d.interval_discounted ? ' — intervalo descontado' : ''} — ${pctAbove(mEO)}% acima do limite (${SEM_OS_LIMIT} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
       }
       case 'fim_jornada': {
           const fromLabelFJ = d.from_label ?? 'Última Liberada';
@@ -7167,10 +7174,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           }
           return `Retorno a base: ${this.nf(d.min)} min entre ${fromLabelFJ} (${d.from ?? '?'}) e Log Off (${d.to ?? '?'}).`;
         }
-        case 'intervalo_deslocamento': {
+      case 'intervalo_deslocamento': {
         const mID = Math.round(d.min);
         const fromLabel = d.from_label ?? 'Lib. Anterior';
-        return `Desl. Intervalo: ${mID} min entre ${fromLabel} (${d.from ?? '—'}) e Início Intervalo (${d.to ?? '—'}) — ${pctAbove(mID)}% acima do limite (${SEM_OS_LIMIT} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
+        return `Desl. Intervalo: sem OS: ${mID} min entre ${fromLabel} (${d.from ?? '—'}) e Início Intervalo (${d.to ?? '—'}) — ${pctAbove(mID)}% acima do limite (${SEM_OS_LIMIT} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
       }
       default:
         return `${d.type}: ${d.min} min (${d.from ?? '—'} → ${d.to ?? '—'})`;
@@ -8276,3 +8283,4 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     return null;
   }
 }
+

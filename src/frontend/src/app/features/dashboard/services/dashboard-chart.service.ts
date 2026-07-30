@@ -824,3 +824,4 @@ export class DashboardChartService {
     return { lines, days, metaY, avgY, yTicks, padLeft, chartRight, labelBaseY, viewBox: `0 0 ${svgW} ${svgH}`, trendLines, trendArea };
   }
 }
+

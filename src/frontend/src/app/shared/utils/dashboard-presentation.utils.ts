@@ -106,33 +106,42 @@ export function getDashboardAlerts(kpi: string, ev: any): DashboardAlert[] {
       addFlag('tr_excede_hd', 'Tempo de Reparo alto:');
       addFlag('tl_excede_hd', 'Tempo de Deslocamento alto:');
       addFlag('temp_prep_alto', 'Tempo de Partida elevado:');
-      addFlag('sem_os_alto', 'Tempo Sem OS elevado:');
-      addFlag('desloc_curto', 'Deslocamento Curto (<5min):', true);
+      addFlag('triagem_alto', '2º Desp.:');
+      addFlag('primeiro_desloc_alto', '1º Desloc.:');
+      addFlag('sem_os_alto', 'Sem OS:');
+      addFlag('inicio_jornada_alto', '1º Desp.:');
+      addFlag('desloc_intervalo_alto', 'Desl. Intervalo: sem OS:');
+      addFlag('retorno_excedente', 'Retorno Excedente:', true);
       break;
     
     case 'Eficiência':
       addFlag('baixa_eficiencia', 'Baixa Eficiência:');
+      addFlag('tr_muito_baixo', 'Tempo de Reparo muito baixo:');
+      addFlag('deslocamento_curto', 'Deslocamento (TL) muito curto:');
+      addFlag('tr_excede_hd', 'Tempo de Reparo alto:');
+      addFlag('tempo_padrao_vazio', 'Tempo Padrão ausente:');
       break;
 
     case 'Utilização':
       addFlag('temp_prep_alto', 'Tempo de Partida elevado:');
-      addFlag('sem_os_alto', 'Tempo Sem OS elevado:');
+      addFlag('sem_os_alto', 'Sem OS:');
+      addFlag('inicio_jornada_alto', '1º Desp.:');
+      addFlag('desloc_intervalo_alto', 'Desl. Intervalo: sem OS:');
       addFlag('tr_excede_hd', 'Tempo de Reparo alto:');
       addFlag('triagem_alto', '2º Desp.:');
-      addFlag('primeiro_desloc_alto', '1º Deslocamento alto:');
-      addFlag('retorno_excedente', 'Retorno à Base excedente:');
+      addFlag('primeiro_desloc_alto', '1º Desloc.:');
+      addFlag('retorno_excedente', 'Retorno Excedente:', true);
       break;
     
     case 'TME Improdutivo':
-      addFlag('tme_muito_alto', 'TME Muito Alto:');
-      addFlag('sem_desloc_tme', 'Sem deslocamento registrado:');
-      addFlag('entre_os_alto', 'Tempo Entre OS elevado:');
-      addFlag('desloc_intervalo_alto', 'Desloc. Intervalo elevado:');
-      addFlag('retorno_vazio_alto', 'Retorno Vazio elevado:');
+      addFlag('tme_muito_alto', 'TME IMP elevado:');
+      addFlag('sem_deslocamento', 'Sem registro de deslocamento:');
+      addFlag('sem_execucao', 'Sem TR Ordem:');
       break;
     
     case '1º Login':
       addFlag('login_muito_tardio', 'Log In muito tardio:');
+      addFlag('login_tardio', 'Login tardio:');
       break;
 
     case '1º Desloc.':
@@ -163,7 +172,9 @@ export function getDashboardAlerts(kpi: string, ev: any): DashboardAlert[] {
       break;
     
     case 'Retorno Base':
-      addFlag('retorno_muito_alto', 'Retorno à Base muito alto:');
+      addFlag('retorno_divergente', 'Divergência detectada:', true);
+      addFlag('retorno_muito_alto', 'Retorno muito alto:');
+      addFlag('retorno_alto', 'Retorno acima da meta:');
       break;
   }
 

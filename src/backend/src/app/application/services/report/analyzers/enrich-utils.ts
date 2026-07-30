@@ -110,6 +110,16 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[]): OsDiaOrderEvi
           case 'sem_os_alto':
             alertTexts[flag] = `${Math.round(ev.sem_os_total_min ?? 0)} min sem OS registrada — acima do limite de 10 min. Esse tempo representa intervalos ociosos em que o técnico não estava atendendo nem a caminho de um chamado.`;
             break;
+          case 'inicio_jornada_alto': {
+            const detail = ev.sem_os_details?.find(d => d.type === 'inicio_jornada');
+            alertTexts[flag] = `${Math.round(detail?.min ?? 0)} min do Início Calendário até o primeiro despacho — acima do limite de 10 min. Esse tempo representa espera ociosa no início da jornada.`;
+            break;
+          }
+          case 'desloc_intervalo_alto': {
+            const detail = ev.sem_os_details?.find(d => d.type === 'intervalo_deslocamento');
+            alertTexts[flag] = `${Math.round(detail?.min ?? 0)} min de Deslocamento de Intervalo — acima do limite de 10 min. Esse tempo ocioso ocorreu antes de iniciar o deslocamento ou durante a pausa.`;
+            break;
+          }
           case 'retorno_excedente':
             alertTexts[flag] = `${Math.round(ev.retorno_excedente_min ?? 0)} min excedentes de Retorno a Base no fim da jornada. Esse tempo não produtivo é somado ao tempo ocioso da equipe.`;
             break;
@@ -283,6 +293,16 @@ export function enrichUtilizacaoEvidence(orders: UtilizacaoOrderEvidence[]): Uti
           case 'sem_os_alto':
             alertTexts[flag] = `${Math.round(ev.sem_os_total_min ?? 0)} min sem OS registrada — acima do limite de 10 min. Esse tempo representa intervalos ociosos em que o técnico não estava atendendo nem a caminho de um chamado.`;
             break;
+          case 'inicio_jornada_alto': {
+            const detail = ev.sem_os_details?.find(d => d.type === 'inicio_jornada');
+            alertTexts[flag] = `${Math.round(detail?.min ?? 0)} min do Início Calendário até o primeiro despacho — acima do limite de 10 min. Esse tempo representa espera ociosa no início da jornada.`;
+            break;
+          }
+          case 'desloc_intervalo_alto': {
+            const detail = ev.sem_os_details?.find(d => d.type === 'intervalo_deslocamento');
+            alertTexts[flag] = `${Math.round(detail?.min ?? 0)} min de Deslocamento de Intervalo — acima do limite de 10 min. Esse tempo ocioso ocorreu antes de iniciar o deslocamento ou durante a pausa.`;
+            break;
+          }
           case 'retorno_excedente':
             alertTexts[flag] = `${Math.round(ev.retorno_excedente_min ?? 0)} min excedentes de Retorno a Base no fim da jornada. Esse tempo não produtivo é somado ao tempo ocioso da equipe.`;
             break;
