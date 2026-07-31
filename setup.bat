@@ -19,7 +19,7 @@ echo ===================================================
 echo.
 echo  1 - Executar (Iniciar Backend e Frontend)
 echo  2 - Configurar / Alterar credenciais e link Spotfire (.env)
-echo  3 - Instalar / Resetar dependencias (Node.js + npm)
+echo  3 - Instalar / Resetar dependencias e Executar
 echo  4 - Sair
 echo.
 echo ===================================================
@@ -183,10 +183,11 @@ cd /d "%PROJECT_DIR%"
 echo.
 echo ===================================================
 echo  Instalacao / Reset de dependencias concluido!
+echo  A aplicacao sera iniciada automaticamente...
 echo ===================================================
 echo.
-pause
-goto MENU
+timeout /t 3 >nul
+goto EXECUTAR
 
 
 :: ===================================================
