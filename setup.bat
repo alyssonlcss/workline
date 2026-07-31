@@ -161,6 +161,9 @@ echo [OK] Node.js %NODE_VERSION% e npm %NPM_VERSION% estao operacionais!
 echo.
 echo [2/3] Instalando dependencias do Backend (src\backend)...
 cd /d "%PROJECT_DIR%\src\backend"
+echo [Aguarde] Limpando dependencias antigas do Backend...
+if exist "node_modules" rmdir /s /q "node_modules"
+if exist "package-lock.json" del /q "package-lock.json"
 set PUPPETEER_SKIP_DOWNLOAD=true
 call npm install
 if %errorlevel% neq 0 (
@@ -172,6 +175,9 @@ if %errorlevel% neq 0 (
 echo.
 echo [3/3] Instalando dependencias do Frontend (src\frontend)...
 cd /d "%PROJECT_DIR%\src\frontend"
+echo [Aguarde] Limpando dependencias antigas do Frontend...
+if exist "node_modules" rmdir /s /q "node_modules"
+if exist "package-lock.json" del /q "package-lock.json"
 call npm install
 if %errorlevel% neq 0 (
     echo [AVISO] Houve um problema na instalacao das dependencias do Frontend.
