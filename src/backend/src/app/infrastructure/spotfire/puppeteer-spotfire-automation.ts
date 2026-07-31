@@ -171,7 +171,7 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
       const outputDirectory = await this.raceAbort(this.prepareOutputDirectory(req.customOutputDir), req.signal);
       this.emitProgress(req, 'Iniciando extração de dados...');
       this.logStep('data-download', 'START', 'starting extraction run', {
-        reportTitle: request.reportTitle ?? this.environment.spotfire.defaultReportTitle,
+        reportTitle: request.reportTitle ?? 'Relatório',
         analysisTab: request.analysisTab ?? null,
         tableTitle: request.tableTitle ?? null,
         headless: this.environment.spotfire.headless,
@@ -226,7 +226,7 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
           this.emitProgress(req, 'Abrindo análise no Spotfire...');
           await this.withSpotfireRecovery(page, async () => {
             await this.raceAbort(
-              this.openAnalysis(page, req.reportTitle ?? this.environment.spotfire.defaultReportTitle, req),
+              this.openAnalysis(page, req.reportTitle ?? 'Relatório', req),
               req.signal,
             );
           }, req);
@@ -5725,7 +5725,7 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
     const sourcePath = join(outputDirectory, downloadedFileName);
     const extension = extname(downloadedFileName).toLowerCase() || '.csv';
     const normalizedExtension = DOWNLOAD_EXTENSIONS.has(extension) ? extension : '.csv';
-    const safeReportTitle = this.slugify(request.reportTitle ?? this.environment.spotfire.defaultReportTitle);
+    const safeReportTitle = this.slugify(request.reportTitle ?? 'Relatório');
     const safeTab = this.slugify(request.analysisTab ?? 'active-tab');
     const safeTable = this.slugify(request.tableTitle ?? 'export');
     const finalFileName = `${safeReportTitle}-${safeTab}-${safeTable}-${randomUUID()}${normalizedExtension}`;
@@ -6783,7 +6783,7 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
     // Final check — if analysis still isn't loaded, re-open it
     if (!await this.isAnalysisReady(page)) {
       this.log('analysis not ready after reload, re-opening...');
-      await this.openAnalysis(page, this.environment.spotfire.defaultReportTitle);
+      await this.openAnalysis(page, 'Relatório');
     }
 
     this.logStep('recovery', 'OK', 'Spotfire stabilized after reload');

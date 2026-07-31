@@ -111,7 +111,7 @@ export async function createServer() {
 
   server.get('/api/health', async () => ({
     status: 'ok',
-    reportTitle: environment.spotfire.defaultReportTitle,
+    reportTitle: 'Relatório',
   }));
 
   server.get('/api/scanner/config/bases', async () => {
@@ -128,7 +128,7 @@ export async function createServer() {
 
   server.post('/api/scanner/data-download', async (request, reply) => {
     const payload = dataDownloadSchema.parse(request.body);
-    const reportTitle = payload.reportTitle ?? environment.spotfire.defaultReportTitle;
+    const reportTitle = payload.reportTitle ?? 'Relatório';
     const controller = new AbortController();
     const userAgent = request.headers['user-agent'] ?? '';
     const clientBrowserType = userAgent.includes('Edg/') ? 'edge' : userAgent.includes('Chrome/') ? 'chrome' : undefined;

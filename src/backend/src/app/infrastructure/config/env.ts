@@ -52,7 +52,7 @@ const environmentSchema = z.object({
   SPOTFIRE_BROWSER_WS_ENDPOINT: z.string().url().optional(),
   SPOTFIRE_USER_DATA_DIR: z.string().optional().default(''),
   SPOTFIRE_PROFILE_DIRECTORY: z.string().optional().default(''),
-  SPOTFIRE_DEFAULT_REPORT_TITLE: z.string().optional().default(''),
+
   SPOTFIRE_FILTER_PANEL_LABEL: z.string().optional().default('Filters').transform(v => v && v.trim().length > 0 ? v : 'Filters'),
   SPOTFIRE_EXPORT_MENU_LABEL: z.string().optional().default('Export table').transform(v => v && v.trim().length > 0 ? v : 'Export table'),
   SPOTFIRE_EXPORT_PARENT_MENU_LABEL: z.string().optional().default('Export').transform(v => v && v.trim().length > 0 ? v : 'Export'),
@@ -135,7 +135,7 @@ export const environment = {
     browserWSEndpoint: parsedEnvironment.SPOTFIRE_BROWSER_WS_ENDPOINT,
     userDataDir: parsedEnvironment.SPOTFIRE_USER_DATA_DIR,
     profileDirectory: parsedEnvironment.SPOTFIRE_PROFILE_DIRECTORY,
-    defaultReportTitle: parsedEnvironment.SPOTFIRE_DEFAULT_REPORT_TITLE,
+
     filterPanelLabel: parsedEnvironment.SPOTFIRE_FILTER_PANEL_LABEL,
     exportMenuLabel: parsedEnvironment.SPOTFIRE_EXPORT_MENU_LABEL,
     exportParentMenuLabel: parsedEnvironment.SPOTFIRE_EXPORT_PARENT_MENU_LABEL,
