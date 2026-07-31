@@ -49,7 +49,7 @@ const environmentSchema = z.object({
   SPOTFIRE_USERNAME: z.string().optional().default(''),
   SPOTFIRE_PASSWORD: z.string().optional().default(''),
   SPOTFIRE_BROWSER_PATH: z.string().optional().default(''),
-  SPOTFIRE_BROWSER_WS_ENDPOINT: z.string().url().optional(),
+  SPOTFIRE_BROWSER_WS_ENDPOINT: z.string().optional().transform(v => v && v.trim().length > 0 ? v : undefined),
   SPOTFIRE_USER_DATA_DIR: z.string().optional().default(''),
   SPOTFIRE_PROFILE_DIRECTORY: z.string().optional().default(''),
 
