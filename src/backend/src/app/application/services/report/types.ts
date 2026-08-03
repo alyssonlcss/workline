@@ -140,6 +140,7 @@ export interface GeneratedReport {
   };
   executiveSummary: ExecutiveSummary;
   teamScorecard: TeamKpiScorecard[];
+  recurrentWarnings?: TeamRecurrentWarning[];
   specialAnalysis: {
     tempPrepAndSemOs: TeamMetricSummary[];
     crossedInsights: CrossedInsight[];
@@ -641,3 +642,23 @@ export interface ExecutiveSummary {
  * When iterating ranking rows, only the FIRST row per (team, date) pair is counted to avoid
  * inflating the average when multiple OS rows repeat the same jornada-level value.
  */
+
+export interface TeamRecurrentWarning {
+  team: string;
+  diasTrab: number;
+  totalOrders: number;
+  desvios: Array<{
+    name: string;
+    priority: number;
+    avgMin: number;
+    count: number;
+    globalAvg: number;
+  }>;
+  entreOs?: {
+    count: number;
+    distinctDaysCount: number;
+    avgMin: number;
+    globalAvg: number;
+    sumOver15Min: number;
+  };
+}

@@ -31,6 +31,7 @@ import { analyzePrimeiroLogin } from './report/analyzers/primeiro-login.analyzer
 import { analyzePrimeiroDesloc } from './report/analyzers/primeiro-desloc.analyzer.js';
 import { analyzeRetornoBase } from './report/analyzers/retorno-base.analyzer.js';
 import { analyzeDespacho } from './report/analyzers/despacho.analyzer.js';
+import { buildRecurrentWarnings } from './report/analyzers/recurrent-warnings.analyzer.js';
 
 type CsvRow = Record<string, string>;
 type TeamType = 
@@ -276,6 +277,14 @@ export class PostDownloadReportService {
       deviations: deviationInsights,
       executiveSummary,
       teamScorecard,
+      recurrentWarnings: buildRecurrentWarnings(
+        teamScorecard,
+        utilizacaoAnalysis,
+        retornoBaseAnalysis,
+        tmeImpAnalysis,
+        primeiroDeslocAnalysis,
+        primeiroLoginAnalysis
+      ),
       specialAnalysis: {
         tempPrepAndSemOs: teamMetrics,
         crossedInsights,

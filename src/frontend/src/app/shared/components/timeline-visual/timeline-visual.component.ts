@@ -246,7 +246,7 @@ export class TimelineVisualComponent implements OnInit {
     if (!seg.isInterval) return false;
     if (seg.flags && seg.flags.length > 0) return true;
     if (this.ev?.flags?.includes('intervalo_por_ultimo')) return true;
-    if (this.ev?.fim_intervalo && (this.ev?.retorno_excedente_details?.from === this.ev?.fim_intervalo || this.ev?.liberada)) return true;
+    if (this.ev?.fim_intervalo && (this.ev?.retorno_excedente_details?.from === this.ev?.fim_intervalo || this.ev?.fim_intervalo === this.ev?.liberada)) return true;
     return false;
   }
 

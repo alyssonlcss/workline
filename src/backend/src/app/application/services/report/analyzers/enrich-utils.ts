@@ -27,13 +27,13 @@ export function semOsDetailText(d: {
     };
     switch (d.type) {
       case 'inicio_jornada': {
-        const pctIJ = Math.round((d.min - 10) / 10 * 100);
-        return `1º Despacho: ${d.min} min do Início Calendário (${d.from ?? '—'}) até o primeiro despacho (${d.to ?? '—'}) — ${pctIJ}% acima do limite (10 min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
+        const pctIJ = Math.round((d.min - SEM_OS_LIMIT) / SEM_OS_LIMIT * 100);
+        return `1º Despacho: ${d.min} min do Início Calendário (${d.from ?? '—'}) até o primeiro despacho (${d.to ?? '—'}) — ${pctIJ}% acima do limite (${SEM_OS_LIMIT} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
       }
       case 'entre_ordens': {
         const mEO = Math.round(d.min);
-        const pctEO = Math.round((mEO - 10) / 10 * 100);
-        return `Entre OS: ${mEO} min sem nova OS — Lib. Anterior (${d.from ?? '—'})${d.desp_anterior ? ' · Desp. Anterior (' + d.desp_anterior + ')' : ''} até Despachada (${d.to ?? '—'})${d.interval_discounted ? ' — intervalo descontado' : ''} — ${pctEO}% acima do limite (10 min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
+        const pctEO = Math.round((mEO - SEM_OS_LIMIT) / SEM_OS_LIMIT * 100);
+        return `Entre OS: ${mEO} min sem nova OS — Lib. Anterior (${d.from ?? '—'})${d.desp_anterior ? ' · Desp. Anterior (' + d.desp_anterior + ')' : ''} até Despachada (${d.to ?? '—'})${d.interval_discounted ? ' — intervalo descontado' : ''} — ${pctEO}% acima do limite (${SEM_OS_LIMIT} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
       }
       case 'retorno_excedente': {
         const fromLabel = d.from_label ?? 'última Liberada';
@@ -55,9 +55,9 @@ export function semOsDetailText(d: {
       }
       case 'intervalo_deslocamento': {
         const mID = Math.round(d.min);
-        const pctID = Math.round((mID - 10) / 10 * 100);
+        const pctID = Math.round((mID - SEM_OS_LIMIT) / SEM_OS_LIMIT * 100);
         const fromLabel = d.from_label ?? 'Lib. Anterior';
-        return `Desl. Intervalo: ${mID} min entre ${fromLabel} (${d.from ?? '—'}) e Início Intervalo (${d.to ?? '—'}) — ${pctID}% acima do limite (10 min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
+        return `Desl. Intervalo: ${mID} min entre ${fromLabel} (${d.from ?? '—'}) e Início Intervalo (${d.to ?? '—'}) — ${pctID}% acima do limite (${SEM_OS_LIMIT} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
       }
       default:
         return `${d.type}: ${d.min} min (${d.from ?? '—'} → ${d.to ?? '—'})`;
@@ -91,7 +91,7 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[]): OsDiaOrderEvi
             const best = candidates[0];
             const duration = Math.round((iniTs - best.ts) / 60000);
             
-            if (duration >= 10) {
+            if (duration >= SEM_OS_LIMIT) {
               ev.sem_os_details = ev.sem_os_details ?? [];
               if (!ev.sem_os_details.some(d => d.type === 'intervalo_deslocamento')) {
                 ev.sem_os_details.push({
@@ -103,7 +103,6 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[]): OsDiaOrderEvi
                 });
               }
               if (!ev.flags.includes('desloc_intervalo_alto')) ev.flags.push('desloc_intervalo_alto');
-              if (!ev.flags.includes('sem_os_alto')) ev.flags.push('sem_os_alto');
             }
           }
         }
@@ -123,7 +122,7 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[]): OsDiaOrderEvi
             const best = candidates[0];
             const duration = Math.round((despTs - best.ts) / 60000);
             
-            if (duration >= 10) {
+            if (duration >= SEM_OS_LIMIT) {
               ev.sem_os_details = ev.sem_os_details ?? [];
               if (!ev.sem_os_details.some(d => d.type === 'entre_ordens' && d.from === best.raw)) {
                 ev.sem_os_details.push({
@@ -440,7 +439,7 @@ export function enrichUtilizacaoEvidence(orders: UtilizacaoOrderEvidence[]): Uti
           }
           case 'temp_prep_alto': {
             const tempPrepMin = ev.temp_prep_os_min ?? 0;
-            const limit = 10;
+            const limit = TEMP_PREP_LIMIT;
             const pct = Math.round((tempPrepMin - limit) / limit * 100);
             const subject = ev.prev_liberada
               ? 'a Despachada e o registro de saída nesta OS'
@@ -450,8 +449,8 @@ export function enrichUtilizacaoEvidence(orders: UtilizacaoOrderEvidence[]): Uti
           }
           case 'sem_os_alto': {
             const detail = ev.sem_os_details?.find(d => d.type === 'entre_ordens');
-            const minVal = Math.round(detail?.min ?? ev.sem_os_total_min ?? 10);
-            alertTexts[flag] = `${minVal} min sem OS registrada — acima do limite de 10 min. Esse tempo representa intervalos ociosos em que o técnico não estava atendendo nem a caminho de um chamado.`;
+            const minVal = Math.round(detail?.min ?? ev.sem_os_total_min ?? SEM_OS_LIMIT);
+            alertTexts[flag] = `${minVal} min sem OS registrada — acima do limite de ${SEM_OS_LIMIT} min. Esse tempo representa intervalos ociosos em que o técnico não estava atendendo nem a caminho de um chamado.`;
             break;
           }
           case 'inicio_jornada_alto': {
@@ -465,13 +464,13 @@ export function enrichUtilizacaoEvidence(orders: UtilizacaoOrderEvidence[]): Uti
               const waitMin = Math.max(0, totalMin - delayMin);
               alertTexts[flag] = `a distribuição de OS ocorre apenas após o acesso ao sistema. Como a equipe iniciou com ${nfBr(delayMin)} min de atraso no Log In, o despacho da primeira OS foi naturalmente impactado. No total, passaram-se ${nfBr(totalMin)} min entre o início da jornada programada e o recebimento da OS (sendo ${nfBr(waitMin)} min de espera após o acesso).`;
             } else {
-              alertTexts[flag] = `${nfBr(totalMin)} min do Início Calendário até o primeiro despacho — acima do limite de 10 min. Esse tempo representa espera ociosa no início da jornada.`;
+              alertTexts[flag] = `${nfBr(totalMin)} min do Início Calendário até o primeiro despacho — acima do limite de ${SEM_OS_LIMIT} min. Esse tempo representa espera ociosa no início da jornada.`;
             }
             break;
           }
           case 'desloc_intervalo_alto': {
             const detail = ev.sem_os_details?.find(d => d.type === 'intervalo_deslocamento');
-            alertTexts[flag] = `${Math.round(detail?.min ?? 0)} min de Deslocamento de Intervalo — acima do limite de 10 min. Esse tempo ocioso ocorreu antes de iniciar o deslocamento ou durante a pausa.`;
+            alertTexts[flag] = `${Math.round(detail?.min ?? 0)} min de Deslocamento de Intervalo — acima do limite de ${SEM_OS_LIMIT} min. Esse tempo ocioso ocorreu antes de iniciar o deslocamento ou durante a pausa.`;
             break;
           }
           case 'login_atrasado': {
@@ -492,7 +491,7 @@ export function enrichUtilizacaoEvidence(orders: UtilizacaoOrderEvidence[]): Uti
               return m ? m[1] : raw;
             };
             const val2 = ev.triagem_min ?? 0;
-            const limit3 = 10;
+            const limit3 = TRIAGEM_LIMIT;
             const pct3 = Math.round((val2 - limit3) / limit3 * 100);
             let trText2 = `${nfBr(val2)} min entre o 1º Despacho (${fmtTs2(ev.hora_despacho_anterior)}) e o Despacho (${fmtTs2(ev.despachada)}) — ${pct3}% acima do limite (${limit3} min)`;
             if (ev.triagem_global_avg_min && ev.triagem_global_avg_min > 0) {
@@ -505,7 +504,7 @@ export function enrichUtilizacaoEvidence(orders: UtilizacaoOrderEvidence[]): Uti
           }
           case 'primeiro_desloc_alto': {
             const val2d = ev.ocioso_min ?? 0;
-            const limit2d = 25;
+            const limit2d = PRIMEIRO_DESLOC_LIMIT;
             const pct2d = Math.round((val2d - limit2d) / limit2d * 100);
             alertTexts[flag] = `o tempo desde o Início Calendário até o primeiro registro de 'A Caminho' foi de ${nfBr(val2d)} min — ${pct2d}% acima do limite de ${limit2d} min. Esse tempo reflete o tempo total ocioso no início da jornada antes do primeiro deslocamento.`;
             break;
@@ -587,7 +586,7 @@ export function enrichDeslocEvidence(days: PrimeiroDeslocDayEvidence[], metaTarg
             if (ev.flags.includes('login_atrasado')) {
               alertTexts[flag] = `a distribuição de OS ocorre apenas após o acesso ao sistema. Como a equipe iniciou com ${nfBr(ev.login_atraso_min)} min de atraso no Log In, o despacho da primeira OS foi naturalmente impactado pela regra de negócio. No total, passaram-se ${nfBr(ev.despacho_apos_inicio_min)} min entre o início da jornada programada e o recebimento da OS (sendo ${nfBr(ev.despacho_apos_inicio_min - ev.login_atraso_min)} min de espera após o acesso).`;
             } else {
-              alertTexts[flag] = `a equipe recebeu a primeira OS com ${nfBr(ev.despacho_apos_inicio_min)} min de atraso em relação ao início da jornada - acima do limite de 10 min. Esse atraso na fila inicial de distribuição reduz o tempo disponível para atendimentos no dia.`;
+              alertTexts[flag] = `a equipe recebeu a primeira OS com ${nfBr(ev.despacho_apos_inicio_min)} min de atraso em relação ao início da jornada - acima do limite de ${SEM_OS_LIMIT} min. Esse atraso na fila inicial de distribuição reduz o tempo disponível para atendimentos no dia.`;
             }
             break;
           case 'login_atrasado':
@@ -609,7 +608,7 @@ export function enrichDeslocEvidence(days: PrimeiroDeslocDayEvidence[], metaTarg
               return m ? m[1] : raw;
             };
             const valDesloc = ev.triagem_min ?? 0;
-            const limitDesloc = 10;
+            const limitDesloc = TRIAGEM_LIMIT;
             const pctDesloc = Math.round((valDesloc - limitDesloc) / limitDesloc * 100);
             let trTextDesloc = `${nfBr(valDesloc)} min entre o 1º Despacho (${fmtTsDesloc(ev.hora_despacho_anterior)}) e o Despacho (${fmtTsDesloc(ev.despachada)}) — ${pctDesloc}% acima do limite (${limitDesloc} min)`;
             if (ev.triagem_global_avg_min && ev.triagem_global_avg_min > 0) {

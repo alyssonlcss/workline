@@ -745,24 +745,21 @@ type SavedFilterState = {
                                 </li>
                               </ul>
                             </ng-template>
-                            <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.flaggedOrders || [], []); trackBy: trackByDateRef">
+                            <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.flaggedOrders || [], analysis.extraFlaggedOrders || []); trackBy: trackByDateRef">
                               <div class="ev-date-group-header">{{ grp.dateRef }}</div>
                               <div class="osdia-ev-item" *ngFor="let ev of grp.items">
                                 <ng-container *ngTemplateOutlet="osDiaEvTpl; context: {$implicit: ev}"></ng-container>
                               </div>
-                            </ng-container>
-                            <ng-container *ngIf="analysis.extraFlaggedOrders?.length">
-                              <button class="ev-ver-mais-btn team-ver-mais" style="background-color: lightblue; color: #000; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" (click)="toggleTeamExpanded('OS Dia', analysis.team)">
-                                {{ isTeamExpanded('OS Dia', analysis.team) ? '▲ Ver menos' : '▼ Ver mais ' + (analysis.extraFlaggedOrders?.length || 0) + ' OS(s) com baixo tempo' }}
-                              </button>
-                              <div *ngIf="isTeamExpanded('OS Dia', analysis.team)" class="extra-orders-container" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
-                                <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.extraFlaggedOrders || [], []); trackBy: trackByDateRef">
-                                  <div class="ev-date-group-header" style="opacity: 0.8">{{ grp.dateRef }} (Extra)</div>
-                                  <div class="osdia-ev-item osdia-ev-item--extra" *ngFor="let ev of grp.items">
+                              <ng-container *ngIf="grp.extraItems?.length">
+                                <button class="ev-ver-mais-btn team-ver-mais" style="background-color: lightblue; color: #000; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" (click)="toggleDateExpanded('OS Dia', analysis.team, grp.dateRef)">
+                                  {{ isDateExpanded('OS Dia', analysis.team, grp.dateRef) ? '▲ Ver menos' : '▼ Ver mais ' + (grp.extraItems.length || 0) + ' OS(s) com baixo tempo' }}
+                                </button>
+                                <div *ngIf="isDateExpanded('OS Dia', analysis.team, grp.dateRef)" class="extra-orders-container" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
+                                  <div class="osdia-ev-item" [class.osdia-ev-item--extra]="!ev.flags.length" *ngFor="let ev of grp.extraItems">
                                     <ng-container *ngTemplateOutlet="osDiaEvTpl; context: {$implicit: ev}"></ng-container>
                                   </div>
-                                </ng-container>
-                              </div>
+                                </div>
+                              </ng-container>
                             </ng-container>
                           </div>
                         </div>
@@ -856,24 +853,21 @@ type SavedFilterState = {
                                 </li>
                               </ul>
                             </ng-template>
-                            <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.flaggedOrders, undefined); trackBy: trackByDateRef">
+                            <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.flaggedOrders, analysis.extraFlaggedOrders); trackBy: trackByDateRef">
                               <div class="ev-date-group-header">{{ grp.dateRef }}</div>
                               <div class="osdia-ev-item" *ngFor="let ev of grp.items">
                                 <ng-container *ngTemplateOutlet="eficienciaEvTpl; context: {$implicit: ev}"></ng-container>
                               </div>
-                            </ng-container>
-                            <ng-container *ngIf="analysis.extraFlaggedOrders?.length">
-                              <button class="ev-ver-mais-btn team-ver-mais" style="background-color: lightblue; color: #000; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" (click)="toggleTeamExpanded('Eficiência', analysis.team)">
-                                {{ isTeamExpanded('Eficiência', analysis.team) ? '▲ Ver menos' : '▼ Ver mais ' + (analysis.extraFlaggedOrders?.length || 0) + ' OS(s) com baixo tempo' }}
-                              </button>
-                              <div *ngIf="isTeamExpanded('Eficiência', analysis.team)" class="extra-orders-container" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
-                                <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.extraFlaggedOrders || [], []); trackBy: trackByDateRef">
-                                  <div class="ev-date-group-header" style="opacity: 0.8">{{ grp.dateRef }} (Extra)</div>
-                                  <div class="osdia-ev-item osdia-ev-item--extra" *ngFor="let ev of grp.items">
+                              <ng-container *ngIf="grp.extraItems?.length">
+                                <button class="ev-ver-mais-btn team-ver-mais" style="background-color: lightblue; color: #000; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" (click)="toggleDateExpanded('Eficiência', analysis.team, grp.dateRef)">
+                                  {{ isDateExpanded('Eficiência', analysis.team, grp.dateRef) ? '▲ Ver menos' : '▼ Ver mais ' + (grp.extraItems.length || 0) + ' OS(s) com baixo TR Ordem' }}
+                                </button>
+                                <div *ngIf="isDateExpanded('Eficiência', analysis.team, grp.dateRef)" class="extra-orders-container" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
+                                  <div class="osdia-ev-item" [class.osdia-ev-item--extra]="!ev.flags.length" *ngFor="let ev of grp.extraItems">
                                     <ng-container *ngTemplateOutlet="eficienciaEvTpl; context: {$implicit: ev}"></ng-container>
                                   </div>
-                                </ng-container>
-                              </div>
+                                </div>
+                              </ng-container>
                             </ng-container>
                           </div>
 
@@ -968,24 +962,21 @@ type SavedFilterState = {
                                   </li>
                                 </ul>
                               </ng-template>
-                              <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.flaggedOrders, undefined); trackBy: trackByDateRef">
+                              <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.flaggedOrders, analysis.extraFlaggedOrders); trackBy: trackByDateRef">
                                 <div class="ev-date-group-header">{{ grp.dateRef }}</div>
                                 <div class="osdia-ev-item" *ngFor="let ev of grp.items">
                                   <ng-container *ngTemplateOutlet="utilizacaoEvTpl; context: {$implicit: ev}"></ng-container>
                                 </div>
-                              </ng-container>
-                              <ng-container *ngIf="analysis.extraFlaggedOrders?.length">
-                                <button class="ev-ver-mais-btn team-ver-mais" style="background-color: lightblue; color: #000; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" (click)="toggleTeamExpanded('Utilização', analysis.team)">
-                                  {{ isTeamExpanded('Utilização', analysis.team) ? '▲ Ver menos' : '▼ Ver mais ' + (analysis.extraFlaggedOrders?.length || 0) + ' OS(s) com baixo tempo' }}
-                                </button>
-                                <div *ngIf="isTeamExpanded('Utilização', analysis.team)" class="extra-orders-container" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
-                                  <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.extraFlaggedOrders || [], []); trackBy: trackByDateRef">
-                                    <div class="ev-date-group-header" style="opacity: 0.8">{{ grp.dateRef }} (Extra)</div>
-                                    <div class="osdia-ev-item osdia-ev-item--extra" *ngFor="let ev of grp.items">
+                                <ng-container *ngIf="grp.extraItems?.length">
+                                  <button class="ev-ver-mais-btn team-ver-mais" style="background-color: lightblue; color: #000; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" (click)="toggleDateExpanded('Utilização', analysis.team, grp.dateRef)">
+                                    {{ isDateExpanded('Utilização', analysis.team, grp.dateRef) ? '▲ Ver menos' : '▼ Ver mais ' + (grp.extraItems.length || 0) + ' OS(s) sem alertas' }}
+                                  </button>
+                                  <div *ngIf="isDateExpanded('Utilização', analysis.team, grp.dateRef)" class="extra-orders-container" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
+                                    <div class="osdia-ev-item" [class.osdia-ev-item--extra]="!ev.flags.length" *ngFor="let ev of grp.extraItems">
                                       <ng-container *ngTemplateOutlet="utilizacaoEvTpl; context: {$implicit: ev}"></ng-container>
                                     </div>
-                                  </ng-container>
-                                </div>
+                                  </div>
+                                </ng-container>
                               </ng-container>
                             </div>
                           </div>
@@ -1076,24 +1067,21 @@ type SavedFilterState = {
                             </li>
                           </ul>
                         </ng-template>
-                        <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.flaggedOrders, undefined); trackBy: trackByDateRef">
+                        <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.flaggedOrders, analysis.extraFlaggedOrders); trackBy: trackByDateRef">
                           <div class="ev-date-group-header">{{ grp.dateRef }}</div>
                           <div class="osdia-ev-item" *ngFor="let ev of grp.items">
                             <ng-container *ngTemplateOutlet="tmeImpEvTpl; context: {$implicit: ev}"></ng-container>
                           </div>
-                        </ng-container>
-                        <ng-container *ngIf="analysis.extraFlaggedOrders?.length">
-                          <button class="ev-ver-mais-btn team-ver-mais" style="background-color: lightblue; color: #000; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" (click)="toggleTeamExpanded('TME IMP', analysis.team)">
-                            {{ isTeamExpanded('TME IMP', analysis.team) ? '▲ Ver menos' : '▼ Ver mais ' + (analysis.extraFlaggedOrders?.length || 0) + ' OS(s) com baixo tempo' }}
-                          </button>
-                          <div *ngIf="isTeamExpanded('TME IMP', analysis.team)" class="extra-orders-container" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
-                            <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.extraFlaggedOrders || [], []); trackBy: trackByDateRef">
-                              <div class="ev-date-group-header" style="opacity: 0.8">{{ grp.dateRef }} (Extra)</div>
-                              <div class="osdia-ev-item osdia-ev-item--extra" *ngFor="let ev of grp.items">
+                          <ng-container *ngIf="grp.extraItems?.length">
+                            <button class="ev-ver-mais-btn team-ver-mais" style="background-color: lightblue; color: #000; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" (click)="toggleDateExpanded('TME IMP', analysis.team, grp.dateRef)">
+                              {{ isDateExpanded('TME IMP', analysis.team, grp.dateRef) ? '▲ Ver menos' : '▼ Ver mais ' + (grp.extraItems.length || 0) + ' OS(s) com baixo TME' }}
+                            </button>
+                            <div *ngIf="isDateExpanded('TME IMP', analysis.team, grp.dateRef)" class="extra-orders-container" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
+                              <div class="osdia-ev-item" [class.osdia-ev-item--extra]="!ev.flags.length" *ngFor="let ev of grp.extraItems">
                                 <ng-container *ngTemplateOutlet="tmeImpEvTpl; context: {$implicit: ev}"></ng-container>
                               </div>
-                            </ng-container>
-                          </div>
+                            </div>
+                          </ng-container>
                         </ng-container>
                       </div>
                       <ng-template #noTmeImpEvidence>
@@ -1162,7 +1150,7 @@ type SavedFilterState = {
                           <ng-container *ngTemplateOutlet="loginEvTpl; context: {$implicit: ev}"></ng-container>
                         </div>
                         <ng-container *ngIf="isDateExpanded('1º Login', analysis.team, '__extra__')">
-                          <div class="osdia-ev-item osdia-ev-item--extra" *ngFor="let ev of (analysis.extraFlaggedDays ?? [])">
+                          <div class="osdia-ev-item" [class.osdia-ev-item--extra]="!ev.flags.length" *ngFor="let ev of (analysis.extraFlaggedDays ?? [])">
                             <ng-container *ngTemplateOutlet="loginEvTpl; context: {$implicit: ev}"></ng-container>
                           </div>
                         </ng-container>
@@ -1227,7 +1215,7 @@ type SavedFilterState = {
                           <ng-container *ngTemplateOutlet="deslocEvTpl; context: {$implicit: ev}"></ng-container>
                         </div>
                         <ng-container *ngIf="isDateExpanded('1º Desloc.', analysis.team, '__extra__')">
-                          <div class="osdia-ev-item osdia-ev-item--extra" *ngFor="let ev of (analysis.extraFlaggedDays ?? [])">
+                          <div class="osdia-ev-item" [class.osdia-ev-item--extra]="!ev.flags.length" *ngFor="let ev of (analysis.extraFlaggedDays ?? [])">
                             <ng-container *ngTemplateOutlet="deslocEvTpl; context: {$implicit: ev}"></ng-container>
                           </div>
                         </ng-container>
@@ -1301,7 +1289,7 @@ type SavedFilterState = {
                           <ng-container *ngTemplateOutlet="retornoEvTpl; context: {$implicit: ev}"></ng-container>
                         </div>
                         <ng-container *ngIf="isDateExpanded('Retorno Base', analysis.team, '__extra__')">
-                          <div class="osdia-ev-item osdia-ev-item--extra" *ngFor="let ev of (analysis.extraFlaggedDays ?? [])">
+                          <div class="osdia-ev-item" [class.osdia-ev-item--extra]="!ev.flags.length" *ngFor="let ev of (analysis.extraFlaggedDays ?? [])">
                             <ng-container *ngTemplateOutlet="retornoEvTpl; context: {$implicit: ev}"></ng-container>
                           </div>
                         </ng-container>
@@ -5595,150 +5583,68 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       sumOver15Min: number;
     }>> = {};
 
-    for (const sc of report.teamScorecard) {
+    for (const rw of report.recurrentWarnings || []) {
       if (typeFilter !== 'todas') {
-        const teamType = getTeamType(sc.team);
+        const teamType = getTeamType(rw.team);
         if (teamType !== typeFilter) continue;
       }
 
-      const base = getBaseForTeam(sc.team);
+      const base = getBaseForTeam(rw.team);
 
-      const teamDesvios: { name: string; priority: number; avgMin: number; count: number; globalAvg: number }[] = [];
-
-      const util = report.specialAnalysis.utilizacaoAnalysis.find((u: any) => u.team === sc.team);
-      const diasTrab = util?.totalJornadas || report.specialAnalysis.retornoBaseAnalysis.find((a: any) => a.team === sc.team)?.totalDays || report.specialAnalysis.primeiroDeslocAnalysis.find((a: any) => a.team === sc.team)?.totalDays || 1;
-      const totalOrders = util?.totalOrders || report.specialAnalysis.tmeImpAnalysis.find((a: any) => a.team === sc.team)?.totalOrders || 0;
-
-      if (util && util.flaggedOrders) {
-        const partidasAll = util.flaggedOrders.filter((o: any) => o.temp_prep_os_min > 0);
-        const partidasOver10 = util.flaggedOrders.filter((o: any) => o.flags?.includes('temp_prep_alto'));
-        if (partidasOver10.length > 0) {
-          const avg = Math.round(partidasAll.reduce((acc: number, val: any) => acc + (val.temp_prep_os_min || 0), 0) / (partidasAll.length || 1));
-          teamDesvios.push({ name: 'Partida', priority: 1, avgMin: avg, count: partidasOver10.length, globalAvg: 0 });
-        }
-
-        const intervalosAll = util.flaggedOrders.flatMap((o: any) => o.sem_os_details?.filter((d: any) => d.type === 'intervalo_deslocamento' && d.min > 0) || []);
-        const intervalosOver10 = intervalosAll.filter((d: any) => d.min > 10);
-        if (intervalosOver10.length > 0) {
-          const avg = Math.round(intervalosAll.reduce((acc: number, val: any) => acc + val.min, 0) / (intervalosAll.length || 1));
-          const globalAvg = Math.round(intervalosAll.reduce((acc: number, val: any) => acc + (val.global_avg_min || 0), 0) / (intervalosAll.length || 1));
-          teamDesvios.push({ name: 'Desl. Intervalo', priority: 2, avgMin: avg, count: intervalosOver10.length, globalAvg });
-        }
-
-        const entreOsAll = util.flaggedOrders.flatMap((o: any) => o.sem_os_details?.filter((d: any) => d.type === 'entre_ordens' && d.min > 0) || []);
-        const entreOsOver10 = entreOsAll.filter((d: any) => d.min > 10);
-        if (entreOsOver10.length > 0) {
-          const avg = Math.round(entreOsAll.reduce((acc: number, val: any) => acc + val.min, 0) / (entreOsAll.length || 1));
-          const globalAvg = Math.round(entreOsAll.reduce((acc: number, val: any) => acc + (val.global_avg_min || 0), 0) / (entreOsAll.length || 1));
-          teamDesvios.push({ name: 'Sem OS', priority: 3, avgMin: avg, count: entreOsOver10.length, globalAvg });
-        }
-
-        // Collect Sem OS > 15min for CCI section with distinct days count
-        const entreOsOrders = util.flaggedOrders.filter((o: any) =>
-          o.sem_os_details?.some((d: any) => d.type === 'entre_ordens' && d.min > 15)
-        );
-        const entreOsOver15 = entreOsAll.filter((d: any) => d.min > 15);
-        if (entreOsOver15.length > 0) {
-          const avg = Math.round(entreOsAll.reduce((acc: number, val: any) => acc + val.min, 0) / (entreOsAll.length || 1));
-          const globalAvg = Math.round(entreOsAll.reduce((acc: number, val: any) => acc + (val.global_avg_min || 0), 0) / (entreOsAll.length || 1));
-          const sumOver15Min = entreOsOver15.reduce((acc: number, val: any) => acc + val.min, 0);
-
-          const distinctDates = new Set(
-            entreOsOrders.map((o: any) => o.date_ref).filter(Boolean)
-          );
-          const distinctDaysCount = distinctDates.size > 0 ? distinctDates.size : entreOsOver15.length;
-
-          if (!baseEntreOsMap[base]) baseEntreOsMap[base] = [];
-          baseEntreOsMap[base].push({
-            team: sc.team,
-            count: entreOsOver15.length,
-            distinctDaysCount,
-            totalOrders,
-            diasTrab,
-            avgMin: avg,
-            globalAvg,
-            sumOver15Min
-          });
-        }
+      if (rw.entreOs) {
+         if (!baseEntreOsMap[base]) baseEntreOsMap[base] = [];
+         baseEntreOsMap[base].push({
+           team: rw.team,
+           count: rw.entreOs.count,
+           distinctDaysCount: rw.entreOs.distinctDaysCount,
+           totalOrders: rw.totalOrders,
+           diasTrab: rw.diasTrab,
+           avgMin: rw.entreOs.avgMin,
+           globalAvg: rw.entreOs.globalAvg,
+           sumOver15Min: rw.entreOs.sumOver15Min
+         });
       }
 
-      if (sc.kpiStatus.retornoBase === 'below' && sc.kpis.retornoBase !== undefined) {
-        const ana = report.specialAnalysis.retornoBaseAnalysis.find((a: any) => a.team === sc.team);
-        if (ana) {
-          teamDesvios.push({ name: 'Retorno a Base', priority: 4, avgMin: Math.round(sc.kpis.retornoBase), count: ana.flaggedDays?.length || 0, globalAvg: Math.round(ana.globalAvgRetornoMin || 0) });
+      if (rw.desvios && rw.desvios.length > 0) {
+        rw.desvios.sort((a, b) => a.priority - b.priority);
+        const top3 = rw.desvios.slice(0, 3);
+        const problemStr = top3.map(d => {
+          const showOS = ['Partida', 'Desl. Intervalo', '2º Desp.', 'TME IMP'].includes(d.name);
+          let timesStr = showOS 
+            ? `${d.count}x em ${rw.totalOrders} OS (${rw.diasTrab} dias)`
+            : `${d.count}x em ${rw.diasTrab} dias`;
+          
+          if (['Partida', 'Desl. Intervalo'].includes(d.name)) {
+            timesStr += ' (Tempo Elevado)';
+          }
+          
+          const aboveAvg = d.globalAvg > 0 ? d.avgMin - d.globalAvg : 0;
+          const aboveAvgStr = aboveAvg > 0 ? ` (+${aboveAvg}m base)` : '';
+          
+          let emoji = '⚠️';
+          if (d.name === 'Partida') emoji = '🏁';
+          else if (d.name === 'Desl. Intervalo') emoji = '⏸️';
+          else if (d.name === 'Retorno a Base') emoji = '🏠';
+          else if (d.name === 'TME IMP') emoji = '⏱️';
+          else if (d.name === '1º Login') emoji = '📱';
+          else if (d.name === '1º Desloc.') emoji = '🚐';
+          else if (d.name === 'Calendário Errado') emoji = '📅';
+
+          return `${L3}${emoji} *${d.name}:* ${timesStr} | ⏱️ Média: ${d.avgMin}m${aboveAvgStr}`;
+        }).join('\n');
+
+        let badness = 0;
+        for (const d of rw.desvios) {
+          badness += d.count * (10 - d.priority);
         }
+
+        if (!baseMap[base]) baseMap[base] = [];
+        baseMap[base].push({
+          team: rw.team,
+          badness: badness,
+          problem: problemStr
+        });
       }
-      if (sc.kpiStatus.tmeImp === 'below' && sc.kpis.tmeImp !== undefined) {
-        const ana = report.specialAnalysis.tmeImpAnalysis.find((a: any) => a.team === sc.team);
-        if (ana) {
-          teamDesvios.push({ name: 'TME IMP', priority: 5, avgMin: Math.round(sc.kpis.tmeImp), count: ana.flaggedOrders?.length || 0, globalAvg: Math.round(ana.globalAvgTmeImpMin || 0) });
-        }
-      }
-      if (sc.kpiStatus.primeiroDesloc === 'below' && sc.kpis.primeiroDesloc !== undefined) {
-        const ana = report.specialAnalysis.primeiroDeslocAnalysis.find((a: any) => a.team === sc.team);
-        if (ana) {
-          teamDesvios.push({ name: '1º Desloc.', priority: 6, avgMin: Math.round(sc.kpis.primeiroDesloc), count: ana.flaggedDays?.length || 0, globalAvg: Math.round(ana.globalAvgDeslocMin || 0) });
-        }
-      }
-      if (sc.kpiStatus.primeiroLogin === 'below' && sc.kpis.primeiroLogin !== undefined) {
-        const ana = report.specialAnalysis.primeiroLoginAnalysis.find((a: any) => a.team === sc.team);
-        if (ana) {
-          teamDesvios.push({ name: '1º Login', priority: 7, avgMin: Math.round(sc.kpis.primeiroLogin), count: ana.flaggedDays?.length || 0, globalAvg: Math.round(ana.globalAvgLoginMin || 0) });
-        }
-      }
-
-      // Filter recurrent desvios (excluding Entre OS which belongs only to CCI)
-      const recurrentDesvios = teamDesvios.filter(d => {
-        if (d.name === 'Sem OS') return false;
-        const showOS = d.name === 'Partida';
-        const baseCount = showOS ? totalOrders : diasTrab;
-        if (baseCount === 0) return false;
-        return (d.count / baseCount) >= 0.20;
-      });
-
-      // ONLY include team if it has actual recurrent desvios
-      if (recurrentDesvios.length === 0) {
-        continue;
-      }
-
-      recurrentDesvios.sort((a, b) => a.priority - b.priority);
-      const top3 = recurrentDesvios.slice(0, 3);
-
-      const problemStr = top3.map(d => {
-        const showOS = d.name === 'Partida';
-        let timesStr = showOS 
-          ? `${d.count}x em ${totalOrders} OS (${diasTrab} dias)`
-          : `${d.count}x em ${diasTrab} dias`;
-        
-        if (['Partida', 'Desl. Intervalo'].includes(d.name)) {
-          timesStr += ' > 10m';
-        }
-        
-        const aboveAvg = d.globalAvg > 0 ? d.avgMin - d.globalAvg : 0;
-        const aboveAvgStr = aboveAvg > 0 ? ` (+${aboveAvg}m base)` : '';
-        
-        let emoji = '⚠️';
-        if (d.name === 'Partida') emoji = '🏁';
-        else if (d.name === 'Desl. Intervalo') emoji = '⏸️';
-        else if (d.name === 'Retorno a Base') emoji = '🏠';
-        else if (d.name === 'TME IMP') emoji = '⏱️';
-        else if (d.name === '1º Login') emoji = '📱';
-        else if (d.name === '1º Desloc.') emoji = '🚐';
-
-        return `${L3}${emoji} *${d.name}:* ${timesStr} | ⏱️ Média: ${d.avgMin}m${aboveAvgStr}`;
-      }).join('\n');
-
-      let badness = 0;
-      for (const d of teamDesvios) {
-        badness += d.count * (10 - d.priority);
-      }
-
-      if (!baseMap[base]) baseMap[base] = [];
-      baseMap[base].push({
-        team: sc.team,
-        badness: badness,
-        problem: problemStr
-      });
     }
 
     const ALL_OPT = '(Todos)';
@@ -5821,7 +5727,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
         msg += `🏢 *Base: ${baseName}*\n`;
         for (const t of top3Teams) {
-          const timesStr = `${t.count}x > 15min em ${t.totalOrders} OS | Ocorreu em ${t.distinctDaysCount} de ${t.diasTrab} dias`;
+          const timesStr = `${t.count}x prolongada em ${t.totalOrders} OS | Ocorreu em ${t.distinctDaysCount} de ${t.diasTrab} dias`;
           const aboveAvg = t.globalAvg > 0 ? t.avgMin - t.globalAvg : 0;
           const aboveAvgStr = aboveAvg > 0 ? ` (+${aboveAvg}m base)` : '';
           msg += `${L3}🔄 *Sem OS:* ${t.team} | ${timesStr} | ⏱️ Média: ${t.avgMin}m${aboveAvgStr}\n`;
@@ -5832,13 +5738,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Add concise legend at the end
     msg += `${DIVIDER}\n💡 *Legenda dos Desvios:*\n`;
-    msg += `  🏁 *Partida:* Saída para OS (A Caminho)/ prep. ≥ 10m\n`;
+    msg += `  🏁 *Partida:* Saída para OS (A Caminho)/ prep. tempo elevado\n`;
     msg += `  📱 *1º Login:* Atraso no 1º login do dia\n`;
     msg += `  🚐 *1º Desloc.:* Atraso na partida do 1º deslocamento\n`;
-    msg += `  ⏸️ *Desl. Intervalo:* Parada em deslocamento > 10m\n`;
-    msg += `  🔄 *Sem OS:* Ociosidade entre ordens > 15m\n`;
+    msg += `  ⏸️ *Desl. Intervalo:* Parada em deslocamento prolongada\n`;
+    msg += `  🔄 *Sem OS:* Ociosidade entre ordens prolongada\n`;
     msg += `  🏠 *Retorno a Base:* Tempo elevado de retorno\n`;
     msg += `  ⏱️ *TME IMP:* Tempo de reparo em improdutivas acima do padrão\n`;
+    msg += `  📅 *Calendário Errado:* Atividade realizada com o calendário no dia errado\n`;
 
     msg = msg.trimEnd();
 
@@ -6531,20 +6438,35 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   protected allDateGroupsForKpi<T extends { date_ref?: string }>(
     top: T[],
     extra: T[] | undefined,
-  ): Array<{ dateRef: string; items: T[] }> {
+  ): Array<{ dateRef: string; items: T[]; extraItems: T[] }> {
     const topGroups = this.groupByDateRef(top);
+    const extraGroups = this.groupByDateRef(extra ?? []);
+    
     const topDates = new Set(topGroups.map(g => g.dateRef));
     const extraOnlyDates = new Set(
-      (extra ?? []).map(o => (o.date_ref ?? '').trim() || '—').filter(d => !topDates.has(d)),
+      extraGroups.map(g => g.dateRef).filter(d => !topDates.has(d)),
     );
+    
     const parseDate = (s: string): number => {
       const p = s.split('/');
       return p.length >= 3 ? +p[2] * 10000 + +p[1] * 100 + +p[0] : 0;
     };
-    return [
-      ...topGroups,
-      ...[...extraOnlyDates].map(d => ({ dateRef: d, items: [] as T[] })),
-    ].sort((a, b) => parseDate(a.dateRef) - parseDate(b.dateRef));
+    
+    const result = topGroups.map(g => ({
+      dateRef: g.dateRef,
+      items: g.items,
+      extraItems: extraGroups.find(eg => eg.dateRef === g.dateRef)?.items || []
+    }));
+    
+    for (const d of extraOnlyDates) {
+      result.push({
+        dateRef: d,
+        items: [],
+        extraItems: extraGroups.find(eg => eg.dateRef === d)?.items || []
+      });
+    }
+    
+    return result.sort((a, b) => parseDate(a.dateRef) - parseDate(b.dateRef));
   }
 
   protected trackByDateRef(_: number, grp: { dateRef: string }): string {

@@ -529,6 +529,26 @@ export interface ExecutiveSummary {
   tmeImpAlertCount: number;
 }
 
+export interface TeamRecurrentWarning {
+  team: string;
+  diasTrab: number;
+  totalOrders: number;
+  desvios: Array<{
+    name: string;
+    priority: number;
+    avgMin: number;
+    count: number;
+    globalAvg: number;
+  }>;
+  entreOs?: {
+    count: number;
+    distinctDaysCount: number;
+    avgMin: number;
+    globalAvg: number;
+    sumOver15Min: number;
+  };
+}
+
 export interface GeneratedReport {
   generatedAt: string;
   filtersApplied: {
@@ -549,6 +569,7 @@ export interface GeneratedReport {
   };
   executiveSummary: ExecutiveSummary;
   teamScorecard: TeamKpiScorecard[];
+  recurrentWarnings?: TeamRecurrentWarning[];
   specialAnalysis: {
     tempPrepAndSemOs: ReportTeamMetric[];
     crossedInsights: ReportCrossedInsight[];
