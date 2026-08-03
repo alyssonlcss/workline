@@ -59,7 +59,7 @@ export interface SemOsDetail {
 export class DashboardPdfService {
 
   private static readonly TIMELINE_IDLE_LABELS = new Set([
-    'Sem OS', 'Desl. Intervalo: sem OS', 'Partida', '1º Desloc.', 'Deslocamento p/OS', 'Retorno Vazio',
+    'Sem OS', 'Desl. Intervalo | Sem OS', 'Partida', '1º Desloc.', 'Deslocamento p/OS', 'Retorno Vazio',
   ]);
 
   private getOciosoTotal(ev: any): number | null {
@@ -73,7 +73,7 @@ export class DashboardPdfService {
         lbl.startsWith('1º Desp.') ||
         lbl.startsWith('2º Desp.') ||
         lbl === 'Sem OS' ||
-        lbl === 'Desl. Intervalo: sem OS' ||
+        lbl === 'Desl. Intervalo | Sem OS' ||
         lbl === 'Partida' ||
         lbl === '1º Desloc.'
       ) {
@@ -1024,9 +1024,12 @@ export class DashboardPdfService {
               if (ev.flags?.includes('temp_prep_alto')) orderItems.push(alertItem(`Tempo de Partida elevado: ${helpers.osDiaAlertBody('temp_prep_alto', ev)}`));
               if (ev.flags?.includes('triagem_alto')) orderItems.push(alertItem(`2º Desp.: ${helpers.osDiaAlertBody('triagem_alto', ev)}`));
               if (ev.flags?.includes('primeiro_desloc_alto')) orderItems.push(alertItem(`1º Desloc.: ${helpers.osDiaAlertBody('primeiro_desloc_alto', ev)}`));
-              if (ev.flags?.includes('inicio_jornada_alto')) orderItems.push(alertItem(`1º Desp.: ${helpers.osDiaAlertBody('inicio_jornada_alto', ev)}`));
-              if (ev.flags?.includes('desloc_intervalo_alto')) orderItems.push(alertItem(`Desl. Intervalo: sem OS: ${helpers.osDiaAlertBody('desloc_intervalo_alto', ev)}`));
+              if (ev.flags?.includes('inicio_jornada_alto')) orderItems.push(alertItem(`${ev.flags.includes('login_atrasado') ? '1º Desp. tardio após login atrasado:' : '1º Desp.:'} ${helpers.osDiaAlertBody('inicio_jornada_alto', ev)}`));
+              if (ev.flags?.includes('desloc_intervalo_alto')) orderItems.push(alertItem(`Desl. Intervalo | Sem OS: ${helpers.osDiaAlertBody('desloc_intervalo_alto', ev)}`));
               if (ev.flags?.includes('sem_os_alto')) orderItems.push(alertItem(`Sem OS: ${helpers.osDiaAlertBody('sem_os_alto', ev)}`));
+              if (ev.flags?.includes('login_atrasado')) orderItems.push(alertItem(`Log In atrasado: ${helpers.osDiaAlertBody('login_atrasado', ev)}`));
+              if (ev.flags?.includes('calendario_errado')) orderItems.push(alertItem(`Calendário errado: ${helpers.osDiaAlertBody('calendario_errado', ev)}`));
+              if (ev.flags?.includes('intervalo_por_ultimo')) orderItems.push(alertItem(`Intervalo por último: ${helpers.osDiaAlertBody('intervalo_por_ultimo', ev)}`));
               if (ev.nr_ordem_despacho_anterior) {
                 const horaFmt = (ev.hora_despacho_anterior || '').replace(/^(\d{2}\/\d{2})\/\d{4}\s+(\d{2}:\d{2}).*$/, '$1 $2');
                 orderItems.push(alertWarnItemRuns('Despacho anterior da 1ªOS', [
@@ -1106,6 +1109,7 @@ export class DashboardPdfService {
             if (efCcParts.length > 0) orderItems.push({ text: efCcParts.join(''), fontSize: 7, color: GRAY, margin: [0, 0, 0, 2] });
             const efTl = this.buildTimelinePdfBlock(ev, true, true);
             if (efTl) orderItems.push(efTl);
+            if (ev.flags?.includes('baixa_eficiencia')) orderItems.push(alertItem(`Baixa Eficiência: ${helpers.eficienciaAlertBody('baixa_eficiencia', ev)}`));
             if (ev.flags?.includes('tr_muito_baixo')) orderItems.push(alertItem(`Tempo de Reparo muito baixo: ${helpers.eficienciaAlertBody('tr_muito_baixo', ev)}`));
             if (ev.flags?.includes('deslocamento_curto')) orderItems.push(alertItem(`Deslocamento (TL) muito curto: ${helpers.eficienciaAlertBody('deslocamento_curto', ev)}`));
             if (ev.flags?.includes('tr_excede_hd')) orderItems.push(alertItem(`Tempo de Reparo alto: ${helpers.eficienciaAlertBody('tr_excede_hd', ev)}`));
@@ -1180,9 +1184,12 @@ export class DashboardPdfService {
             if (ev.flags?.includes('temp_prep_alto')) orderItems.push(alertItem(`Tempo de Partida elevado: ${helpers.osDiaAlertBody('temp_prep_alto', ev)}`));
             if (ev.flags?.includes('triagem_alto')) orderItems.push(alertItem(`2º Desp.: ${helpers.osDiaAlertBody('triagem_alto', ev)}`));
             if (ev.flags?.includes('primeiro_desloc_alto')) orderItems.push(alertItem(`1º Desloc.: ${helpers.osDiaAlertBody('primeiro_desloc_alto', ev)}`));
-            if (ev.flags?.includes('inicio_jornada_alto')) orderItems.push(alertItem(`1º Desp.: ${helpers.osDiaAlertBody('inicio_jornada_alto', ev)}`));
-            if (ev.flags?.includes('desloc_intervalo_alto')) orderItems.push(alertItem(`Desl. Intervalo: sem OS: ${helpers.osDiaAlertBody('desloc_intervalo_alto', ev)}`));
+            if (ev.flags?.includes('inicio_jornada_alto')) orderItems.push(alertItem(`${ev.flags.includes('login_atrasado') ? '1º Desp. tardio após login atrasado:' : '1º Desp.:'} ${helpers.osDiaAlertBody('inicio_jornada_alto', ev)}`));
+            if (ev.flags?.includes('desloc_intervalo_alto')) orderItems.push(alertItem(`Desl. Intervalo | Sem OS: ${helpers.osDiaAlertBody('desloc_intervalo_alto', ev)}`));
             if (ev.flags?.includes('sem_os_alto')) orderItems.push(alertItem(`Sem OS: ${helpers.osDiaAlertBody('sem_os_alto', ev)}`));
+            if (ev.flags?.includes('login_atrasado')) orderItems.push(alertItem(`Log In atrasado: ${helpers.osDiaAlertBody('login_atrasado', ev)}`));
+            if (ev.flags?.includes('calendario_errado')) orderItems.push(alertItem(`Calendário errado: ${helpers.osDiaAlertBody('calendario_errado', ev)}`));
+            if (ev.flags?.includes('intervalo_por_ultimo')) orderItems.push(alertItem(`Intervalo por último: ${helpers.osDiaAlertBody('intervalo_por_ultimo', ev)}`));
             if (ev.nr_ordem_despacho_anterior) {
               const obsHoraFmt = (ev.hora_despacho_anterior || '').replace(/^(\d{2}\/\d{2})\/\d{4}\s+(\d{2}:\d{2}).*$/, '$1 $2');
               orderItems.push(alertWarnItemRuns('Despacho anterior da 1ªOS', [
@@ -1284,6 +1291,7 @@ export class DashboardPdfService {
             dayItems.push(tl('Inicio Cal.', ev.inicio_calendario || '\u2014', `Log In: ${ev.log_in_corrigido || '\u2014'}`));
             if (ev.flags?.includes('login_muito_tardio')) dayItems.push(alertItem(`Login muito tardio: ${helpers.loginAlertBody('login_muito_tardio', ev)}`));
             else if (ev.flags?.includes('login_tardio')) dayItems.push(alertItem(`Login tardio: ${helpers.loginAlertBody('login_tardio', ev)}`));
+            if (ev.flags?.includes('calendario_errado')) dayItems.push(alertItem(`Calendário errado: ${helpers.loginAlertBody('calendario_errado', ev)}`));
             teamItems.push({ stack: [
               {
                 text: [
@@ -1332,12 +1340,13 @@ export class DashboardPdfService {
             const dayItems: any[] = [];
             const deslocTl = this.buildTimelinePdfBlock(ev);
             if (deslocTl) dayItems.push(deslocTl);
-            if (ev.flags?.includes('despacho_tardio')) dayItems.push(alertItem(`${ev.flags.includes('login_atrasado') ? 'Despacho tardio após login atrasado:' : 'Despacho tardio:'} ${helpers.deslocAlertBody('despacho_tardio', ev)}`));
+            if (ev.flags?.includes('despacho_tardio')) dayItems.push(alertItem(`${ev.flags.includes('login_atrasado') ? '1º Desp. tardio após login atrasado:' : 'Despacho tardio:'} ${helpers.deslocAlertBody('despacho_tardio', ev)}`));
             if (ev.flags?.includes('login_atrasado')) dayItems.push(alertItem(`Log In atrasado: ${helpers.deslocAlertBody('login_atrasado', ev)}`));
             if (ev.flags?.includes('desloc_muito_lento')) dayItems.push(alertItem(`1º Desloc.: ${helpers.deslocAlertBody('desloc_muito_lento', ev)}`));
             else if (ev.flags?.includes('desloc_lento')) dayItems.push(alertItem(`1º Desloc.: ${helpers.deslocAlertBody('desloc_lento', ev)}`));
             if (ev.flags?.includes('triagem_alto')) dayItems.push(alertItem(`2º Desp.: ${helpers.deslocAlertBody('triagem_alto', ev)}`));
             if (ev.flags?.includes('sem_desloc_registrado')) dayItems.push(alertItem(`Sem deslocamento registrado: ${helpers.deslocAlertBody('sem_desloc_registrado', ev)}`));
+            if (ev.flags?.includes('calendario_errado')) dayItems.push(alertItem(`Calendário errado: ${helpers.deslocAlertBody('calendario_errado', ev)}`));
             if (ev.nr_ordem_despacho_anterior) {
               const horaFmt = (ev.hora_despacho_anterior || '').replace(/^(\d{2}\/\d{2})\/\d{4}\s+(\d{2}:\d{2}).*$/, '$1 $2');
               dayItems.push(alertWarnItemRuns('Despacho anterior da 1ªOS', [

@@ -13,9 +13,11 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[]): OsDiaTea
     }
 
     const OS_DIA_META = 4.4;
-    const OS_DIA_PCT_THRESHOLD = 0.20;
-    const TEMP_PREP_THRESHOLD_MIN      = 10; // Desp. → A Caminho (all OS)
-    const SEM_OS_THRESHOLD_MIN = 10;
+    const OS_DIA_PCT_THRESHOLD = (Number(process.env['LIMIT_TR_EXCEDE_HD_PCT']) || 20) / 100;
+    const TEMP_PREP_THRESHOLD_MIN = Number(process.env['LIMIT_TEMP_PREP_MIN']) || 10;
+    const SEM_OS_THRESHOLD_MIN = Number(process.env['LIMIT_SEM_OS_MIN']) || 10;
+    const PRIMEIRO_DESLOC_THRESHOLD_MIN = Number(process.env['LIMIT_PRIMEIRO_DESLOC_MIN']) || 25;
+    const TRIAGEM_THRESHOLD_MIN = Number(process.env['LIMIT_TRIAGEM_MIN']) || 10;
     const TOLERANCE_MIN = 5; // invisible grace margin — keeps displayed limits unchanged
 
     // 1. Determine under-performing teams from KPI insight
@@ -398,8 +400,8 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[]): OsDiaTea
         }
       }
       let dayRetornoExcedente = 0;
-      if (Number.isFinite(semOsFimDirectGapMin) && semOsFimDirectGapMin > 70) {
-        const excess = round2(semOsFimDirectGapMin - 70);
+      if (Number.isFinite(semOsFimDirectGapMin) && semOsFimDirectGapMin > 60) {
+        const excess = round2(semOsFimDirectGapMin - 60);
         teamRetornoExcedenteSum.set(team, (teamRetornoExcedenteSum.get(team) ?? 0) + excess);
         dayRetornoExcedente = excess;
       }
@@ -556,12 +558,12 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[]): OsDiaTea
         if (Number.isFinite(tempPrepOs) && tempPrepOs >= tempPrepThreshold + TOLERANCE_MIN) {
           flags.push('temp_prep_alto');
         }
-        if (triagemMin !== undefined && triagemMin >= TEMP_PREP_THRESHOLD_MIN + TOLERANCE_MIN) {
+        if (triagemMin !== undefined && triagemMin >= TRIAGEM_THRESHOLD_MIN + TOLERANCE_MIN) {
           flags.push('triagem_alto');
         }
-        // 1º Desloc.: Início Cal. → A Caminho, only for 1ª OS, threshold 25 min
+        // 1º Desloc.: Início Cal. → A Caminho, only for 1ª OS, threshold from env
         const ocisoForFlag = ocisoValues[i];
-        if (i === 0 && ocisoForFlag !== undefined && ocisoForFlag >= 25) {
+        if (i === 0 && ocisoForFlag !== undefined && ocisoForFlag >= PRIMEIRO_DESLOC_THRESHOLD_MIN) {
           flags.push('primeiro_desloc_alto');
         }
         if (Number.isFinite(semOsMin) && semOsMin >= SEM_OS_THRESHOLD_MIN + TOLERANCE_MIN) {
@@ -600,12 +602,16 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[]): OsDiaTea
           continue;
         }
 
-        // Only include interval if it falls within [prev_liberada, liberada_atual]
+        const despachadaDate = despachadaCol ? parseDateTimeBr(String(row[despachadaCol] ?? '')) : null;
+        const inicioJanelaMin = prevLiberadaDate && despachadaDate
+          ? Math.min(prevLiberadaDate.getTime(), despachadaDate.getTime())
+          : (prevLiberadaDate?.getTime() ?? despachadaDate?.getTime() ?? null);
+
+        // Include interval if it falls within [inicioJanelaMin, liberada_atual]
         const intervaloNaJanela = Boolean(
           inicioIntervaloDate &&
-          liberadaAtualDate &&
-          inicioIntervaloDate.getTime() <= liberadaAtualDate.getTime() &&
-          (prevLiberadaDate === null || inicioIntervaloDate.getTime() >= prevLiberadaDate.getTime()),
+          (liberadaAtualDate === null || inicioIntervaloDate.getTime() <= liberadaAtualDate.getTime()) &&
+          (inicioJanelaMin === null || inicioIntervaloDate.getTime() >= inicioJanelaMin),
         );
 
         // Build sem_os_details
@@ -799,7 +805,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[]): OsDiaTea
         const logOffStr = logOffCorrigidoCol2 ? String(lastRow[logOffCorrigidoCol2] ?? '').trim() || undefined : undefined;
         const liberadaStr = liberadaCol ? String(lastRow[liberadaCol] ?? '').trim() || undefined : undefined;
         if (logOffStr) {
-          const retornoExcedenteThreshold = Number.isFinite(semOsFimDirectGapMin) && semOsFimDirectGapMin > 70;
+          const retornoExcedenteThreshold = Number.isFinite(semOsFimDirectGapMin) && semOsFimDirectGapMin > 60;
           const fimDeslAbove = Number.isFinite(semOsFimDeslIntervalMin) && semOsFimDeslIntervalMin >= SEM_OS_THRESHOLD_MIN + TOLERANCE_MIN;
           const semOsAbove = fimDeslAbove;
           const retornoDetail: NonNullable<OsDiaOrderEvidence['retorno_excedente_details']> = {
@@ -809,7 +815,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[]): OsDiaTea
             to:   logOffStr,
             retorno_base_discounted: semOsFimRetornoBaseUsedRow ? round2(semOsFimRetornoBaseRowVal) : undefined,
             retorno_base_used_row:   semOsFimRetornoBaseUsedRow || undefined,
-            excess_min: retornoExcedenteThreshold ? round2(semOsFimDirectGapMin - 70) : undefined,
+            excess_min: retornoExcedenteThreshold ? round2(semOsFimDirectGapMin - 60) : undefined,
           };
           const fimInicioIntervalo = semOsFimHasIntervalInWindow && inicioIntervaloCol ? String(lastRow[inicioIntervaloCol] ?? '').trim() : '';
           const fimFimIntervalo    = semOsFimHasIntervalInWindow && fimIntervaloCol    ? String(lastRow[fimIntervaloCol]    ?? '').trim() : '';

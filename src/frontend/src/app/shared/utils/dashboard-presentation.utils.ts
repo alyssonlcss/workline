@@ -1,3 +1,5 @@
+import { parseDt } from './timeline-segment.utils';
+
 export interface DashboardChip {
   label: string;
   value: string;
@@ -96,8 +98,38 @@ export function getDashboardAlerts(kpi: string, ev: any): DashboardAlert[] {
   const alertTexts = ev.alertTexts || {};
 
   const addFlag = (flag: string, title: string, isWarn = false) => {
-    if (ev.flags?.includes(flag) && alertTexts[flag]) {
-      alerts.push({ title, bodyHtml: alertTexts[flag], isWarn });
+    let text = alertTexts[flag];
+
+    if (!text) {
+      if (flag === 'desloc_intervalo_alto') {
+        const detail = ev.sem_os_details?.find((d: any) => d.type === 'intervalo_deslocamento');
+        const minVal = Math.round(detail?.min ?? 20);
+        text = `${minVal} min de Deslocamento de Intervalo — acima do limite de 10 min. Esse tempo ocioso ocorreu antes de iniciar o deslocamento ou durante a pausa.`;
+      } else if (flag === 'sem_os_alto') {
+        const detail = ev.sem_os_details?.find((d: any) => d.type === 'entre_ordens');
+        const minVal = Math.round(detail?.min ?? ev.sem_os_total_min ?? 10);
+        text = `${minVal} min sem OS registrada — acima do limite de 10 min. Esse tempo representa intervalos ociosos em que o técnico não estava atendendo nem a caminho de um chamado.`;
+      } else if (flag === 'intervalo_por_ultimo') {
+        text = `o intervalo foi registrado ao fim do turno (imediatamente antes do Log Off). O intervalo deve ser tirado entre ordens de serviço, não ao fim do turno, pois isso ocasiona erros na metrificação do retorno a base, que fica vazio.`;
+      } else if (flag === 'retorno_excedente') {
+        const minVal = Math.round(ev.retorno_excedente_min ?? ev.retorno_excedente_details?.excess_min ?? 37);
+        text = `${minVal} min excedentes de Retorno a Base no fim da jornada. Esse tempo não produtivo é somado ao tempo ocioso da equipe.`;
+      } else if (flag === 'calendario_errado') {
+        text = `o login foi realizado mais de 15 min antes do Início Calendário. Verifique se o horário do calendário de trabalho da equipe está configurado corretamente.`;
+      }
+    }
+
+    const hasFlag = ev.flags?.includes(flag);
+    const hasIntervalDetail = flag === 'desloc_intervalo_alto' && hasFlag;
+    const hasIntervaloPorUltimo = flag === 'intervalo_por_ultimo' && hasFlag;
+    const hasRetornoExcedente = flag === 'retorno_excedente' && hasFlag;
+    const hasCalendarioErrado = flag === 'calendario_errado' && hasFlag;
+    const hasLoginAtrasado = flag === 'login_atrasado' && hasFlag;
+
+    if ((hasFlag || hasIntervalDetail || hasIntervaloPorUltimo || hasRetornoExcedente || hasCalendarioErrado || hasLoginAtrasado) && text) {
+      if (!alerts.some(a => a.title === title)) {
+        alerts.push({ title, bodyHtml: text, isWarn: false });
+      }
     }
   };
 
@@ -109,9 +141,15 @@ export function getDashboardAlerts(kpi: string, ev: any): DashboardAlert[] {
       addFlag('triagem_alto', '2º Desp.:');
       addFlag('primeiro_desloc_alto', '1º Desloc.:');
       addFlag('sem_os_alto', 'Sem OS:');
-      addFlag('inicio_jornada_alto', '1º Desp.:');
-      addFlag('desloc_intervalo_alto', 'Desl. Intervalo: sem OS:');
-      addFlag('retorno_excedente', 'Retorno Excedente:', true);
+      if (ev.flags?.includes('inicio_jornada_alto')) {
+        const title = ev.flags.includes('login_atrasado') ? '1º Desp. tardio após login atrasado:' : '1º Desp.:';
+        alerts.push({ title, bodyHtml: alertTexts['inicio_jornada_alto'] });
+      }
+      addFlag('desloc_intervalo_alto', 'Desl. Intervalo | Sem OS:');
+      addFlag('intervalo_por_ultimo', 'Intervalo por último:');
+      addFlag('calendario_errado', 'Calendário errado:');
+      addFlag('login_atrasado', 'Log In atrasado:');
+      addFlag('retorno_excedente', 'Retorno Excedente:');
       break;
     
     case 'Eficiência':
@@ -125,12 +163,18 @@ export function getDashboardAlerts(kpi: string, ev: any): DashboardAlert[] {
     case 'Utilização':
       addFlag('temp_prep_alto', 'Tempo de Partida elevado:');
       addFlag('sem_os_alto', 'Sem OS:');
-      addFlag('inicio_jornada_alto', '1º Desp.:');
-      addFlag('desloc_intervalo_alto', 'Desl. Intervalo: sem OS:');
+      if (ev.flags?.includes('inicio_jornada_alto')) {
+        const title = ev.flags.includes('login_atrasado') ? '1º Desp. tardio após login atrasado:' : '1º Desp.:';
+        alerts.push({ title, bodyHtml: alertTexts['inicio_jornada_alto'] });
+      }
+      addFlag('desloc_intervalo_alto', 'Desl. Intervalo | Sem OS:');
+      addFlag('intervalo_por_ultimo', 'Intervalo por último:');
+      addFlag('calendario_errado', 'Calendário errado:');
+      addFlag('login_atrasado', 'Log In atrasado:');
       addFlag('tr_excede_hd', 'Tempo de Reparo alto:');
       addFlag('triagem_alto', '2º Desp.:');
       addFlag('primeiro_desloc_alto', '1º Desloc.:');
-      addFlag('retorno_excedente', 'Retorno Excedente:', true);
+      addFlag('retorno_excedente', 'Retorno Excedente:');
       break;
     
     case 'TME Improdutivo':
@@ -142,14 +186,16 @@ export function getDashboardAlerts(kpi: string, ev: any): DashboardAlert[] {
     case '1º Login':
       addFlag('login_muito_tardio', 'Log In muito tardio:');
       addFlag('login_tardio', 'Login tardio:');
+      addFlag('calendario_errado', 'Calendário errado:');
       break;
 
     case '1º Desloc.':
       if (ev.flags?.includes('despacho_tardio')) {
-        const title = ev.flags.includes('login_atrasado') ? 'Despacho tardio após login atrasado:' : 'Despacho tardio:';
+        const title = ev.flags.includes('login_atrasado') ? '1º Desp. tardio após login atrasado:' : 'Despacho tardio:';
         alerts.push({ title, bodyHtml: alertTexts['despacho_tardio'] });
       }
       addFlag('login_atrasado', 'Log In atrasado:');
+      addFlag('calendario_errado', 'Calendário errado:');
       
       if (ev.flags?.includes('desloc_muito_lento')) {
         addFlag('desloc_muito_lento', '1º Desloc.:');

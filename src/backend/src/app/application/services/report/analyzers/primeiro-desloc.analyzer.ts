@@ -33,8 +33,11 @@ export function analyzePrimeiroDesloc(deslocRows: CsvRow[], kpis: KpiInsight[]):
 
     const distinctDates = dateCol ? countDistinctDates(deslocRows, dateCol) : 0;
 
-    // Threshold: first dispatch is considered "tardio" if > 10 min after inicio_calendario
-    const DESPACHO_TARDIO_MIN = 10;
+    // Thresholds
+    const DESPACHO_TARDIO_MIN = Number(process.env['LIMIT_DESPACHO_TARDIO_MIN']) || 10;
+    const LOGIN_ATRASADO_MIN = Number(process.env['LIMIT_LOGIN_ATRASADO_MIN']) || 8;
+    const TRIAGEM_THRESHOLD = Number(process.env['LIMIT_TRIAGEM_MIN']) || 10;
+    const TRIAGEM_TOLERANCE = 5;
 
     // Global average
     const globalDeslocValues: number[] = [];
@@ -195,14 +198,12 @@ export function analyzePrimeiroDesloc(deslocRows: CsvRow[], kpis: KpiInsight[]):
           flags.push('despacho_tardio');
           countDespachoTardio++;
         }
-        if (loginAtrasoMin > 8 && flags.length > 0) {
+        if (loginAtrasoMin > LOGIN_ATRASADO_MIN && flags.length > 0) {
           flags.push('login_atrasado');
           countLoginAtrasado++;
         }
 
         // Desp. Prioritário: prior OS was dispatched before team's first A Caminho (triagem window)
-        const TRIAGEM_THRESHOLD = 10;
-        const TRIAGEM_TOLERANCE = 5;
         if (triagemMin !== undefined && triagemMin >= TRIAGEM_THRESHOLD + TRIAGEM_TOLERANCE) {
           flags.push('triagem_alto');
         }

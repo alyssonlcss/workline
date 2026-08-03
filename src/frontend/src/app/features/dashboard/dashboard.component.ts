@@ -7069,7 +7069,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         lbl.startsWith('1º Desp.') ||
         lbl.startsWith('2º Desp.') ||
         lbl === 'Sem OS' ||
-        lbl === 'Desl. Intervalo' ||
+        lbl === 'Desl. Intervalo | Sem OS' ||
         lbl === 'Partida' ||
         lbl === '1º Desloc.'
       ) {

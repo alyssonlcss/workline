@@ -9,10 +9,16 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
     if (deslocRows.length === 0) return [];
 
     const UTIL_META = 85;
-    const IDLE_THRESHOLD_PCT = 15;
-    const OS_DIA_PCT_THRESHOLD = 0.20;
-    const TEMP_PREP_THRESHOLD_MIN = 10; // Desp. → A Caminho (all OS)
-    const SEM_OS_THRESHOLD_MIN = 10;
+    // Thresholds
+    const IDLE_THRESHOLD_PCT = Number(process.env['LIMIT_OCIOSIDADE_PCT']) || 15;
+    const OS_DIA_PCT_THRESHOLD = (Number(process.env['LIMIT_TR_EXCEDE_HD_PCT']) || 20) / 100;
+    const TEMP_PREP_THRESHOLD_MIN = Number(process.env['LIMIT_TEMP_PREP_MIN']) || 10;
+    const SEM_OS_THRESHOLD_MIN = Number(process.env['LIMIT_SEM_OS_MIN']) || 10;
+    const PRIMEIRO_DESLOC_THRESHOLD_MIN = Number(process.env['LIMIT_PRIMEIRO_DESLOC_MIN']) || 25;
+    const TRIAGEM_THRESHOLD_MIN = Number(process.env['LIMIT_TRIAGEM_MIN']) || 10;
+    const DESLOC_INTERVALO_MIN = Number(process.env['LIMIT_DESLOC_INTERVALO_MIN']) || 10;
+    const INICIO_JORNADA_MIN = Number(process.env['LIMIT_INICIO_JORNADA_MIN']) || 10;
+    const RETORNO_EXCEDENTE_MIN = Number(process.env['LIMIT_RETORNO_EXCEDENTE_MIN']) || 60;
     const TOLERANCE_MIN = 5; // invisible grace margin — keeps displayed limits unchanged
 
     const utilizacaoKpi = kpis.find((k) => normalizeToken(k.kpi) === normalizeToken('Utilização'));
@@ -427,8 +433,8 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
         if (Number.isFinite(v) && v > 0) teamSemOrdemSum.set(team, (teamSemOrdemSum.get(team) ?? 0) + v);
       }
       let dayRetornoExcedente = 0;
-      if (Number.isFinite(semOsFimDirectGapMin) && semOsFimDirectGapMin > 70) {
-        const excess = round2(semOsFimDirectGapMin - 70);
+      if (Number.isFinite(semOsFimDirectGapMin) && semOsFimDirectGapMin >= RETORNO_EXCEDENTE_MIN) {
+        const excess = round2(semOsFimDirectGapMin - 60);
         teamRetornoExcedenteSum.set(team, (teamRetornoExcedenteSum.get(team) ?? 0) + excess);
         dayRetornoExcedente = excess;
       }
@@ -567,10 +573,10 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
 
         const tempPrepThreshold = TEMP_PREP_THRESHOLD_MIN;
         if (Number.isFinite(tempPrepOs) && tempPrepOs >= tempPrepThreshold + TOLERANCE_MIN) flags.push('temp_prep_alto');
-        if (triagemMin !== undefined && triagemMin >= TEMP_PREP_THRESHOLD_MIN + TOLERANCE_MIN) flags.push('triagem_alto');
-        // 1º Desloc.: Início Cal. → A Caminho, only for 1ª OS, threshold 25 min
+        if (triagemMin !== undefined && triagemMin >= TRIAGEM_THRESHOLD_MIN + TOLERANCE_MIN) flags.push('triagem_alto');
+        // 1º Desloc.: Início Cal. → A Caminho, only for 1ª OS, threshold from env
         const ocisoForFlag = ocisoValues[i];
-        if (i === 0 && ocisoForFlag !== undefined && ocisoForFlag >= 25) flags.push('primeiro_desloc_alto');
+        if (i === 0 && ocisoForFlag !== undefined && ocisoForFlag >= PRIMEIRO_DESLOC_THRESHOLD_MIN) flags.push('primeiro_desloc_alto');
         if (Number.isFinite(semOsMin) && semOsMin >= SEM_OS_THRESHOLD_MIN + TOLERANCE_MIN) flags.push('sem_os_alto');
         if (
           hdTotalMin > 0 && trOrdemMin > hdTotalMin * OS_DIA_PCT_THRESHOLD &&
@@ -809,7 +815,7 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
         const logOffStr  = logOffCorrigidoCol ? String(lastRow[logOffCorrigidoCol] ?? '').trim() || undefined : undefined;
         const liberadaStr = liberadaCol ? String(lastRow[liberadaCol] ?? '').trim() || undefined : undefined;
         if (logOffStr) {
-          const retornoExcedenteThreshold = Number.isFinite(semOsFimDirectGapMin) && semOsFimDirectGapMin > 70;
+          const retornoExcedenteThreshold = Number.isFinite(semOsFimDirectGapMin) && semOsFimDirectGapMin >= RETORNO_EXCEDENTE_MIN;
           const fimDeslAbove = Number.isFinite(semOsFimDeslIntervalMin) && semOsFimDeslIntervalMin >= SEM_OS_THRESHOLD_MIN + TOLERANCE_MIN;
           const semOsAbove = fimDeslAbove;
           const retornoDetail: NonNullable<UtilizacaoOrderEvidence['retorno_excedente_details']> = {
@@ -819,7 +825,7 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
             to:   logOffStr,
             retorno_base_discounted: semOsFimRetornoBaseRowVal > 0 ? semOsFimRetornoBaseRowVal : undefined,
             retorno_base_used_row:   semOsFimRetornoBaseUsedRow || undefined,
-            excess_min: retornoExcedenteThreshold ? round2(semOsFimDirectGapMin - 70) : undefined,
+            excess_min: retornoExcedenteThreshold ? round2(semOsFimDirectGapMin - RETORNO_EXCEDENTE_MIN) : undefined,
             global_avg_min: retornoExcedenteThreshold && retornoBaseAvg > 0 ? round2(retornoBaseAvg) : undefined,
           };
           const fimInicioIntervalo = semOsFimHasIntervalInWindow && inicioIntervaloCol ? String(lastRow[inicioIntervaloCol] ?? '').trim() : '';

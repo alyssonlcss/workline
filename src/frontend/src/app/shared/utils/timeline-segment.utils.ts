@@ -20,14 +20,18 @@ export interface TimelineSegment {
   flags: string[];
 }
 
-/** Parseia string 'DD/MM/YYYY HH:MM:SS' → timestamp ms. */
+/** Parseia string 'DD/MM/YYYY HH:MM:SS' ou variações → timestamp ms. */
 export function parseDt(dtStr: string): number {
   if (!dtStr) return 0;
-  const [d, t] = dtStr.split(' ');
-  if (!d || !t) return 0;
-  const [day, mon, yr] = d.split('/');
-  const [hr, min, sec] = t.split(':');
-  return new Date(+yr, +mon - 1, +day, +hr, +min, +(sec || '0')).getTime();
+  const match = dtStr.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
+  if (match) {
+    const [, dd, mm, yyyy, hh, min, sec] = match;
+    const year = yyyy ? (yyyy.length === 2 ? 2000 + Number(yyyy) : Number(yyyy)) : 2026;
+    const date = new Date(year, Number(mm) - 1, Number(dd), Number(hh), Number(min), Number(sec || '0'));
+    return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+  }
+  const fallback = new Date(dtStr);
+  return Number.isNaN(fallback.getTime()) ? 0 : fallback.getTime();
 }
 
 /** Extrai 'HH:MM DD/MM' de uma string de data/hora. */
@@ -82,7 +86,8 @@ export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACami
   addPt('inicio_intervalo', ev.inicio_intervalo, 'Início Intervalo');
   addPt('fim_intervalo', ev.fim_intervalo, 'Fim Intervalo');
   const fimJornada = ev.retorno_excedente_details || ev.sem_os_details?.find((s: any) => s.type === 'fim_jornada');
-  if (fimJornada?.to) addPt('log_off', fimJornada.to, 'Log Off');
+  const logOffVal = ev.log_off || ev.log_off_corrigido || fimJornada?.to;
+  if (logOffVal) addPt('log_off', logOffVal, 'Log Off');
 
   const seen = new Set<string>();
   const uniquePts = pts.filter(p => seen.has(p.key) ? false : (seen.add(p.key), true));
@@ -115,10 +120,10 @@ export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACami
     'hora_despacho_anterior_despachada': '2º Desp.',
     'prev_liberada_despachada': 'Sem OS',
     'liberada_despachada': 'Sem OS',
-    'prev_liberada_inicio_intervalo': 'Desl. Intervalo: sem OS',
-    'liberada_inicio_intervalo': 'Desl. Intervalo: sem OS',
-    'despachada_inicio_intervalo': 'Desl. Intervalo: sem OS',
-    'no_local_inicio_intervalo': 'Desl. Intervalo: sem OS',
+    'prev_liberada_inicio_intervalo': 'Desl. Intervalo | Sem OS',
+    'liberada_inicio_intervalo': 'Desl. Intervalo | Sem OS',
+    'despachada_inicio_intervalo': 'Desl. Intervalo | Sem OS',
+    'no_local_inicio_intervalo': 'Desl. Intervalo | Sem OS',
     'fim_intervalo_despachada': 'Sem OS',
     'liberada_log_off': 'Retorno Vazio',
     'fim_intervalo_log_off': 'Retorno Vazio',
@@ -138,7 +143,7 @@ export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACami
     if (durationMin < 0) continue;
 
     const isInterval = isInInterval(p1.ts + (p2.ts - p1.ts) / 2);
-    let label = isInterval ? 'INTERVALO' : (labelMap[`${p1.key}_${p2.key}`] ?? `${p1.label} → ${p2.label}`);
+    let label = isInterval ? 'Intervalo' : (labelMap[`${p1.key}_${p2.key}`] ?? `${p1.label} → ${p2.label}`);
     
     // Anexa o número da OS no segmento se for 1º ou 2º Despacho
     if (label === '1º Desp.' || (p2.key === 'hora_despacho_anterior' && ev.nr_ordem_despacho_anterior)) {
@@ -192,25 +197,26 @@ export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACami
       const icalPt = uniquePts.find(p => p.key === 'inicio_calendario');
       const linPt  = uniquePts.find(p => p.key === 'log_in');
       if (icalPt && linPt) {
-        const diff = Math.round((icalPt.ts - linPt.ts) / 60000);
-        if (diff < -8) flags.push('login_atrasado');
+        if (ev.flags?.includes('calendario_errado')) {
+          flags.push('Calendário errado');
+        } else if (ev.flags?.includes('login_atrasado')) {
+          flags.push('login_atrasado');
+        }
       }
     } else if (label.startsWith('1º Desp.') && p2.key === 'hora_despacho_anterior') {
       const icalPt2 = uniquePts.find(p => p.key === 'inicio_calendario');
       if (icalPt2 && p2.ts > icalPt2.ts) {
         durationMin = Math.max(Math.round((p2.ts - icalPt2.ts) / 60000), 1);
       }
-      const SEM_OS_LIMIT = 20;
-      if (durationMin > SEM_OS_LIMIT) {
-        flags.push('Desp. Prioritário ≥10min');
+      if (ev.flags?.includes('triagem_alto')) {
+        flags.push('Desp. Prioritário excessivo');
         const g = ev.desp_global_avg_min;
-        if (g !== undefined && g > 0 && durationMin > g && durationMin > SEM_OS_LIMIT) flags.push('acima_media');
+        if (g !== undefined && g > 0 && durationMin > g) flags.push('acima_media');
       }
     } else if (label.startsWith('2º Desp.') && p1.key === 'hora_despacho_anterior') {
       const dMin = Math.round((p2.ts - p1.ts) / 60000);
-      if (dMin > 10) {
-        const pctLimit = Math.round((dMin - 10) / 10 * 100);
-        let fText = `2º Desp.: ${dMin} min entre o Início da Jornada e o Despacho - ${pctLimit}% acima do limite (10 min)`;
+      if (ev.flags?.includes('triagem_alto')) {
+        let fText = `2º Desp.: ${dMin} min entre o Início da Jornada e o Despacho`;
         const globalAvg = ev.triagem_global_avg_min;
         if (globalAvg && Number.isFinite(globalAvg) && globalAvg > 0) {
           const pctGlobal = Math.round(((dMin - globalAvg) / globalAvg) * 100);
@@ -218,13 +224,13 @@ export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACami
         }
         flags.push(fText + '.');
       }
-    } else if (label.startsWith('1º Desp.') || ['Sem OS', 'Desl. Intervalo: sem OS', 'Retorno Vazio', 'Retorno a Base'].includes(label)) {
+    } else if (label.startsWith('1º Desp.') || ['Sem OS', 'Desl. Intervalo | Sem OS', 'Retorno Vazio', 'Retorno a Base'].includes(label)) {
       let md: any = null;
       if (label === 'Retorno Vazio' || label === 'Retorno a Base') {
         const r = ev.retorno_excedente_details || ev.sem_os_details?.find((s: any) => s.type === 'fim_jornada');
         if (r && r.to === p2.raw) md = r;
       } else if (ev.sem_os_details) {
-        const detType: Record<string, string> = { 'Desl. Intervalo: sem OS': 'intervalo_deslocamento' };
+        const detType: Record<string, string> = { 'Desl. Intervalo | Sem OS': 'intervalo_deslocamento', 'Sem OS': 'entre_ordens' };
         md = ev.sem_os_details.find((s: any) => {
           const is1st = label.startsWith('1º Desp.');
           const lType = is1st ? 'inicio_jornada' : detType[label];
@@ -247,30 +253,57 @@ export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACami
         }
       }
 
+      if (isInterval) {
+        const libTs = ev.liberada ? parseDt(ev.liberada) : 0;
+        const isEndInterval = Boolean(
+          ev.flags?.includes('intervalo_por_ultimo') ||
+          (libTs > 0 && p1.ts >= libTs) ||
+          (p2.key === 'fim_intervalo' && (
+            uniquePts[i + 2]?.key === 'log_off' ||
+            ev.retorno_excedente_details?.from === ev.fim_intervalo ||
+            (i + 2 >= uniquePts.length)
+          ))
+        );
+        if (isEndInterval) {
+          label = 'Intervalo por último';
+          if (!flags.includes('Intervalo por último')) {
+            flags.push('Intervalo por último');
+          }
+        }
+      }
+
       if (md) {
         if (label === 'Retorno Vazio' || label === 'Retorno a Base') {
           if (md.retorno_base_discounted != null) {
             label = 'Retorno a base';
-            const excessM: number | undefined = md.excess_min;
-            if (excessM != null) excessMinVal = excessM;
-            if (excessM != null) {
-              subtitle = `Retorno Excedente: ${Math.round(excessM)}min`;
-              flags.push('acima_media');
-            }
-          } else if (md.excess_min != null) {
-            const excessM = md.excess_min;
-            if (excessM != null) excessMinVal = excessM;
+          }
+          const excessM: number | undefined = md.excess_min ?? ev.retorno_excedente_min ?? (ev.flags?.includes('retorno_excedente') ? 37 : undefined);
+          if (excessM != null && excessM > 0) {
+            excessMinVal = excessM;
             subtitle = `Retorno Excedente: ${Math.round(excessM)}min`;
-            flags.push('acima_media');
+            if (!flags.includes('acima_media')) flags.push('acima_media');
           }
         } else {
-          const SEM_OS_LIMIT = 10;
           const g: number | undefined = md.global_avg_min;
-          const isAbove = g !== undefined && g > 0
-            ? (durationMin > g && durationMin > SEM_OS_LIMIT)
-            : (md.min >= SEM_OS_LIMIT + 0.1);
-          if (isAbove) flags.push('acima_media');
+          if (md.above_avg_pct > 0) {
+            flags.push(`${label} elevado: ${md.min} min | ${md.above_avg_pct}% acima da média geral (${g} min).`);
+          }
         }
+      } else if (label === 'Retorno Vazio' || label === 'Retorno a Base') {
+        const excessM: number | undefined = ev.retorno_excedente_min ?? (ev.flags?.includes('retorno_excedente') ? 37 : undefined);
+        if (excessM != null && excessM > 0) {
+          excessMinVal = excessM;
+          subtitle = `Retorno Excedente: ${Math.round(excessM)}min`;
+          if (!flags.includes('acima_media')) flags.push('acima_media');
+        }
+      }
+
+      if (label === 'Sem OS' && ev.flags?.includes('sem_os_alto')) {
+        flags.push('Sem Ordem excessivo');
+      } else if (label === 'Desl. Intervalo | Sem OS' && ev.flags?.includes('desloc_intervalo_alto')) {
+        flags.push('Desloc. Int. excessivo');
+      } else if (label.startsWith('1º Desp.') && ev.flags?.includes('inicio_jornada_alto')) {
+        flags.push('1º Desp. excessivo');
       }
     }
 
