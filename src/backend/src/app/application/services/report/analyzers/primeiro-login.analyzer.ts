@@ -13,7 +13,11 @@ export function analyzePrimeiroLogin(deslocRows: CsvRow[], kpis: KpiInsight[]): 
     if (!loginKpi) return [];
 
     const teamsToAnalyze = new Map<string, { value: number }>();
-    for (const t of loginKpi.opportunityTeams) teamsToAnalyze.set(t.team, { value: t.value });
+    for (const s of loginKpi.scores) {
+      if (loginKpi.direction === 'higher-is-better' ? s.rawValue < loginKpi.metaTarget : s.rawValue > loginKpi.metaTarget) {
+        teamsToAnalyze.set(s.team, { value: s.rawValue });
+      }
+    }
     if (teamsToAnalyze.size === 0) return [];
 
     const deslocAcc = createAccessor(deslocRows[0]);

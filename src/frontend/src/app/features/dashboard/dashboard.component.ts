@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Alysson Pinheiro. Todos os direitos reservados.
 // Software proprietário e confidencial. Uso não autorizado é proibido.
 import { CommonModule } from '@angular/common';
-import { buildTimelineSegments } from '../../shared/utils/timeline-segment.utils';
+import { buildTimelineSegments, getEvidenceColor } from '../../shared/utils/timeline-segment.utils';
 import { TimelineVisualComponent } from '../../shared/components/timeline-visual/timeline-visual.component';
 import { AfterViewInit, Component, ElementRef, NgZone, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import type { Subscription } from 'rxjs';
@@ -669,7 +669,7 @@ type SavedFilterState = {
                 <!-- OS/Dia drill-down (3 abaixo do padrão) -->
                 <ng-container *ngIf="kpi.kpi === 'OS Dia'">
                   <div class="kpi-osdia-drill-head">
-                    🔍 Análise Detalhada — 3 Abaixo do Padrão
+                    🔍 Análise Detalhada — Equipes Abaixo do Padrão
                     <span class="rpt-osdia-src-inline">Fonte: Scanner 4.4 - CE M300</span>
                   </div>
                   <ng-container *ngIf="report.specialAnalysis.osDiaAnalysis && report.specialAnalysis.osDiaAnalysis.length > 0; else noOsDiaAnalysis">
@@ -747,18 +747,26 @@ type SavedFilterState = {
                             </ng-template>
                             <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.flaggedOrders || [], analysis.extraFlaggedOrders || []); trackBy: trackByDateRef">
                               <div class="ev-date-group-header">{{ grp.dateRef }}</div>
-                              <div class="osdia-ev-item" *ngFor="let ev of grp.items">
+                              <div class="osdia-ev-item" 
+                                   [class.osdia-ev-item--yellow]="getEvidenceColorHelper(ev) === 'yellow'" 
+                                   [class.osdia-ev-item--green]="getEvidenceColorHelper(ev) === 'green'" 
+                                   *ngFor="let ev of getRenderItems(grp, 'OS Dia', analysis.team)">
                                 <ng-container *ngTemplateOutlet="osDiaEvTpl; context: {$implicit: ev}"></ng-container>
                               </div>
-                              <ng-container *ngIf="grp.extraItems?.length">
-                                <button class="ev-ver-mais-btn team-ver-mais" style="background-color: lightblue; color: #000; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" (click)="toggleDateExpanded('OS Dia', analysis.team, grp.dateRef)">
-                                  {{ isDateExpanded('OS Dia', analysis.team, grp.dateRef) ? '▲ Ver menos' : '▼ Ver mais ' + (grp.extraItems.length || 0) + ' OS(s) com baixo tempo' }}
+                              <ng-container *ngIf="grp.hiddenItems && grp.hiddenItems.length > 0">
+                                <button class="ev-ver-mais-btn team-ver-mais" 
+                                        *ngIf="!isDateExpanded('OS Dia', analysis.team, grp.dateRef)"
+                                        [style.background]="getVerMaisGradient(grp.hiddenItems)"
+                                        style="color: #1f2937; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" 
+                                        (click)="toggleDateExpanded('OS Dia', analysis.team, grp.dateRef)">
+                                  ▼ Ver mais {{ grp.hiddenItems.length }} OS
                                 </button>
-                                <div *ngIf="isDateExpanded('OS Dia', analysis.team, grp.dateRef)" class="extra-orders-container" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
-                                  <div class="osdia-ev-item" [class.osdia-ev-item--extra]="!ev.flags.length" *ngFor="let ev of grp.extraItems">
-                                    <ng-container *ngTemplateOutlet="osDiaEvTpl; context: {$implicit: ev}"></ng-container>
-                                  </div>
-                                </div>
+                                <button class="ev-ver-menos-btn team-ver-mais" 
+                                        *ngIf="isDateExpanded('OS Dia', analysis.team, grp.dateRef)"
+                                        style="background-color: #e5e7eb; color: #374151; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" 
+                                        (click)="toggleDateExpanded('OS Dia', analysis.team, grp.dateRef)">
+                                  ▲ Mostrar menos
+                                </button>
                               </ng-container>
                             </ng-container>
                           </div>
@@ -776,7 +784,7 @@ type SavedFilterState = {
                 </ng-container>
                 <!-- Eficiência drill-down (evidências de incidências) -->
                 <ng-container *ngIf="kpi.kpi === 'Eficiência' && kpi.evidenceAnalysis && kpi.evidenceAnalysis.length > 0">                  <div class="kpi-osdia-drill-head">
-                    🔍 Análise Detalhada — Top 3 e 3 Abaixo do Padrão
+                    🔍 Análise Detalhada — Destaques e Oportunidades
                     <span class="rpt-osdia-src-inline">Fonte: Scanner 4.4 - CE M300</span>
                   </div>
                   <div class="rpt-osdia-grid">
@@ -855,18 +863,26 @@ type SavedFilterState = {
                             </ng-template>
                             <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.flaggedOrders, analysis.extraFlaggedOrders); trackBy: trackByDateRef">
                               <div class="ev-date-group-header">{{ grp.dateRef }}</div>
-                              <div class="osdia-ev-item" *ngFor="let ev of grp.items">
+                              <div class="osdia-ev-item" 
+                                   [class.osdia-ev-item--yellow]="getEvidenceColorHelper(ev) === 'yellow'" 
+                                   [class.osdia-ev-item--green]="getEvidenceColorHelper(ev) === 'green'" 
+                                   *ngFor="let ev of getRenderItems(grp, 'Eficiência', analysis.team)">
                                 <ng-container *ngTemplateOutlet="eficienciaEvTpl; context: {$implicit: ev}"></ng-container>
                               </div>
-                              <ng-container *ngIf="grp.extraItems?.length">
-                                <button class="ev-ver-mais-btn team-ver-mais" style="background-color: lightblue; color: #000; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" (click)="toggleDateExpanded('Eficiência', analysis.team, grp.dateRef)">
-                                  {{ isDateExpanded('Eficiência', analysis.team, grp.dateRef) ? '▲ Ver menos' : '▼ Ver mais ' + (grp.extraItems.length || 0) + ' OS(s) com baixo TR Ordem' }}
+                              <ng-container *ngIf="grp.hiddenItems && grp.hiddenItems.length > 0">
+                                <button class="ev-ver-mais-btn team-ver-mais" 
+                                        *ngIf="!isDateExpanded('Eficiência', analysis.team, grp.dateRef)"
+                                        [style.background]="getVerMaisGradient(grp.hiddenItems)"
+                                        style="color: #1f2937; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" 
+                                        (click)="toggleDateExpanded('Eficiência', analysis.team, grp.dateRef)">
+                                  ▼ Ver mais {{ grp.hiddenItems.length }} OS
                                 </button>
-                                <div *ngIf="isDateExpanded('Eficiência', analysis.team, grp.dateRef)" class="extra-orders-container" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
-                                  <div class="osdia-ev-item" [class.osdia-ev-item--extra]="!ev.flags.length" *ngFor="let ev of grp.extraItems">
-                                    <ng-container *ngTemplateOutlet="eficienciaEvTpl; context: {$implicit: ev}"></ng-container>
-                                  </div>
-                                </div>
+                                <button class="ev-ver-menos-btn team-ver-mais" 
+                                        *ngIf="isDateExpanded('Eficiência', analysis.team, grp.dateRef)"
+                                        style="background-color: #e5e7eb; color: #374151; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" 
+                                        (click)="toggleDateExpanded('Eficiência', analysis.team, grp.dateRef)">
+                                  ▲ Mostrar menos
+                                </button>
                               </ng-container>
                             </ng-container>
                           </div>
@@ -893,7 +909,7 @@ type SavedFilterState = {
                 <!-- Eficiência: all teams at meta -->
                 <ng-container *ngIf="kpi.kpi === 'Eficiência' && (!kpi.evidenceAnalysis || kpi.evidenceAnalysis.length === 0)">
                   <div class="kpi-osdia-drill-head">
-                    🔍 Análise Detalhada — Top 3 e 3 Abaixo do Padrão
+                    🔍 Análise Detalhada — Destaques e Oportunidades
                     <span class="rpt-osdia-src-inline">Fonte: Scanner 4.4 - CE M300</span>
                   </div>
                   <p class="kpi-meta-ok">✅ Todas as equipes atingiram a meta esperada.</p>
@@ -901,7 +917,7 @@ type SavedFilterState = {
                 <!-- Utilização drill-down (3 abaixo do padrão) -->
                 <ng-container *ngIf="kpi.kpi === 'Utilização'">
                   <div class="kpi-osdia-drill-head">
-                    🔍 Análise Detalhada — 3 Abaixo do Padrão
+                    🔍 Análise Detalhada — Equipes Abaixo do Padrão
                     <span class="rpt-osdia-src-inline">Fonte: Scanner 4.0 CE - M300</span>
                   </div>
                   <ng-container *ngIf="report.specialAnalysis.utilizacaoAnalysis && report.specialAnalysis.utilizacaoAnalysis.length > 0 && filterOsDiaEvidence(report.specialAnalysis.utilizacaoAnalysis).length > 0; else noUtilizacaoAnalysis">
@@ -964,18 +980,26 @@ type SavedFilterState = {
                               </ng-template>
                               <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.flaggedOrders, analysis.extraFlaggedOrders); trackBy: trackByDateRef">
                                 <div class="ev-date-group-header">{{ grp.dateRef }}</div>
-                                <div class="osdia-ev-item" *ngFor="let ev of grp.items">
+                                <div class="osdia-ev-item" 
+                                     [class.osdia-ev-item--yellow]="getEvidenceColorHelper(ev) === 'yellow'" 
+                                     [class.osdia-ev-item--green]="getEvidenceColorHelper(ev) === 'green'" 
+                                     *ngFor="let ev of getRenderItems(grp, 'Utilização', analysis.team)">
                                   <ng-container *ngTemplateOutlet="utilizacaoEvTpl; context: {$implicit: ev}"></ng-container>
                                 </div>
-                                <ng-container *ngIf="grp.extraItems?.length">
-                                  <button class="ev-ver-mais-btn team-ver-mais" style="background-color: lightblue; color: #000; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" (click)="toggleDateExpanded('Utilização', analysis.team, grp.dateRef)">
-                                    {{ isDateExpanded('Utilização', analysis.team, grp.dateRef) ? '▲ Ver menos' : '▼ Ver mais ' + (grp.extraItems.length || 0) + ' OS(s) sem alertas' }}
+                                <ng-container *ngIf="grp.hiddenItems && grp.hiddenItems.length > 0">
+                                  <button class="ev-ver-mais-btn team-ver-mais" 
+                                          *ngIf="!isDateExpanded('Utilização', analysis.team, grp.dateRef)"
+                                          [style.background]="getVerMaisGradient(grp.hiddenItems)"
+                                          style="color: #1f2937; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" 
+                                          (click)="toggleDateExpanded('Utilização', analysis.team, grp.dateRef)">
+                                    ▼ Ver mais {{ grp.hiddenItems.length }} OS
                                   </button>
-                                  <div *ngIf="isDateExpanded('Utilização', analysis.team, grp.dateRef)" class="extra-orders-container" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
-                                    <div class="osdia-ev-item" [class.osdia-ev-item--extra]="!ev.flags.length" *ngFor="let ev of grp.extraItems">
-                                      <ng-container *ngTemplateOutlet="utilizacaoEvTpl; context: {$implicit: ev}"></ng-container>
-                                    </div>
-                                  </div>
+                                  <button class="ev-ver-menos-btn team-ver-mais" 
+                                          *ngIf="isDateExpanded('Utilização', analysis.team, grp.dateRef)"
+                                          style="background-color: #e5e7eb; color: #374151; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" 
+                                          (click)="toggleDateExpanded('Utilização', analysis.team, grp.dateRef)">
+                                    ▲ Mostrar menos
+                                  </button>
                                 </ng-container>
                               </ng-container>
                             </div>
@@ -1069,18 +1093,26 @@ type SavedFilterState = {
                         </ng-template>
                         <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.flaggedOrders, analysis.extraFlaggedOrders); trackBy: trackByDateRef">
                           <div class="ev-date-group-header">{{ grp.dateRef }}</div>
-                          <div class="osdia-ev-item" *ngFor="let ev of grp.items">
+                          <div class="osdia-ev-item" 
+                               [class.osdia-ev-item--yellow]="getEvidenceColorHelper(ev) === 'yellow'" 
+                               [class.osdia-ev-item--green]="getEvidenceColorHelper(ev) === 'green'" 
+                               *ngFor="let ev of getRenderItems(grp, 'TME IMP', analysis.team)">
                             <ng-container *ngTemplateOutlet="tmeImpEvTpl; context: {$implicit: ev}"></ng-container>
                           </div>
-                          <ng-container *ngIf="grp.extraItems?.length">
-                            <button class="ev-ver-mais-btn team-ver-mais" style="background-color: lightblue; color: #000; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" (click)="toggleDateExpanded('TME IMP', analysis.team, grp.dateRef)">
-                              {{ isDateExpanded('TME IMP', analysis.team, grp.dateRef) ? '▲ Ver menos' : '▼ Ver mais ' + (grp.extraItems.length || 0) + ' OS(s) com baixo TME' }}
+                          <ng-container *ngIf="grp.hiddenItems && grp.hiddenItems.length > 0">
+                            <button class="ev-ver-mais-btn team-ver-mais" 
+                                    *ngIf="!isDateExpanded('TME IMP', analysis.team, grp.dateRef)"
+                                    [style.background]="getVerMaisGradient(grp.hiddenItems)"
+                                    style="color: #1f2937; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" 
+                                    (click)="toggleDateExpanded('TME IMP', analysis.team, grp.dateRef)">
+                              ▼ Ver mais {{ grp.hiddenItems.length }} OS
                             </button>
-                            <div *ngIf="isDateExpanded('TME IMP', analysis.team, grp.dateRef)" class="extra-orders-container" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
-                              <div class="osdia-ev-item" [class.osdia-ev-item--extra]="!ev.flags.length" *ngFor="let ev of grp.extraItems">
-                                <ng-container *ngTemplateOutlet="tmeImpEvTpl; context: {$implicit: ev}"></ng-container>
-                              </div>
-                            </div>
+                            <button class="ev-ver-menos-btn team-ver-mais" 
+                                    *ngIf="isDateExpanded('TME IMP', analysis.team, grp.dateRef)"
+                                    style="background-color: #e5e7eb; color: #374151; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; text-align: center; font-weight: bold;" 
+                                    (click)="toggleDateExpanded('TME IMP', analysis.team, grp.dateRef)">
+                              ▲ Mostrar menos
+                            </button>
                           </ng-container>
                         </ng-container>
                       </div>
@@ -1146,11 +1178,17 @@ type SavedFilterState = {
                             </li>
                           </ul>
                         </ng-template>
-                        <div class="osdia-ev-item" *ngFor="let ev of analysis.flaggedDays">
+                        <div class="osdia-ev-item" 
+                             [class.osdia-ev-item--yellow]="getEvidenceColorHelper(ev) === 'yellow'" 
+                             [class.osdia-ev-item--green]="getEvidenceColorHelper(ev) === 'green'" 
+                             *ngFor="let ev of analysis.flaggedDays">
                           <ng-container *ngTemplateOutlet="loginEvTpl; context: {$implicit: ev}"></ng-container>
                         </div>
                         <ng-container *ngIf="isDateExpanded('1º Login', analysis.team, '__extra__')">
-                          <div class="osdia-ev-item" [class.osdia-ev-item--extra]="!ev.flags.length" *ngFor="let ev of (analysis.extraFlaggedDays ?? [])">
+                          <div class="osdia-ev-item" 
+                               [class.osdia-ev-item--yellow]="getEvidenceColorHelper(ev) === 'yellow'" 
+                               [class.osdia-ev-item--green]="getEvidenceColorHelper(ev) === 'green'" 
+                               *ngFor="let ev of (analysis.extraFlaggedDays ?? [])">
                             <ng-container *ngTemplateOutlet="loginEvTpl; context: {$implicit: ev}"></ng-container>
                           </div>
                         </ng-container>
@@ -1211,11 +1249,17 @@ type SavedFilterState = {
                             </li>
                           </ul>
                         </ng-template>
-                        <div class="osdia-ev-item" *ngFor="let ev of analysis.flaggedDays">
+                        <div class="osdia-ev-item" 
+                             [class.osdia-ev-item--yellow]="getEvidenceColorHelper(ev) === 'yellow'" 
+                             [class.osdia-ev-item--green]="getEvidenceColorHelper(ev) === 'green'" 
+                             *ngFor="let ev of analysis.flaggedDays">
                           <ng-container *ngTemplateOutlet="deslocEvTpl; context: {$implicit: ev}"></ng-container>
                         </div>
                         <ng-container *ngIf="isDateExpanded('1º Desloc.', analysis.team, '__extra__')">
-                          <div class="osdia-ev-item" [class.osdia-ev-item--extra]="!ev.flags.length" *ngFor="let ev of (analysis.extraFlaggedDays ?? [])">
+                          <div class="osdia-ev-item" 
+                               [class.osdia-ev-item--yellow]="getEvidenceColorHelper(ev) === 'yellow'" 
+                               [class.osdia-ev-item--green]="getEvidenceColorHelper(ev) === 'green'" 
+                               *ngFor="let ev of (analysis.extraFlaggedDays ?? [])">
                             <ng-container *ngTemplateOutlet="deslocEvTpl; context: {$implicit: ev}"></ng-container>
                           </div>
                         </ng-container>
@@ -1285,11 +1329,17 @@ type SavedFilterState = {
                             </li>
                           </ul>
                         </ng-template>
-                        <div class="osdia-ev-item" *ngFor="let ev of analysis.flaggedDays">
+                        <div class="osdia-ev-item" 
+                             [class.osdia-ev-item--yellow]="getEvidenceColorHelper(ev) === 'yellow'" 
+                             [class.osdia-ev-item--green]="getEvidenceColorHelper(ev) === 'green'" 
+                             *ngFor="let ev of analysis.flaggedDays">
                           <ng-container *ngTemplateOutlet="retornoEvTpl; context: {$implicit: ev}"></ng-container>
                         </div>
                         <ng-container *ngIf="isDateExpanded('Retorno Base', analysis.team, '__extra__')">
-                          <div class="osdia-ev-item" [class.osdia-ev-item--extra]="!ev.flags.length" *ngFor="let ev of (analysis.extraFlaggedDays ?? [])">
+                          <div class="osdia-ev-item" 
+                               [class.osdia-ev-item--yellow]="getEvidenceColorHelper(ev) === 'yellow'" 
+                               [class.osdia-ev-item--green]="getEvidenceColorHelper(ev) === 'green'" 
+                               *ngFor="let ev of (analysis.extraFlaggedDays ?? [])">
                             <ng-container *ngTemplateOutlet="retornoEvTpl; context: {$implicit: ev}"></ng-container>
                           </div>
                         </ng-container>
@@ -3804,9 +3854,12 @@ type SavedFilterState = {
         gap: 6px;
       }
 
-      .osdia-ev-item--extra {
-        border-left-color: #3b82f6;
-        opacity: 0.9;
+      .osdia-ev-item--yellow {
+        border-left-color: #eab308;
+      }
+
+      .osdia-ev-item--green {
+        border-left-color: #22c55e;
       }
 
       .ev-date-group-header {
@@ -6438,7 +6491,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   protected allDateGroupsForKpi<T extends { date_ref?: string }>(
     top: T[],
     extra: T[] | undefined,
-  ): Array<{ dateRef: string; items: T[]; extraItems: T[] }> {
+  ): Array<{ dateRef: string; items: T[]; extraItems: T[]; visibleItems: T[]; hiddenItems: T[] }> {
     const topGroups = this.groupByDateRef(top);
     const extraGroups = this.groupByDateRef(extra ?? []);
     
@@ -6452,25 +6505,103 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return p.length >= 3 ? +p[2] * 10000 + +p[1] * 100 + +p[0] : 0;
     };
     
-    const result = topGroups.map(g => ({
-      dateRef: g.dateRef,
-      items: g.items,
-      extraItems: extraGroups.find(eg => eg.dateRef === g.dateRef)?.items || []
-    }));
+    const allDates = [...topDates, ...extraOnlyDates];
     
-    for (const d of extraOnlyDates) {
-      result.push({
-        dateRef: d,
-        items: [],
-        extraItems: extraGroups.find(eg => eg.dateRef === d)?.items || []
+    const result = allDates.map(d => {
+      const items = topGroups.find(g => g.dateRef === d)?.items || [];
+      const extraItems = extraGroups.find(eg => eg.dateRef === d)?.items || [];
+      
+      const allItems = [...items, ...extraItems];
+      allItems.sort((a, b) => {
+        const ocA = this.getOciosoTotal(a) ?? 0;
+        const ocB = this.getOciosoTotal(b) ?? 0;
+        return ocB - ocA;
       });
-    }
+
+      let visibleItems: T[] = [];
+      let hiddenItems: T[] = [];
+
+      if (allDates.length === 1 && false /* placeholder for pdf logic if needed */) {
+        visibleItems = allItems;
+      } else {
+        visibleItems = allItems.slice(0, 3);
+        hiddenItems = allItems.slice(3);
+      }
+
+      return {
+        dateRef: d,
+        items,
+        extraItems,
+        visibleItems,
+        hiddenItems
+      };
+    });
     
     return result.sort((a, b) => parseDate(a.dateRef) - parseDate(b.dateRef));
   }
 
+  protected getEvidenceColorHelper(ev: any): string {
+    return getEvidenceColor(ev);
+  }
+
+  protected getVerMaisGradient(hiddenItems: any[]): string {
+    if (!hiddenItems || hiddenItems.length === 0) return '';
+    let red = 0, yellow = 0, green = 0;
+    
+    for (const ev of hiddenItems) {
+      const color = getEvidenceColor(ev);
+      if (color === 'red') red++;
+      else if (color === 'yellow') yellow++;
+      else green++;
+    }
+    
+    const total = hiddenItems.length;
+    const rp = (red / total) * 100;
+    const yp = (yellow / total) * 100;
+    const gp = (green / total) * 100;
+    
+    let start = 0;
+    const stops = [];
+    
+    // Cores exatas dos segmentos da timeline (tons)
+    const redColor = '#f87171'; // vermelho dos segmentos
+    const yellowColor = '#fde68a'; // amarelo dos segmentos ociosos
+    const greenColor = '#bbf7d0'; // verde dos segmentos normais
+    
+    if (red > 0) {
+      const mid = start + rp / 2;
+      stops.push(`${redColor} 0%`);
+      if (rp > 15) stops.push(`${redColor} ${mid}%`);
+      start += rp;
+    }
+    if (yellow > 0) {
+      const mid = start + yp / 2;
+      stops.push(`${yellowColor} ${mid}%`);
+      start += yp;
+    }
+    if (green > 0) {
+      const mid = start + gp / 2;
+      stops.push(`${greenColor} ${mid}%`);
+      stops.push(`${greenColor} 100%`);
+      start += gp;
+    }
+    
+    if (stops.length === 2 && stops[0].split(' ')[0] === stops[1].split(' ')[0]) {
+      return stops[0].split(' ')[0];
+    }
+    
+    return `linear-gradient(to right, ${stops.join(', ')})`;
+  }
+
   protected trackByDateRef(_: number, grp: { dateRef: string }): string {
     return grp.dateRef;
+  }
+
+  protected getRenderItems(grp: any, kpiKey: string, team: string): any[] {
+    if (this.isDateExpanded(kpiKey, team, grp.dateRef)) {
+      return [...grp.visibleItems, ...grp.hiddenItems];
+    }
+    return grp.visibleItems;
   }
 
   protected isTeamExpanded(kpiKey: string, team: string): boolean {

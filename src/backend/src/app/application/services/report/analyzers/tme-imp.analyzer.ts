@@ -14,7 +14,11 @@ export function analyzeTmeImp(deslocRows: CsvRow[], kpis: KpiInsight[]): TmeImpT
 
     // Teams to analyze: bottom 3 worst only
     const teamsToAnalyze = new Map<string, { value: number; type: 'underperformer' }>();
-    for (const t of tmeKpi.opportunityTeams) teamsToAnalyze.set(t.team, { value: t.value, type: 'underperformer' });
+    for (const s of tmeKpi.scores) {
+      if (tmeKpi.direction === 'higher-is-better' ? s.rawValue < tmeKpi.metaTarget : s.rawValue > tmeKpi.metaTarget) {
+        teamsToAnalyze.set(s.team, { value: s.rawValue, type: 'underperformer' });
+      }
+    }
     if (teamsToAnalyze.size === 0) return [];
 
     const deslocAcc = createAccessor(deslocRows[0]);

@@ -13,7 +13,11 @@ export function analyzePrimeiroDesloc(deslocRows: CsvRow[], kpis: KpiInsight[]):
     if (!deslocKpi) return [];
 
     const teamsToAnalyze = new Map<string, { value: number }>();
-    for (const t of deslocKpi.opportunityTeams) teamsToAnalyze.set(t.team, { value: t.value });
+    for (const s of deslocKpi.scores) {
+      if (deslocKpi.direction === 'higher-is-better' ? s.rawValue < deslocKpi.metaTarget : s.rawValue > deslocKpi.metaTarget) {
+        teamsToAnalyze.set(s.team, { value: s.rawValue });
+      }
+    }
     if (teamsToAnalyze.size === 0) return [];
 
     const deslocAcc = createAccessor(deslocRows[0]);

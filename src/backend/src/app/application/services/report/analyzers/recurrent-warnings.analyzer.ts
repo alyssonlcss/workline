@@ -33,17 +33,16 @@ export function buildRecurrentWarnings(
       // 1. Partida (temp_prep_alto)
       const partidasOverLimit = util.flaggedOrders.filter(o => o.flags?.includes('temp_prep_alto'));
       if (partidasOverLimit.length > 0) {
-        const partidasAll = util.flaggedOrders.filter(o => (o.temp_prep_os_min || 0) > 0);
-        const avg = Math.round(partidasAll.reduce((acc, val) => acc + (val.temp_prep_os_min || 0), 0) / (partidasAll.length || 1));
+        const avg = Math.round(partidasOverLimit.reduce((acc, val) => acc + (val.temp_prep_os_min || 0), 0) / (partidasOverLimit.length || 1));
         teamDesvios.push({ name: 'Partida', priority: 1, avgMin: avg, count: partidasOverLimit.length, globalAvg: 0 });
       }
 
       // 2. Desl. Intervalo (desloc_intervalo_alto)
       const intervalosOverLimit = util.flaggedOrders.filter(o => o.flags?.includes('desloc_intervalo_alto'));
       if (intervalosOverLimit.length > 0) {
-        const intervalosAll = util.flaggedOrders.flatMap(o => o.sem_os_details?.filter(d => d.type === 'intervalo_deslocamento' && d.min > 0) || []);
-        const avg = Math.round(intervalosAll.reduce((acc, val) => acc + val.min, 0) / (intervalosAll.length || 1));
-        const globalAvg = Math.round(intervalosAll.reduce((acc, val) => acc + (val.global_avg_min || 0), 0) / (intervalosAll.length || 1));
+        const badIntervalos = intervalosOverLimit.flatMap(o => o.sem_os_details?.filter(d => d.type === 'intervalo_deslocamento' && d.min >= SEM_OS_LIMIT) || []);
+        const avg = Math.round(badIntervalos.reduce((acc, val) => acc + val.min, 0) / (badIntervalos.length || 1));
+        const globalAvg = Math.round(badIntervalos.reduce((acc, val) => acc + (val.global_avg_min || 0), 0) / (badIntervalos.length || 1));
         teamDesvios.push({ name: 'Desl. Intervalo', priority: 2, avgMin: avg, count: intervalosOverLimit.length, globalAvg });
       }
 
@@ -105,7 +104,7 @@ export function buildRecurrentWarnings(
 
     // Filter recurrent desvios
     const recurrentDesvios = teamDesvios.filter(d => {
-      const isOSBased = ['Partida', 'Desl. Intervalo', '2º Desp.', 'TME IMP'].includes(d.name);
+      const isOSBased = ['Partida', 'TME IMP'].includes(d.name);
       const baseCount = isOSBased ? totalOrders : diasTrab;
       if (baseCount === 0) return false;
       return (d.count / baseCount) >= 0.20;

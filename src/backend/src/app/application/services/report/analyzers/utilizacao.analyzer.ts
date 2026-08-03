@@ -12,23 +12,25 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
     // Thresholds
     const IDLE_THRESHOLD_PCT = Number(process.env['LIMIT_OCIOSIDADE_PCT']) || 15;
     const OS_DIA_PCT_THRESHOLD = (Number(process.env['LIMIT_TR_EXCEDE_HD_PCT']) || 20) / 100;
-    const TEMP_PREP_THRESHOLD_MIN = Number(process.env['LIMIT_TEMP_PREP_MIN']) || 10;
-    const SEM_OS_THRESHOLD_MIN = Number(process.env['LIMIT_SEM_OS_MIN']) || 10;
-    const PRIMEIRO_DESLOC_THRESHOLD_MIN = Number(process.env['LIMIT_PRIMEIRO_DESLOC_MIN']) || 25;
-    const TRIAGEM_THRESHOLD_MIN = Number(process.env['LIMIT_TRIAGEM_MIN']) || 10;
-    const DESLOC_INTERVALO_MIN = Number(process.env['LIMIT_DESLOC_INTERVALO_MIN']) || 10;
-    const INICIO_JORNADA_MIN = Number(process.env['LIMIT_INICIO_JORNADA_MIN']) || 10;
-    const RETORNO_EXCEDENTE_MIN = Number(process.env['LIMIT_RETORNO_EXCEDENTE_MIN']) || 60;
+    const getTempPrepThreshold = () => Number(process.env['LIMIT_TEMP_PREP_MIN']) || 10;
+    const getSemOsThreshold = () => Number(process.env['LIMIT_SEM_OS_MIN']) || 10;
+    const getPrimeiroDeslocThreshold = () => Number(process.env['LIMIT_PRIMEIRO_DESLOC_MIN']) || 25;
+    const getTriagemThreshold = () => Number(process.env['LIMIT_TRIAGEM_MIN']) || 10;
+    const getDeslocIntervaloMin = () => Number(process.env['LIMIT_DESLOC_INTERVALO_MIN']) || 10;
+    const getInicioJornadaMin = () => Number(process.env['LIMIT_INICIO_JORNADA_MIN']) || 10;
+    const getRetornoExcedenteMin = () => Number(process.env['LIMIT_RETORNO_EXCEDENTE_MIN']) || 60;
     const TOLERANCE_MIN = 5; // invisible grace margin — keeps displayed limits unchanged
 
     const utilizacaoKpi = kpis.find((k) => normalizeToken(k.kpi) === normalizeToken('Utilização'));
     if (!utilizacaoKpi) return [];
 
-    const underPerforming = new Map<string, number>();
-    for (const t of utilizacaoKpi.opportunityTeams) {
-      underPerforming.set(t.team, t.value);
+    const teamsToAnalyze = new Map<string, { value: number; type: string }>();
+    for (const s of utilizacaoKpi.scores) {
+      if (utilizacaoKpi.direction === 'higher-is-better' ? s.rawValue < utilizacaoKpi.metaTarget : s.rawValue > utilizacaoKpi.metaTarget) {
+        teamsToAnalyze.set(s.team, { value: s.rawValue, type: 'underperformer' });
+      }
     }
-    if (underPerforming.size === 0) return [];
+    if (teamsToAnalyze.size === 0) return [];
 
     // Resolve columns (same as analyzeOsDia)
     const deslocAcc = createAccessor(deslocRows[0]);
@@ -345,7 +347,7 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
           // Desl. Intervalo for end-of-day interval: Liberada → Início Intervalo is sem_os time
           if (hasIntervalInFimWindow && lastIntStart) {
             semOsFimDeslIntervalMin = round2(minutesBetween(lastIntStart, lastLiberada));
-            if (semOsFimDeslIntervalMin >= SEM_OS_THRESHOLD_MIN + TOLERANCE_MIN) {
+            if (semOsFimDeslIntervalMin >= getSemOsThreshold() + TOLERANCE_MIN) {
               semOsValues.push(semOsFimDeslIntervalMin);
             }
           }
@@ -369,8 +371,8 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
               
             }
           } else {
-            // No retorno base data: fall back to SEM_OS_THRESHOLD_MIN (Antes Log Off — separate flag)
-            if (directGapMin >= SEM_OS_THRESHOLD_MIN + TOLERANCE_MIN) {
+            // No retorno base data: fall back to getSemOsThreshold() (Antes Log Off — separate flag)
+            if (directGapMin >= getSemOsThreshold() + TOLERANCE_MIN) {
               semOsFimJornadaMin = round2(directGapMin);
               
             }
@@ -433,7 +435,7 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
         if (Number.isFinite(v) && v > 0) teamSemOrdemSum.set(team, (teamSemOrdemSum.get(team) ?? 0) + v);
       }
       let dayRetornoExcedente = 0;
-      if (Number.isFinite(semOsFimDirectGapMin) && semOsFimDirectGapMin >= RETORNO_EXCEDENTE_MIN) {
+      if (Number.isFinite(semOsFimDirectGapMin) && semOsFimDirectGapMin >= getRetornoExcedenteMin()) {
         const excess = round2(semOsFimDirectGapMin - 60);
         teamRetornoExcedenteSum.set(team, (teamRetornoExcedenteSum.get(team) ?? 0) + excess);
         dayRetornoExcedente = excess;
@@ -555,29 +557,34 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
             if (anteriorRow) {
               nrOrdemDespachoAnterior = String(anteriorRow[nrOrdemCol] ?? '').trim() || undefined;
               horaDespachoAnterior = hora1oDespachoRaw || undefined;
-                              const inicioCalRaw = inicioCalendarioCol ? String(row[inicioCalendarioCol] ?? '').trim() : '';
-                const hora1oDt = inicioCalRaw ? parseDateTimeBr(inicioCalRaw) : parseDateTimeBr(hora1oDespachoRaw);
-                const despachadaDt = parseDateTimeBr(thisDespachadaRaw);
-                if (hora1oDt && despachadaDt) {
-                  const tMin = minutesBetween(despachadaDt, hora1oDt);
-                  if (Number.isFinite(tMin) && tMin > 0) triagemMin = round2(tMin);
-                }
+              
+              const inicioCalRaw = inicioCalendarioCol ? String(row[inicioCalendarioCol] ?? '').trim() : '';
+              const hora1oDt = inicioCalRaw ? parseDateTimeBr(inicioCalRaw) : parseDateTimeBr(hora1oDespachoRaw);
+              const despachadaDt = parseDateTimeBr(thisDespachadaRaw);
+              if (hora1oDt && despachadaDt) {
+                const tMin = minutesBetween(despachadaDt, hora1oDt);
+                if (Number.isFinite(tMin) && tMin > 0) triagemMin = round2(tMin);
+              }
                 
-                if (nrOrdemDespachoAnterior && horaDespachoAnterior) {
-                  tempPrepOs = Number.NaN; // Absorbed into triagemMin
-                }
-                
+              if (nrOrdemDespachoAnterior && horaDespachoAnterior) {
+                tempPrepOs = Number.NaN; // Absorbed into triagemMin
+              }
             }
           }
         }
-
-        const tempPrepThreshold = TEMP_PREP_THRESHOLD_MIN;
-        if (Number.isFinite(tempPrepOs) && tempPrepOs >= tempPrepThreshold + TOLERANCE_MIN) flags.push('temp_prep_alto');
-        if (triagemMin !== undefined && triagemMin >= TRIAGEM_THRESHOLD_MIN + TOLERANCE_MIN) flags.push('triagem_alto');
+        const tempPrepThreshold = getTempPrepThreshold();
+        if (Number.isFinite(tempPrepOs) && tempPrepOs >= tempPrepThreshold + TOLERANCE_MIN) {
+          flags.push('temp_prep_alto');
+        }
+        if (triagemMin !== undefined && triagemMin >= getTriagemThreshold() + TOLERANCE_MIN) {
+          flags.push('triagem_alto');
+        }
         // 1º Desloc.: Início Cal. → A Caminho, only for 1ª OS, threshold from env
         const ocisoForFlag = ocisoValues[i];
-        if (i === 0 && ocisoForFlag !== undefined && ocisoForFlag >= PRIMEIRO_DESLOC_THRESHOLD_MIN) flags.push('primeiro_desloc_alto');
-        if (Number.isFinite(semOsMin) && semOsMin >= SEM_OS_THRESHOLD_MIN + TOLERANCE_MIN) flags.push('sem_os_alto');
+        if (i === 0 && ocisoForFlag !== undefined && ocisoForFlag >= getPrimeiroDeslocThreshold()) {
+          flags.push('primeiro_desloc_alto');
+        }
+        if (Number.isFinite(semOsMin) && semOsMin >= getSemOsThreshold() + TOLERANCE_MIN) flags.push('sem_os_alto');
         if (
           hdTotalMin > 0 && trOrdemMin > hdTotalMin * OS_DIA_PCT_THRESHOLD &&
           tempoPadraoRaw !== null && Number.isFinite(tempoPadraoRaw) && tempoPadraoRaw > 0 &&
@@ -642,11 +649,6 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
             const prevLibStr  = prevRow && liberadaCol  ? String(prevRow[liberadaCol]  ?? '').trim() || undefined : undefined;
             const prevLibDate  = prevLibStr  ? parseDateTimeBr(prevLibStr)  : null;
             const despachadaDate = despachadaCol ? parseDateTimeBr(String(row[despachadaCol] ?? '')) : null;
-            // When the interval overlaps the dispatch window (interceptsDispatch case), calculateSemOsValue
-            // already returns minutesBetween(inicioIntervalo, prevLiberada) as semOsMin — the exact
-            // pre-interval travel time.
-            // When the interval fits fully within the entre-ordens window (insideTolerance case),
-            // semOsMin is the total discounted gap. We must split it into separate entries.
             if (
               hasIntervaloDeslocamento &&
               semOsIntervalApplied[i] &&
@@ -658,9 +660,8 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
                 fimIntervaloDate && despachadaDate.getTime() < fimIntervaloDate.getTime(),
               );
               if (isInterceptsDispatch) {
-                // semOsMin IS the pre-interval travel time (minutesBetween(inicioIntervalo, prevLiberada)).
                 const interceptMin = round2(semOsMin);
-                if (interceptMin >= SEM_OS_THRESHOLD_MIN + TOLERANCE_MIN) {
+                if (interceptMin >= getSemOsThreshold() + TOLERANCE_MIN) {
                   const overPct = globalAvgIntervaloDeslocMin > 0
                     ? round2(((interceptMin - globalAvgIntervaloDeslocMin) / globalAvgIntervaloDeslocMin) * 100)
                     : undefined;
@@ -674,9 +675,7 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
                   });
                 }
               } else {
-                // insideTolerance: split into pre-interval travel (prevLiberada → inicioIntervalo)
-                // and post-interval wait (fimIntervalo → despachada).
-                if (intervaloDeslocMin !== null && intervaloDeslocMin >= SEM_OS_THRESHOLD_MIN + TOLERANCE_MIN) {
+                if (intervaloDeslocMin !== null && intervaloDeslocMin >= getSemOsThreshold() + TOLERANCE_MIN) {
                   const overPct = globalAvgIntervaloDeslocMin > 0
                     ? round2(((intervaloDeslocMin - globalAvgIntervaloDeslocMin) / globalAvgIntervaloDeslocMin) * 100)
                     : undefined;
@@ -691,7 +690,7 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
                 }
                 if (fimIntervaloDate) {
                   const postIntervalMin = round2(minutesBetween(despachadaDate, fimIntervaloDate));
-                  if (postIntervalMin >= SEM_OS_THRESHOLD_MIN + TOLERANCE_MIN) {
+                  if (postIntervalMin >= getSemOsThreshold() + TOLERANCE_MIN) {
                     semOsDetails.push({
                       type: 'entre_ordens',
                       min:  postIntervalMin,
@@ -717,11 +716,7 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
             }
           }
         }
-        // Skip intervalo_deslocamento when the interval was already absorbed into entre_ordens
-        // (semOsIntervalApplied[i] === true), to avoid two sub-flags pointing to the same time window.
-        if (intervaloDeslocAboveGlobalAvg && intervaloDeslocMin !== null && !semOsIntervalApplied[i] && intervaloDeslocMin >= SEM_OS_THRESHOLD_MIN + TOLERANCE_MIN) {
-          // When the current OS has a Despachada between prevLiberada and inicioIntervalo,
-          // the "Desl. Intervalo" is measured from Despachada (not Lib. Anterior).
+        if (intervaloDeslocAboveGlobalAvg && intervaloDeslocMin !== null && !semOsIntervalApplied[i] && intervaloDeslocMin >= getSemOsThreshold() + TOLERANCE_MIN) {
           const despachadaAtualDate = despachadaCol ? parseDateTimeBr(String(row[despachadaCol] ?? '')) : null;
           const useDespachadaAsFrom = Boolean(
             despachadaAtualDate && prevLiberadaDate && inicioIntervaloDate &&
@@ -755,11 +750,11 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
           uniqueFlags.splice(idx, 1);
           let addedSemOs = false;
           for (const detail of semOsDetails) {
-            if (detail.type === 'inicio_jornada' && detail.min >= SEM_OS_THRESHOLD_MIN + TOLERANCE_MIN) {
+            if (detail.type === 'inicio_jornada' && detail.min >= getSemOsThreshold() + TOLERANCE_MIN) {
               if (!uniqueFlags.includes('inicio_jornada_alto' as any)) uniqueFlags.push('inicio_jornada_alto' as any);
-            } else if (detail.type === 'intervalo_deslocamento' && detail.min >= SEM_OS_THRESHOLD_MIN + TOLERANCE_MIN) {
+            } else if (detail.type === 'intervalo_deslocamento' && detail.min >= getSemOsThreshold() + TOLERANCE_MIN) {
               if (!uniqueFlags.includes('desloc_intervalo_alto' as any)) uniqueFlags.push('desloc_intervalo_alto' as any);
-            } else if (detail.type === 'entre_ordens' && detail.min >= SEM_OS_THRESHOLD_MIN + TOLERANCE_MIN) {
+            } else if (detail.type === 'entre_ordens' && detail.min >= getSemOsThreshold() + TOLERANCE_MIN) {
               if (!addedSemOs) {
                 uniqueFlags.push('sem_os_alto');
                 addedSemOs = true;
@@ -815,8 +810,8 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
         const logOffStr  = logOffCorrigidoCol ? String(lastRow[logOffCorrigidoCol] ?? '').trim() || undefined : undefined;
         const liberadaStr = liberadaCol ? String(lastRow[liberadaCol] ?? '').trim() || undefined : undefined;
         if (logOffStr) {
-          const retornoExcedenteThreshold = Number.isFinite(semOsFimDirectGapMin) && semOsFimDirectGapMin >= RETORNO_EXCEDENTE_MIN;
-          const fimDeslAbove = Number.isFinite(semOsFimDeslIntervalMin) && semOsFimDeslIntervalMin >= SEM_OS_THRESHOLD_MIN + TOLERANCE_MIN;
+          const retornoExcedenteThreshold = Number.isFinite(semOsFimDirectGapMin) && semOsFimDirectGapMin >= getRetornoExcedenteMin();
+          const fimDeslAbove = Number.isFinite(semOsFimDeslIntervalMin) && semOsFimDeslIntervalMin >= getSemOsThreshold() + TOLERANCE_MIN;
           const semOsAbove = fimDeslAbove;
           const retornoDetail: NonNullable<UtilizacaoOrderEvidence['retorno_excedente_details']> = {
             type: 'retorno_excedente',
@@ -825,7 +820,7 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
             to:   logOffStr,
             retorno_base_discounted: semOsFimRetornoBaseRowVal > 0 ? semOsFimRetornoBaseRowVal : undefined,
             retorno_base_used_row:   semOsFimRetornoBaseUsedRow || undefined,
-            excess_min: retornoExcedenteThreshold ? round2(semOsFimDirectGapMin - RETORNO_EXCEDENTE_MIN) : undefined,
+            excess_min: retornoExcedenteThreshold ? round2(semOsFimDirectGapMin - getRetornoExcedenteMin()) : undefined,
             global_avg_min: retornoExcedenteThreshold && retornoBaseAvg > 0 ? round2(retornoBaseAvg) : undefined,
           };
           const fimInicioIntervalo = semOsFimHasIntervalInWindow && inicioIntervaloCol ? String(lastRow[inicioIntervaloCol] ?? '').trim() : '';
@@ -942,8 +937,8 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
     const distinctDates = dateCol ? countDistinctDates(deslocRows, dateCol) : 0;
     const result: UtilizacaoTeamAnalysis[] = [];
 
-    for (const team of underPerforming.keys()) {
-      const utilizacaoValue = underPerforming.get(team) ?? 0;
+    for (const team of teamsToAnalyze.keys()) {
+      const utilizacaoValue = teamsToAnalyze.get(team)?.value ?? 0;
 
       const flaggedOrders = mergeEvidenceFlags(teamEvidences.get(team) ?? []);
       const allBasic = teamAllBasicUtil.get(team) ?? [];

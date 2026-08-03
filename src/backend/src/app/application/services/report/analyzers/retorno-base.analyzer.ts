@@ -13,7 +13,11 @@ export function analyzeRetornoBase(deslocRows: CsvRow[], kpis: KpiInsight[]): Re
     if (!retornoKpi) return [];
 
     const teamsToAnalyze = new Map<string, { value: number }>();
-    for (const t of retornoKpi.opportunityTeams) teamsToAnalyze.set(t.team, { value: t.value });
+    for (const s of retornoKpi.scores) {
+      if (retornoKpi.direction === 'higher-is-better' ? s.rawValue < retornoKpi.metaTarget : s.rawValue > retornoKpi.metaTarget) {
+        teamsToAnalyze.set(s.team, { value: s.rawValue });
+      }
+    }
     if (teamsToAnalyze.size === 0) return [];
 
     const deslocAcc = createAccessor(deslocRows[0]);

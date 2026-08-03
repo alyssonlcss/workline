@@ -30,9 +30,11 @@ export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[]): Efi
       teamsToAnalyze.set(t.team, { value: t.value, type: 'top_performer' });
     }
     
-    // Bottom 3 teams (check for issues)
-    for (const t of eficienciaKpi.opportunityTeams) {
-      teamsToAnalyze.set(t.team, { value: t.value, type: 'underperformer' });
+    // Bottom teams (check for issues)
+    for (const s of eficienciaKpi.scores) {
+      if (eficienciaKpi.direction === 'higher-is-better' ? s.rawValue < eficienciaKpi.metaTarget : s.rawValue > eficienciaKpi.metaTarget) {
+        teamsToAnalyze.set(s.team, { value: s.rawValue, type: 'underperformer' });
+      }
     }
 
     console.log('[Eficiencia Analysis] Teams to analyze:', Array.from(teamsToAnalyze.keys()));

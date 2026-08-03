@@ -331,3 +331,32 @@ export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACami
   }
   return merged;
 }
+
+/**
+ * Determina a cor da OS com base em suas flags e segmentos de timeline.
+ * Retorna 'red' (flags ativas), 'yellow' (mais segmentos ociosos que produtivos) ou 'green'.
+ */
+export function getEvidenceColor(ev: any): 'red' | 'yellow' | 'green' {
+  if (ev.flags && ev.flags.length > 0) return 'red';
+
+  const segments = buildTimelineSegments(ev, false, false);
+  let yellowCount = 0;
+  let greenCount = 0;
+  
+  const idleLabels = new Set(['Sem OS', 'Desl. Intervalo | Sem OS', 'Partida', '1º Desloc.', 'Antes Log Off']);
+
+  for (const seg of segments) {
+    if (seg.isInterval) {
+      greenCount++;
+    } else {
+      const isIdle = idleLabels.has(seg.label) || seg.label.startsWith('1º Desp.') || seg.label.startsWith('2º Desp.');
+      if (isIdle) {
+        yellowCount++;
+      } else {
+        greenCount++;
+      }
+    }
+  }
+
+  return yellowCount > greenCount ? 'yellow' : 'green';
+}

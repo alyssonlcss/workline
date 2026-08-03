@@ -58,6 +58,39 @@ export interface SemOsDetail {
 @Injectable({ providedIn: 'root' })
 export class DashboardPdfService {
 
+  private limitOrdersPerDay(orders: any[], extraOrders: any[]): any[] {
+    const all = [...(orders || []), ...(extraOrders || [])];
+    if (all.length === 0) return [];
+    
+    // Group by date_ref
+    const groups: { [key: string]: any[] } = {};
+    for (const ev of all) {
+      const d = ev.date_ref || 'unknown';
+      if (!groups[d]) groups[d] = [];
+      groups[d].push(ev);
+    }
+    
+    const dates = Object.keys(groups);
+    const result: any[] = [];
+    
+    for (const d of dates) {
+      const items = groups[d];
+      items.sort((a, b) => {
+        const oA = this.getOciosoTotal(a) || 0;
+        const oB = this.getOciosoTotal(b) || 0;
+        return oB - oA;
+      });
+      if (dates.length === 1) {
+        result.push(...items);
+      } else {
+        result.push(...items.slice(0, 3));
+      }
+    }
+    return result;
+  }
+
+
+
   private static readonly TIMELINE_IDLE_LABELS = new Set([
     'Sem OS', 'Desl. Intervalo | Sem OS', 'Partida', '1º Desloc.', 'Deslocamento p/OS', 'Retorno Vazio',
   ]);
@@ -1001,8 +1034,9 @@ export class DashboardPdfService {
               ...(analysis.idleAnalysis.horasExtras > 0 ? [`Horas Extras Méd/dia: ${Math.round(analysis.idleAnalysis.horasExtras)} min`] : []),
             ]));
           }
-          if (analysis.flaggedOrders?.length > 0) {
-            analysis.flaggedOrders.forEach((ev: any, evIdx: number, evArr: any[]) => {
+          const pdfOrders = this.limitOrdersPerDay(analysis.flaggedOrders, analysis.extraFlaggedOrders);
+          if (pdfOrders.length > 0) {
+            pdfOrders.forEach((ev: any, evIdx: number, evArr: any[]) => {
               const orderItems: any[] = [];
               const ccParts: string[] = [];
               if (ev.classe) ccParts.push(`Classe: ${ev.classe}`);
@@ -1092,7 +1126,8 @@ export class DashboardPdfService {
               ...(analysis.flags.includes('short_displacement') ? [`TL curto: ${analysis.avgDeslocamentoMin?.toFixed(0)} min (\u2264 ${(analysis.globalAvgDeslocamentoMin * 0.25)?.toFixed(0)} min – 25% global)`] : []),
             ]));
           }
-          analysis.flaggedOrders?.forEach((ev: any, evIdx: number, evArr: any[]) => {
+          const pdfOrders = this.limitOrdersPerDay(analysis.flaggedOrders, analysis.extraFlaggedOrders);
+          pdfOrders.forEach((ev: any, evIdx: number, evArr: any[]) => {
             const orderItems: any[] = [];
             const efCcParts: string[] = [];
             if (ev.classe) efCcParts.push(`Classe: ${ev.classe}`);
@@ -1163,7 +1198,8 @@ export class DashboardPdfService {
               ...(analysis.idleAnalysis.horasExtras > 0 ? [`Horas Extras Méd/dia: ${Math.round(analysis.idleAnalysis.horasExtras)} min`] : []),
             ]));
           }
-          analysis.flaggedOrders?.forEach((ev: any, evIdx: number, evArr: any[]) => {
+          const pdfOrders = this.limitOrdersPerDay(analysis.flaggedOrders, analysis.extraFlaggedOrders);
+          pdfOrders.forEach((ev: any, evIdx: number, evArr: any[]) => {
             const orderItems: any[] = [];
             const utilCcParts: string[] = [];
             if (ev.classe) utilCcParts.push(`Classe: ${ev.classe}`);
@@ -1244,7 +1280,8 @@ export class DashboardPdfService {
           if (analysis.summary?.countTmeMuitoAlto > 0) chips.push(`TME\u22651.5\u00d7avg: ${analysis.summary.countTmeMuitoAlto}`);
           if (analysis.summary?.countSemDeslocamento > 0) chips.push(`Sem desloc.: ${analysis.summary.countSemDeslocamento}`);
           const teamItems: any[] = [chipRow(chips)];
-          analysis.flaggedOrders?.forEach((ev: any, evIdx: number, evArr: any[]) => {
+          const pdfOrders = this.limitOrdersPerDay(analysis.flaggedOrders, analysis.extraFlaggedOrders);
+          pdfOrders.forEach((ev: any, evIdx: number, evArr: any[]) => {
             const orderItems: any[] = [];
             if (ev.classe || ev.causa) {
               orderItems.push({ text: [ev.classe ? `Classe: ${ev.classe}` : '', ev.classe && ev.causa ? '  \u00b7  ' : '', ev.causa ? `Causa: ${ev.causa}` : ''].join(''), fontSize: 7, color: GRAY, margin: [0, 0, 0, 2] });
