@@ -63,6 +63,8 @@ const dataDownloadSchema = z.object({
 });
 
 const reportGenerationSchema = z.object({
+  jobId: z.string().uuid().optional(),
+  sessionId: z.string().optional(),
   reportFilters: z.object({
     bases: z.array(z.string().trim().min(1)).optional(),
     teamTypes: z.array(z.enum(['propria', 'parceira'])).optional(),
@@ -89,7 +91,7 @@ export async function createServer() {
     `SPOTFIRE_DOWNLOAD_TABLES: ${downloadTargets.length} table(s) → ${downloadTargets.map(t => `${t.analysisTab}/${t.tableTitle}`).join(', ')}`,
   );
 
-  const startScannerJob = new StartScannerJobUseCase(automation, jobStore);
+  const startScannerJob = new StartScannerJobUseCase(new PuppeteerSpotfireAutomation(environment), jobStore);
   const getScannerJob = new GetScannerJobUseCase(jobStore);
   const postDownloadReport = new PostDownloadReportService(environment);
 
@@ -192,7 +194,8 @@ export async function createServer() {
               ? { username: session.username, password: session.spotfirePassword }
               : undefined;
 
-          const result = await automation.runExtraction({
+          const localAutomation = new PuppeteerSpotfireAutomation(environment);
+          const result = await localAutomation.runExtraction({
             reportTitle,
             analysisTab: downloadTargets[0].analysisTab,
             tableTitle: downloadTargets[0].tableTitle,
@@ -235,12 +238,6 @@ export async function createServer() {
             const fileName = `${fileLabel}.csv`;
             const filePath = await moveDownloadedFile(exportedFile, jobDirectory, fileName);
 
-            // Copy to the main output directory so it is accessible outside the job session
-            const mainOutputDir = environment.spotfire.outputDirectory;
-            await mkdir(mainOutputDir, { recursive: true });
-            const mainFilePath = join(mainOutputDir, fileName);
-            await copyFile(filePath, mainFilePath);
-
             downloadedFiles.push({
               analysisTab: target.analysisTab,
               tableTitle: target.tableTitle,
@@ -255,6 +252,8 @@ export async function createServer() {
 
           return {
             status: 'completed',
+            jobId,
+            sessionId,
             reportTitle,
             updatedAt: new Date().toISOString(),
             files: downloadedFiles,
@@ -294,9 +293,18 @@ export async function createServer() {
     return reply.send(job);
   });
 
-  server.get('/api/scanner/reports/teams', async (_request, reply) => {
+  server.get('/api/scanner/reports/teams', async (request, reply) => {
+    const querySchema = z.object({ jobId: z.string().uuid().optional(), sessionId: z.string().optional() });
+    const query = querySchema.parse(request.query);
+    const sessionId = request.cookies.scanner_session_id || (request.headers['x-session-id'] as string) || query.sessionId || 'default-session';
+    
+    let outputDir = environment.spotfire.outputDirectory;
+    if (query.jobId) {
+      outputDir = tempStorage.getJobDirectory(sessionId, query.jobId);
+    }
+
     const { dataDirectory, downloadedFiles } = await resolveReportFiles(
-      environment.spotfire.outputDirectory,
+      outputDir,
       downloadTargets,
     );
 
@@ -306,8 +314,15 @@ export async function createServer() {
 
   server.post('/api/scanner/reports/generate', async (request, reply) => {
     const payload = reportGenerationSchema.parse(request.body);
+    const sessionId = request.cookies.scanner_session_id || (request.headers['x-session-id'] as string) || payload.sessionId || 'default-session';
+    
+    let outputDir = environment.spotfire.outputDirectory;
+    if (payload.jobId) {
+      outputDir = tempStorage.getJobDirectory(sessionId, payload.jobId);
+    }
+
     const { dataDirectory, downloadedFiles } = await resolveReportFiles(
-      environment.spotfire.outputDirectory,
+      outputDir,
       downloadTargets,
     );
 
@@ -331,8 +346,15 @@ export async function createServer() {
 
   server.post('/api/scanner/reports/export-data', async (request, reply) => {
     const payload = reportGenerationSchema.parse(request.body);
+    const sessionId = request.cookies.scanner_session_id || (request.headers['x-session-id'] as string) || payload.sessionId || 'default-session';
+    
+    let outputDir = environment.spotfire.outputDirectory;
+    if (payload.jobId) {
+      outputDir = tempStorage.getJobDirectory(sessionId, payload.jobId);
+    }
+
     const { dataDirectory, downloadedFiles } = await resolveReportFiles(
-      environment.spotfire.outputDirectory,
+      outputDir,
       downloadTargets,
     );
 

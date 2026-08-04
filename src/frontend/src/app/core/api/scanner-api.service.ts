@@ -9,6 +9,8 @@ import { SpotfireFilter } from '../../models/spotfire-catalog.model';
 
 export interface ScannerDataDownloadResult {
   status: 'completed';
+  jobId: string;
+  sessionId?: string;
   reportTitle: string;
   updatedAt: string;
   files: Array<{
@@ -746,6 +748,7 @@ export class ScannerApiService {
   }
 
   public generateReport(payload: {
+    jobId?: string;
     reportFilters?: {
       bases?: string[];
       teamTypes?: Array<'propria' | 'parceira'>;
@@ -759,6 +762,7 @@ export class ScannerApiService {
 
   /** Gera dados filtrados por base/tipo/equipe sem sobrescrever o relatório salvo. */
   public exportData(payload: {
+    jobId?: string;
     reportFilters: {
       bases: string[];
       teamTypes: Array<'propria' | 'parceira'>;
@@ -777,8 +781,9 @@ export class ScannerApiService {
     return this.http.post<{ deleted: number; files: string[] }>(`${this.baseUrl}/export/cleanup`, { type });
   }
 
-  public getTeams(): Observable<{ teams: string[] }> {
-    return this.http.get<{ teams: string[] }>(`${this.baseUrl}/scanner/reports/teams`);
+  public getTeams(jobId?: string): Observable<{ teams: string[] }> {
+    const params = jobId ? `?jobId=${jobId}` : '';
+    return this.http.get<{ teams: string[] }>(`${this.baseUrl}/scanner/reports/teams${params}`);
   }
 
   public getExportDownloadUrl(jobId: string): string {

@@ -5147,6 +5147,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('minNumInput') private minNumInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('maxNumInput') private maxNumInputRef?: ElementRef<HTMLInputElement>;
 
+  protected readonly jobId = signal<string | undefined>(undefined);
   protected readonly loading = signal(false);
   protected readonly progressMessage = signal('');
   protected readonly progressLog = signal<string[]>([]);
@@ -5875,6 +5876,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       const filters = this.buildReportFiltersPayload();
       const result = await firstValueFrom(
         this.api.exportData({
+          jobId: this.jobId(),
           reportFilters: { bases: filters.bases ?? [], teamTypes: filters.teamTypes ?? [], teams: filters.teams, dates: filters.dates },
         })
       );
@@ -5896,7 +5898,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       const currentFilters = this.buildReportFiltersPayload();
       const results = await firstValueFrom(
         forkJoin(basesToExport.map(base =>
-          this.api.exportData({ reportFilters: { bases: [base], teamTypes: [teamType], dates: currentFilters.dates } })
+          this.api.exportData({ jobId: this.jobId(), reportFilters: { bases: [base], teamTypes: [teamType], dates: currentFilters.dates } })
         ))
       );
       const sections = results.map((r, i) => ({
@@ -6128,7 +6130,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       const filters = this.buildReportFiltersPayload();
       this.exportLoading.set(true);
       this.exportError.set('');
-      this.api.exportData({ reportFilters: { bases: filters.bases ?? [], teamTypes: filters.teamTypes ?? [], teams: filters.teams, dates: filters.dates } }).subscribe({
+      this.api.exportData({ jobId: this.jobId(), reportFilters: { bases: filters.bases ?? [], teamTypes: filters.teamTypes ?? [], teams: filters.teams, dates: filters.dates } }).subscribe({
         next: async (result) => {
           const hasTeams = filters.teams && filters.teams.length > 0;
           const subtitle = hasTeams
@@ -6196,7 +6198,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     const currentFilters = this.buildReportFiltersPayload();
     const requests = basesToExport.map((base) =>
-      this.api.exportData({ reportFilters: { bases: [base], teamTypes: [teamType], dates: currentFilters.dates } })
+      this.api.exportData({ jobId: this.jobId(), reportFilters: { bases: [base], teamTypes: [teamType], dates: currentFilters.dates } })
     );
 
     forkJoin(requests).subscribe({
@@ -6292,7 +6294,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.exportLoading.set(true);
     this.exportError.set('');
 
-    this.api.exportData({ reportFilters: { bases: [base], teamTypes: [teamType] } }).subscribe({
+    this.api.exportData({ jobId: this.jobId(), reportFilters: { bases: [base], teamTypes: [teamType] } }).subscribe({
       next: (result) => {
         const section = { report: result.generatedReport, title: base, subtitle: typeLabel };
         this.downloadPdfDirect(section, exportType);
@@ -7695,14 +7697,16 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             }
           });
         },
-        onResult: () => {
+        onResult: (result) => {
           this.zone.run(() => {
             this.stopLoginCountdown();
             this.activeDownloadAbort = undefined;
             this.progressMessage.set('Gerando relatório analítico...');
+            this.jobId.set(result.jobId);
           });
 
           this.api.generateReport({
+            jobId: this.jobId(),
             reportFilters: this.buildReportFiltersPayload(),
           }).subscribe({
             next: (result) => {
@@ -7770,6 +7774,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.reportRefreshSubscription?.unsubscribe();
     this.reportRefreshSubscription = this.api.generateReport({
+      jobId: this.jobId(),
       reportFilters: this.buildReportFiltersPayload(),
     }).subscribe({
       next: (result) => {
@@ -8055,7 +8060,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private fetchAndUpdateTeams(): void {
-    this.api.getTeams().subscribe({
+    this.api.getTeams(this.jobId()).subscribe({
       next: (result) => {
         this.availableTeams = result.teams;
         this.updateAvailableBasesForExport();
@@ -8117,6 +8122,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.reportApplyTimer = setTimeout(() => {
       this.reportRefreshSubscription?.unsubscribe();
       this.reportRefreshSubscription = this.api.generateReport({
+        jobId: this.jobId(),
         reportFilters: this.buildReportFiltersPayload(),
       }).subscribe({
         next: (result) => {
