@@ -54,7 +54,7 @@ export function tlFlexGrow(durationMin: number): number {
 export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACaminho = false): TimelineSegment[] {
   if (!ev) return [];
 
-  const logIn = ev.log_in || ev.log_in_corrigido;
+  const logIn = ev.log_in_corrigido || ev.log_in;
   const despachada = ev.despachada || ev.hora_primeiro_despacho;
   const aCaminho = ev.a_caminho || ev.hora_primeiro_deslocamento;
 
@@ -86,7 +86,7 @@ export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACami
   addPt('inicio_intervalo', ev.inicio_intervalo, 'Início Intervalo');
   addPt('fim_intervalo', ev.fim_intervalo, 'Fim Intervalo');
   const fimJornada = ev.retorno_excedente_details || ev.sem_os_details?.find((s: any) => s.type === 'fim_jornada');
-  const logOffVal = ev.log_off || ev.log_off_corrigido || fimJornada?.to;
+  const logOffVal = ev.log_off_corrigido || ev.log_off || fimJornada?.to;
   if (logOffVal) addPt('log_off', logOffVal, 'Log Off');
 
   const seen = new Set<string>();

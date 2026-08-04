@@ -212,7 +212,7 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string,
       }
 
       // Synthesize calendario_errado or login_atrasado (exclusive to 1st OS)
-      const logInVal = (ev as any).log_in || (ev as any).log_in_corrigido;
+      const logInVal = (ev as any).log_in_corrigido || (ev as any).log_in;
       if (!ev.prev_liberada && ev.inicio_calendario && logInVal) {
         const icalTs = parseDt(ev.inicio_calendario);
         const linTs = parseDt(logInVal);
@@ -300,7 +300,7 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string,
             const detail = ev.sem_os_details?.find(d => d.type === 'inicio_jornada');
             const totalMin = Math.round(detail?.min ?? 0);
             if (ev.flags.includes('login_atrasado' as any)) {
-              const logInVal = (ev as any).log_in || (ev as any).log_in_corrigido;
+              const logInVal = (ev as any).log_in_corrigido || (ev as any).log_in;
               const icalTs = parseDt(ev.inicio_calendario || '');
               const linTs = parseDt(logInVal || '');
               const delayMin = icalTs > 0 && linTs > 0 ? Math.round((linTs - icalTs) / 60000) : getLoginAtrasadoLimit();
@@ -320,7 +320,7 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string,
             alertTexts[flag] = `o intervalo foi registrado ao fim do turno (imediatamente antes do Log Off). O intervalo deve ser tirado entre ordens de serviço, não ao fim do turno, pois isso ocasiona erros na metrificação do retorno a base, que fica vazio.`;
             break;
           case 'login_atrasado': {
-            const logInVal = (ev as any).log_in || (ev as any).log_in_corrigido;
+            const logInVal = (ev as any).log_in_corrigido || (ev as any).log_in;
             const icalTs = parseDt(ev.inicio_calendario || '');
             const linTs = parseDt(logInVal || '');
             const delayMin = icalTs > 0 && linTs > 0 ? Math.round((linTs - icalTs) / 60000) : getLoginAtrasadoLimit();
@@ -328,7 +328,7 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string,
             break;
           }
           case 'calendario_errado': {
-            const logInVal2 = (ev as any).log_in || (ev as any).log_in_corrigido;
+            const logInVal2 = (ev as any).log_in_corrigido || (ev as any).log_in;
             const icalTs = parseDt(ev.inicio_calendario || '');
             const linTs = parseDt(logInVal2 || '');
             const earlyMin = icalTs > 0 && linTs > 0 ? Math.round((icalTs - linTs) / 60000) : getCalendarioErradoLimit();
@@ -470,7 +470,7 @@ export function enrichUtilizacaoEvidence(orders: UtilizacaoOrderEvidence[], team
 
     return orders.map((ev) => {
       // Synthesize calendario_errado or login_atrasado (exclusive to 1st OS)
-      const logInVal = (ev as any).log_in || (ev as any).log_in_corrigido;
+      const logInVal = (ev as any).log_in_corrigido || (ev as any).log_in;
       if (!ev.prev_liberada && ev.inicio_calendario && logInVal) {
         const icalTs = parseDt(ev.inicio_calendario);
         const linTs = parseDt(logInVal);
@@ -532,7 +532,7 @@ export function enrichUtilizacaoEvidence(orders: UtilizacaoOrderEvidence[], team
             const detail = ev.sem_os_details?.find(d => d.type === 'inicio_jornada');
             const totalMin = Math.round(detail?.min ?? 0);
             if (ev.flags.includes('login_atrasado' as any)) {
-              const logInVal = (ev as any).log_in || (ev as any).log_in_corrigido;
+              const logInVal = (ev as any).log_in_corrigido || (ev as any).log_in;
               const icalTs = parseDt(ev.inicio_calendario || '');
               const linTs = parseDt(logInVal || '');
               const delayMin = icalTs > 0 && linTs > 0 ? Math.round((linTs - icalTs) / 60000) : getLoginAtrasadoLimit();
@@ -549,7 +549,7 @@ export function enrichUtilizacaoEvidence(orders: UtilizacaoOrderEvidence[], team
             break;
           }
           case 'login_atrasado': {
-            const logInVal = (ev as any).log_in || (ev as any).log_in_corrigido;
+            const logInVal = (ev as any).log_in_corrigido || (ev as any).log_in;
             const icalTs = parseDt(ev.inicio_calendario || '');
             const linTs = parseDt(logInVal || '');
             const delayMin = icalTs > 0 && linTs > 0 ? Math.round((linTs - icalTs) / 60000) : getLoginAtrasadoLimit();
