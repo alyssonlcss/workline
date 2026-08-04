@@ -620,7 +620,7 @@ type SavedFilterState = {
 
             <!-- KPI sections with bar charts -->
             <ng-container *ngIf="report.kpis.length > 0">
-              <section class="kpi-section anim-el" [id]="'kpi-' + i" *ngFor="let kpi of report.kpis; let i = index">
+              <section class="kpi-section" [id]="'kpi-' + i" *ngFor="let kpi of report.kpis; let i = index">
                 <div class="kpi-section-header">
                   <div class="kpi-title-row">
                     <h2 class="kpi-name">{{ kpi.kpi }}</h2>
@@ -1472,7 +1472,7 @@ type SavedFilterState = {
               <app-toc-nav [kpis]="report.kpis" />
 
               <!-- Gráfico de Tendência Macro por KPI -->
-              <section class="analytic-kpi-section anim-el" [id]="'kpi-' + i" *ngFor="let kpi of report.kpis; let i = index">
+              <section class="analytic-kpi-section" [id]="'kpi-' + i" *ngFor="let kpi of report.kpis; let i = index">
                 <ng-container *ngIf="analyticChartData(kpi) as cd">
                   <div class="analytic-kpi-header">
                     <div class="analytic-kpi-title-row">
@@ -5520,9 +5520,15 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private setupAnimations(): void {
-    setTimeout(() => {
+    const attempt = () => {
       document.querySelectorAll('.anim-el').forEach((el) => this.scrollObserver?.observe(el));
-    }, 60);
+    };
+    attempt();
+    setTimeout(attempt, 60);
+    setTimeout(attempt, 250);
+    setTimeout(attempt, 750);
+    setTimeout(attempt, 1500);
+    setTimeout(attempt, 3000);
   }
 
   private executePendingScroll(): void {

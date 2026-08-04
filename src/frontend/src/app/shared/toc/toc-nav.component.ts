@@ -183,11 +183,12 @@ export class TocNavComponent implements OnChanges, OnDestroy {
   }
 
   private scheduleObserver(): void {
-    if (this.scanTimeout !== null) {
-      clearTimeout(this.scanTimeout);
-    }
-    // Let Angular finish rendering the kpi-section elements
-    this.scanTimeout = setTimeout(() => this.setupObserver(), 120);
+    const attempt = () => this.setupObserver();
+    attempt();
+    setTimeout(attempt, 120);
+    setTimeout(attempt, 500);
+    setTimeout(attempt, 1500);
+    setTimeout(attempt, 3000);
   }
 
   private setupObserver(): void {

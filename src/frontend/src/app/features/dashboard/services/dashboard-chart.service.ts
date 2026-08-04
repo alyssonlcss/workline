@@ -599,14 +599,33 @@ export class DashboardChartService {
            if (wantsParceira && !wantsPropria && tb.teamType !== 'parceira' && tb.teamType !== 'Parceira') continue;
            if (wantsPropria && wantsParceira && tb.teamType !== 'propria' && tb.teamType !== 'Própria' && tb.teamType !== 'parceira' && tb.teamType !== 'Parceira') continue;
         }
-        allVals.push(...tb.trend.map(pt => pt.avgValue));
+        for (let i = 0; i < tb.trend.length; i++) {
+          allVals.push(tb.trend[i].avgValue);
+        }
       }
     } else {
-      allVals.push(...kpi.scores.map((s) => s.rawValue), ...trendValues, ...perTeamValues);
+      for (let i = 0; i < kpi.scores.length; i++) {
+        allVals.push(kpi.scores[i].rawValue);
+      }
+      for (let i = 0; i < trendValues.length; i++) {
+        allVals.push(trendValues[i]);
+      }
+      for (let i = 0; i < perTeamValues.length; i++) {
+        allVals.push(perTeamValues[i]);
+      }
     }
 
-    let minVal = Math.min(...allVals);
-    let maxVal = Math.max(...allVals);
+    let minVal = Infinity;
+    let maxVal = -Infinity;
+    for (let i = 0; i < allVals.length; i++) {
+      const v = allVals[i];
+      if (typeof v === 'number' && !isNaN(v) && isFinite(v)) {
+        if (v < minVal) minVal = v;
+        if (v > maxVal) maxVal = v;
+      }
+    }
+    if (minVal === Infinity) minVal = 0;
+    if (maxVal === -Infinity) maxVal = 100;
     const buf = Math.max((maxVal - minVal) * 0.1, 1);
     minVal = Math.floor(Math.max(0, minVal - buf));
     maxVal = Math.ceil(maxVal + buf);
