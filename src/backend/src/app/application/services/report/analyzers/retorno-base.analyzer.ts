@@ -1,10 +1,10 @@
 import type { CsvRow } from '../csv-utils.js';
-import type { RetornoBaseTeamAnalysis, RetornoBaseDayEvidence, KpiInsight } from '../types.js';
+import type { RetornoBaseTeamAnalysis, RetornoBaseDayEvidence, KpiInsight, GlobalAveragesMap } from '../types.js';
 import { createAccessor, parseNumber, normalizeToken, round2, parseDateTimeBr, minutesBetween } from '../csv-utils.js';
 import { enrichRetornoEvidence } from './enrich-utils.js';
 import { countDistinctDates } from './os-dia.analyzer.js';
 
-export function analyzeRetornoBase(deslocRows: CsvRow[], kpis: KpiInsight[]): RetornoBaseTeamAnalysis[] {
+export function analyzeRetornoBase(deslocRows: CsvRow[], kpis: KpiInsight[], globalAverages?: GlobalAveragesMap): RetornoBaseTeamAnalysis[] {
     if (deslocRows.length === 0) return [];
 
     const RETORNO_META = 40;
@@ -131,6 +131,11 @@ export function analyzeRetornoBase(deslocRows: CsvRow[], kpis: KpiInsight[]): Re
 
       flaggedDays.sort((a, b) => b.retorno_base_min - a.retorno_base_min);
 
+      const enrichedFlagged = enrichRetornoEvidence(flaggedDays.slice(0, 10), RETORNO_META, team, globalAverages);
+      const extraFlagged = flaggedDays.length > 10
+        ? enrichRetornoEvidence(flaggedDays.slice(10), RETORNO_META, team, globalAverages)
+        : [];
+
       result.push({
         team,
         retornoBaseValue: retornoValue,
@@ -140,10 +145,8 @@ export function analyzeRetornoBase(deslocRows: CsvRow[], kpis: KpiInsight[]): Re
         globalAvgRetornoMin: round2(globalAvgRetorno),
         totalDays: jornadaRows.length,
         diasAcimaMetaCount,
-        flaggedDays: enrichRetornoEvidence(flaggedDays.slice(0, 10), RETORNO_META),
-        extraFlaggedDays: flaggedDays.length > 10
-          ? enrichRetornoEvidence(flaggedDays.slice(10), RETORNO_META)
-          : [],
+        flaggedDays: enrichedFlagged,
+        extraFlaggedDays: extraFlagged,
         summary: { countRetornoAlto, countRetornoMuitoAlto },
       });
     }

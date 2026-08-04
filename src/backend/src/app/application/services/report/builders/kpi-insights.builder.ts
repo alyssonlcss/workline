@@ -4,6 +4,7 @@ import { createAccessor, parseNumber, normalizeToken, round2, scoreKpi } from '.
 import { KPI_DEDUP_BY_DATE, KPI_DIRECTIONS, KPI_ALIASES, KPI_THRESHOLDS, KPI_DESLOC_DAILY_CONFIG } from '../constants.js';
 import { aggregateDailyTrends, TrendInput } from './trend-aggregator.js';
 
+
 export function buildKpiInsights(rows: CsvRow[]): KpiInsight[] {
     if (rows.length === 0) {
       return [];

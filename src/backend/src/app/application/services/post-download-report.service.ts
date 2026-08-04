@@ -17,6 +17,7 @@ import {
   buildKpiInsightsFromDesloc, buildKpiDailyTrend, buildPerTeamDailyValue,
   buildPerTeamDailyRatio, buildPerTeamDailyCount, buildPerTeamDailyTmeImp,
 } from './report/builders/kpi-insights.builder.js';
+import { buildGlobalAverages } from './report/builders/global-averages.builder.js';
 import { calculateTempPrepSemOs, buildTeamMetrics } from './report/builders/team-stats.builder.js';
 import {
   buildDeviationInsights, buildCrossedInsights, buildActionPlans,
@@ -98,6 +99,8 @@ export class PostDownloadReportService {
       params.reportFilters,
     );
 
+    const config = (this.environment.report as any).basesConfig;
+    const globalAverages = buildGlobalAverages(filtered.teamFilteredDeslocamentos, filtered.resolvedTeams, config);
     const kpis = buildKpiInsightsFromDesloc(filtered.deslocamentos);
 
     // Attach per-day trend (computed from desloc rows) to each KPI insight
@@ -152,7 +155,7 @@ export class PostDownloadReportService {
     const deviationInsights = buildDeviationInsights(filtered.desvios);
     const crossedInsights = buildCrossedInsights(teamMetrics, kpis, deviationInsights.teamBreakdown);
     
-    let osDiaAnalysis = analyzeOsDia(filtered.deslocamentos, kpis);
+    let osDiaAnalysis = analyzeOsDia(filtered.deslocamentos, kpis, globalAverages);
 
     if (osDiaKpi && osDiaAnalysis.length > 0) {
       const sortedAnalysis = [...osDiaAnalysis].sort((a, b) => {
@@ -170,7 +173,7 @@ export class PostDownloadReportService {
     }
 
     // Analyze Eficiencia KPI for evidence of masked efficiency or issues
-    const eficienciaAnalysis = analyzeEficiencia(filtered.deslocamentos, kpis);
+    const eficienciaAnalysis = analyzeEficiencia(filtered.deslocamentos, kpis, globalAverages);
     console.log('[Generate Report] Eficiencia analysis results:', eficienciaAnalysis.length);
     // Attach evidence to the Eficiencia KPI insight
     const eficienciaKpi = kpis.find((k) => normalizeToken(k.kpi) === normalizeToken('Eficiência'));
@@ -185,14 +188,14 @@ export class PostDownloadReportService {
     }
 
     // Analyze Utilização KPI — jornada-level evidence for top/bottom teams
-    const utilizacaoAnalysis = analyzeUtilizacao(filtered.deslocamentos, kpis);
+    const utilizacaoAnalysis = analyzeUtilizacao(filtered.deslocamentos, kpis, globalAverages);
     console.log('[Generate Report] Utilização analysis results:', utilizacaoAnalysis.length);
 
     // Analyze remaining KPIs — must be computed before buildActionPlans to enable per-flag recommendations
-    const tmeImpAnalysis      = analyzeTmeImp(filtered.deslocamentos, kpis);
-    const primeiroLoginAnalysis = analyzePrimeiroLogin(filtered.deslocamentos, kpis);
-    const primeiroDeslocAnalysis = analyzePrimeiroDesloc(filtered.deslocamentos, kpis);
-    const retornoBaseAnalysis  = analyzeRetornoBase(filtered.deslocamentos, kpis);
+    const tmeImpAnalysis      = analyzeTmeImp(filtered.deslocamentos, kpis, globalAverages);
+    const primeiroLoginAnalysis = analyzePrimeiroLogin(filtered.deslocamentos, kpis, globalAverages);
+    const primeiroDeslocAnalysis = analyzePrimeiroDesloc(filtered.deslocamentos, kpis, globalAverages);
+    const retornoBaseAnalysis  = analyzeRetornoBase(filtered.deslocamentos, kpis, globalAverages);
     const despachoAnalysis = analyzeDespacho(filtered.deslocamentos, filtered.resolvedTeams);
 
     const actionPlan = buildActionPlans(
@@ -408,13 +411,13 @@ export class PostDownloadReportService {
   private applyTeamFilters(
     datasets: { deslocamentos: CsvRow[]; desvios: CsvRow[] },
     reportFilters?: ReportFilterInput,
-  ): { deslocamentos: CsvRow[]; desvios: CsvRow[]; resolvedTeams: Map<string, { base: string; teamType: 'propria' | 'parceira' }> } {
+  ): { deslocamentos: CsvRow[]; desvios: CsvRow[]; teamFilteredDeslocamentos: CsvRow[]; resolvedTeams: Map<string, { base: string; teamType: 'propria' | 'parceira' }> } {
     const includeExtra = reportFilters?.includeExtraTags ?? true;
     const teamResolver = this.buildTeamResolver(reportFilters, includeExtra);
     const resolvedTeams = new Map<string, { base: string; teamType: 'propria' | 'parceira' }>();
     const allowedDates = reportFilters?.dates?.length ? new Set(reportFilters.dates) : null;
 
-    const filterRows = (rows: CsvRow[]): CsvRow[] => {
+    const filterRows = (rows: CsvRow[], ignoreDates = false): CsvRow[] => {
       if (rows.length === 0) return rows;
       const accessor = createAccessor(rows[0]);
       const teamColumn = accessor.resolve(['Equipe', 'Team', 'Equipe Nome']);
@@ -422,7 +425,7 @@ export class PostDownloadReportService {
       if (!teamColumn) return rows;
 
       return rows.filter((row) => {
-        if (allowedDates && dateColumn) {
+        if (!ignoreDates && allowedDates && dateColumn) {
           const rowDate = (row[dateColumn] ?? '').trim();
           if (rowDate && !allowedDates.has(rowDate)) {
              return false;
@@ -443,6 +446,7 @@ export class PostDownloadReportService {
     return {
       deslocamentos: filterRows(datasets.deslocamentos),
       desvios: filterRows(datasets.desvios),
+      teamFilteredDeslocamentos: filterRows(datasets.deslocamentos, true),
       resolvedTeams,
     };
   }

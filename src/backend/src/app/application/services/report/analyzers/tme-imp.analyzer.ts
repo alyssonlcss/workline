@@ -1,10 +1,10 @@
 import type { CsvRow } from '../csv-utils.js';
-import type { TmeImpTeamAnalysis, TmeImpOrderEvidence, KpiInsight } from '../types.js';
-import { createAccessor, parseNumber, normalizeToken, round2, parseDateTimeBr } from '../csv-utils.js';
+import type { TmeImpTeamAnalysis, TmeImpOrderEvidence, KpiInsight, GlobalAveragesMap } from '../types.js';
+import { createAccessor, parseNumber, normalizeToken, round2, parseDateTimeBr, minutesBetween } from '../csv-utils.js';
 import { enrichTmeImpEvidence } from './enrich-utils.js';
 import { countDistinctDates } from './os-dia.analyzer.js';
 
-export function analyzeTmeImp(deslocRows: CsvRow[], kpis: KpiInsight[]): TmeImpTeamAnalysis[] {
+export function analyzeTmeImp(deslocRows: CsvRow[], kpis: KpiInsight[], globalAverages?: GlobalAveragesMap): TmeImpTeamAnalysis[] {
     if (deslocRows.length === 0) return [];
 
     const TME_IMP_META = 20;
@@ -174,8 +174,8 @@ export function analyzeTmeImp(deslocRows: CsvRow[], kpis: KpiInsight[]): TmeImpT
         }
       }
 
-      const enrichedFlaggedOrders = enrichTmeImpEvidence(finalFlagged);
-      const extraEnrichedFlaggedOrders = finalExtra.length ? enrichTmeImpEvidence(finalExtra) : [];
+      const enrichedFlaggedOrders = enrichTmeImpEvidence(finalFlagged, team, globalAverages);
+      const extraEnrichedFlaggedOrders = finalExtra.length > 0 ? enrichTmeImpEvidence(finalExtra, team, globalAverages) : [];
 
       result.push({
         team,

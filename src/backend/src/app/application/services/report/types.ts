@@ -21,6 +21,11 @@ export interface ReportFilterInput {
   includeExtraTags?: boolean;
   dates?: string[];
 }
+export interface GlobalAveragesMap {
+  teamAverages: Record<string, { metrics: Record<string, number>; base: string; polo: string }>;
+  baseAverages: Record<string, Record<string, number>>;
+  poloAverages: Record<string, Record<string, number>>;
+}
 
 export interface TeamMetricSummary {
   team: string;

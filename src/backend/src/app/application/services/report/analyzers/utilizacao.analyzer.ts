@@ -1,11 +1,10 @@
 import type { CsvRow } from '../csv-utils.js';
-import type { UtilizacaoTeamAnalysis, UtilizacaoOrderEvidence, KpiInsight } from '../types.js';
-import { createAccessor, parseNumber, normalizeToken, round2, parseDateTimeBr, minutesBetween } from '../csv-utils.js';
+import type { UtilizacaoTeamAnalysis, UtilizacaoOrderEvidence, KpiInsight, GlobalAveragesMap } from '../types.js';
+import { createAccessor, parseNumber, normalizeToken, round2, parseDateTimeBr, minutesBetween, applyIntervalDiscount, safeSum } from '../csv-utils.js';
 import { calculateTempPrepValue, calculateSemOsValue } from '../builders/team-stats.builder.js';
-import { enrichUtilizacaoEvidence } from './enrich-utils.js';
-
+import { enrichUtilizacaoEvidence, nfBr } from './enrich-utils.js';
 import { countDistinctDates, mergeEvidenceFlags } from './os-dia.analyzer.js';
-export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): UtilizacaoTeamAnalysis[] {
+export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[], globalAverages?: GlobalAveragesMap): UtilizacaoTeamAnalysis[] {
     if (deslocRows.length === 0) return [];
 
     const UTIL_META = 85;
@@ -973,8 +972,8 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[]): Uti
         }
       }
 
-      const enrichedFlaggedOrders = enrichUtilizacaoEvidence(finalFlagged);
-      const extraEnrichedFlaggedOrders = enrichUtilizacaoEvidence(finalExtra);
+      const enrichedFlaggedOrders = enrichUtilizacaoEvidence(finalFlagged, team, globalAverages);
+      const extraEnrichedFlaggedOrders = finalExtra.length > 0 ? enrichUtilizacaoEvidence(finalExtra, team, globalAverages) : [];
       const hdEntry       = teamHdTotals.get(team);
       const dayCount      = teamDayCount.get(team) ?? (hdEntry ? hdEntry.count : 1);
       const avgHdTotal    = hdEntry ? round2(hdEntry.sum / hdEntry.count) : 0;

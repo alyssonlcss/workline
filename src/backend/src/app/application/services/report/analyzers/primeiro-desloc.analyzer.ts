@@ -1,10 +1,10 @@
 import type { CsvRow } from '../csv-utils.js';
-import type { PrimeiroDeslocTeamAnalysis, PrimeiroDeslocDayEvidence, KpiInsight } from '../types.js';
+import type { PrimeiroDeslocTeamAnalysis, PrimeiroDeslocDayEvidence, KpiInsight, GlobalAveragesMap } from '../types.js';
 import { createAccessor, parseNumber, normalizeToken, round2, parseDateTimeBr, minutesBetween } from '../csv-utils.js';
 import { enrichDeslocEvidence } from './enrich-utils.js';
 import { countDistinctDates } from './os-dia.analyzer.js';
 
-export function analyzePrimeiroDesloc(deslocRows: CsvRow[], kpis: KpiInsight[]): PrimeiroDeslocTeamAnalysis[] {
+export function analyzePrimeiroDesloc(deslocRows: CsvRow[], kpis: KpiInsight[], globalAverages?: GlobalAveragesMap): PrimeiroDeslocTeamAnalysis[] {
     if (deslocRows.length === 0) return [];
 
     const DESLOC_META = 25;
@@ -247,9 +247,9 @@ export function analyzePrimeiroDesloc(deslocRows: CsvRow[], kpis: KpiInsight[]):
         globalAvgDeslocMin: round2(globalAvgDesloc),
         totalDays: jornadaData.length,
         diasAcimaMetaCount,
-        flaggedDays: enrichDeslocEvidence(flaggedDays.slice(0, 10), DESLOC_META),
+        flaggedDays: enrichDeslocEvidence(flaggedDays.slice(0, 10), DESLOC_META, team, globalAverages),
         extraFlaggedDays: flaggedDays.length > 10
-          ? enrichDeslocEvidence(flaggedDays.slice(10), DESLOC_META)
+          ? enrichDeslocEvidence(flaggedDays.slice(10), DESLOC_META, team, globalAverages)
           : [],
         summary: { countDeslocLento, countDeslocMuitoLento, countSemDeslocRegistrado, countDespachoTardio, countLoginAtrasado },
       });

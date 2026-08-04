@@ -1,10 +1,10 @@
 import type { CsvRow } from '../csv-utils.js';
-import type { PrimeiroLoginTeamAnalysis, PrimeiroLoginDayEvidence, KpiInsight } from '../types.js';
+import type { PrimeiroLoginTeamAnalysis, PrimeiroLoginDayEvidence, KpiInsight, GlobalAveragesMap } from '../types.js';
 import { createAccessor, parseNumber, normalizeToken, round2, parseDateTimeBr, minutesBetween } from '../csv-utils.js';
 import { enrichLoginEvidence } from './enrich-utils.js';
 import { countDistinctDates } from './os-dia.analyzer.js';
 
-export function analyzePrimeiroLogin(deslocRows: CsvRow[], kpis: KpiInsight[]): PrimeiroLoginTeamAnalysis[] {
+export function analyzePrimeiroLogin(deslocRows: CsvRow[], kpis: KpiInsight[], globalAverages?: GlobalAveragesMap): PrimeiroLoginTeamAnalysis[] {
     if (deslocRows.length === 0) return [];
 
     const LOGIN_META = 8;
@@ -141,9 +141,9 @@ export function analyzePrimeiroLogin(deslocRows: CsvRow[], kpis: KpiInsight[]): 
         globalAvgLoginMin: round2(globalAvgLogin),
         totalDays: jornadaRows.length,
         diasAcimaMetaCount,
-        flaggedDays: enrichLoginEvidence(flaggedDays.slice(0, 10), LOGIN_META),
+        flaggedDays: enrichLoginEvidence(flaggedDays.slice(0, 10), LOGIN_META, team, globalAverages),
         extraFlaggedDays: flaggedDays.length > 10
-          ? enrichLoginEvidence(flaggedDays.slice(10), LOGIN_META)
+          ? enrichLoginEvidence(flaggedDays.slice(10), LOGIN_META, team, globalAverages)
           : [],
         summary: { countLoginTardio, countLoginMuitoTardio },
       });

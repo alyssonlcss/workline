@@ -1,10 +1,10 @@
 import type { CsvRow } from '../csv-utils.js';
-import type { EficienciaTeamAnalysis, EficienciaOrderEvidence, KpiInsight } from '../types.js';
+import type { EficienciaTeamAnalysis, EficienciaOrderEvidence, KpiInsight, GlobalAveragesMap } from '../types.js';
 import { createAccessor, parseNumber, normalizeToken, parseDateTimeBr, round2, percentile } from '../csv-utils.js';
 import { enrichEficienciaEvidence } from './enrich-utils.js';
 import { countDistinctDates, mergeEvidenceFlags } from './os-dia.analyzer.js';
 
-export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[]): EficienciaTeamAnalysis[] {
+export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAverages?: GlobalAveragesMap): EficienciaTeamAnalysis[] {
     if (deslocRows.length === 0) {
       console.log('[Eficiencia Analysis] No deslocamentos data');
       return [];
@@ -375,13 +375,17 @@ export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[]): Efi
       const countTempoPadraoVazio = mergedFlaggedOrders.filter((o) => o.flags.includes('tempo_padrao_vazio')).length;
       
       const enrichedFlagged = enrichEficienciaEvidence(finalFlagged, {
-        globalAvgExecucaoMin: round2(globalAvgExecucao),
         globalAvgDeslocamentoMin: round2(globalAvgDeslocamento),
+        globalAvgExecucaoMin: round2(globalAvgExecucao),
+        team: team,
+        globalAverages,
       });
-      const extraEnrichedFlagged = finalExtra.length
+      const extraFlaggedOrders = finalExtra.length > 0
         ? enrichEficienciaEvidence(finalExtra, {
-            globalAvgExecucaoMin: round2(globalAvgExecucao),
             globalAvgDeslocamentoMin: round2(globalAvgDeslocamento),
+            globalAvgExecucaoMin: round2(globalAvgExecucao),
+            team: team,
+            globalAverages,
           })
         : [];
 
@@ -398,7 +402,7 @@ export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[]): Efi
         analysisType,
         flags,
         flaggedOrders: enrichedFlagged,
-        extraFlaggedOrders: extraEnrichedFlagged,
+        extraFlaggedOrders: extraFlaggedOrders,
         tempoPadraoVazioOrders: [],
         simulatedEficiencia,
         summary: {

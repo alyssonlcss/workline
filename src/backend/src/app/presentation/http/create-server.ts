@@ -555,13 +555,6 @@ function resolveDataDirectoryCandidates(configuredOutputDirectory: string): stri
   const candidates = [
     configuredOutputDirectory ? resolve(process.cwd(), configuredOutputDirectory) : defaultDir,
     defaultDir,
-    resolve(process.cwd(), 'Data'),
-    resolve(process.cwd(), '../Data'),
-    resolve(process.cwd(), '../../Data'),
-    resolve(process.cwd(), 'src/data'),
-    resolve(process.cwd(), 'data'),
-    resolve(process.cwd(), '../data'),
-    resolve(process.cwd(), '../../data'),
   ];
 
   return Array.from(new Set(candidates));

@@ -1,13 +1,13 @@
 // Copyright (c) 2026 Alysson Pinheiro. Todos os direitos reservados.
 // Software proprietário e confidencial. Uso não autorizado é proibido.
 import type { CsvRow } from '../csv-utils.js';
-import type { OsDiaTeamAnalysis, OsDiaOrderEvidence, UtilizacaoOrderEvidence, KpiInsight } from '../types.js';
+import type { OsDiaTeamAnalysis, OsDiaOrderEvidence, UtilizacaoOrderEvidence, KpiInsight, GlobalAveragesMap } from '../types.js';
 import { createAccessor, parseNumber, normalizeToken, parseDateTimeBr, minutesBetween, applyIntervalDiscount, round2, safeSum } from '../csv-utils.js';
 import { nfBr, semOsDetailText, enrichOsDiaEvidence } from './enrich-utils.js';
 import { calculateTempPrepValue, calculateSemOsValue } from '../builders/team-stats.builder.js';
 import { KPI_ALIASES } from '../constants.js';
 
-export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[]): OsDiaTeamAnalysis[] {
+export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAverages?: GlobalAveragesMap): OsDiaTeamAnalysis[] {
     if (deslocRows.length === 0) {
       return [];
     }
@@ -982,8 +982,8 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[]): OsDiaTea
         }
       }
 
-      const prioritizedFlaggedOrders = enrichOsDiaEvidence(finalFlagged);
-      const extraFlaggedOrders = enrichOsDiaEvidence(finalExtra);
+      const prioritizedFlaggedOrders = enrichOsDiaEvidence(finalFlagged, team, globalAverages);
+      const extraFlaggedOrders = enrichOsDiaEvidence(finalExtra, team, globalAverages);
       const hdEntry       = teamHdTotals.get(team);
       const dayCount      = teamDayCount.get(team) ?? (hdEntry ? hdEntry.count : 1);
       const avgHdTotal    = hdEntry ? round2(hdEntry.sum / hdEntry.count) : 0;
