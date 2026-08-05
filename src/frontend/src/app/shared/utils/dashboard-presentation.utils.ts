@@ -177,6 +177,7 @@ export function getDashboardAlerts(kpi: string, ev: any): DashboardAlert[] {
       addFlag('retorno_excedente', 'Retorno Excedente:');
       break;
     
+    case 'TME IMP':
     case 'TME Improdutivo':
       addFlag('tme_muito_alto', 'TME IMP elevado:');
       addFlag('sem_deslocamento', 'Sem registro de deslocamento:');

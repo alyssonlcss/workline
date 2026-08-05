@@ -76,20 +76,22 @@ export class DashboardPdfService {
     
     for (const d of dates) {
       const items = groups[d];
-      items.sort((a, b) => {
+      const isExpanded = expandedKeys && kpiName && team && (expandedKeys.has(`${kpiName}|${team}|${d}`) || expandedKeys.has(`${kpiName}|${team}|__extra__`));
+      
+      const validItems = items.filter((ev) => {
+        const color = getEvidenceColor(ev);
+        if (color === 'green') return false;
+        if (isExpanded) return true;
+        return color === 'red';
+      });
+      
+      validItems.sort((a, b) => {
         const oA = this.getOciosoTotal(a) || 0;
         const oB = this.getOciosoTotal(b) || 0;
         return oB - oA;
       });
       
-      const isExpanded = expandedKeys && kpiName && team && (expandedKeys.has(`${kpiName}|${team}|${d}`) || expandedKeys.has(`${kpiName}|${team}|__extra__`));
-      
-      if (dates.length === 1 || isExpanded) {
-        result.push(...items);
-      } else {
-        const nonGreenItems = items.filter((ev) => getEvidenceColor(ev) !== 'green');
-        result.push(...nonGreenItems.slice(0, 3));
-      }
+      result.push(...validItems);
     }
     return result;
   }
@@ -488,26 +490,6 @@ export class DashboardPdfService {
    * Returns a shallow-cloned report — only the relevant nested arrays are replaced.
    */
   private injectExpandedOrders(report: any, expandedKeys?: Set<string>): any {
-    const mergeOrderExtrasAndSort = (analysisList: any[], kpiName: string): any[] =>
-      analysisList.map((a: any) => {
-        const extras = (a.extraFlaggedOrders ?? []).filter((o: any) => (o.flags?.length ?? 0) > 0);
-        if (extras.length === 0) return a;
-        
-        const merged = [...a.flaggedOrders, ...extras];
-        
-        if (kpiName === 'OS Dia' || kpiName === 'Utilização') {
-          merged.sort((x, y) => {
-            const idleX = (x.ocioso_min ?? 0);
-            const idleY = (y.ocioso_min ?? 0);
-            return idleY - idleX;
-          });
-        } else if (kpiName === 'Eficiência' || kpiName === 'TME IMP') {
-          merged.sort((x, y) => (y.tr_ordem_min ?? 0) - (x.tr_ordem_min ?? 0));
-        }
-        
-        return { ...a, flaggedOrders: merged };
-      });
-
     const mergeDayExtras = (analysisList: any[], kpiName: string): any[] =>
       analysisList.map((a: any) => {
         if (expandedKeys?.has(`${kpiName}|${a.team}|__extra__`)) {
@@ -519,15 +501,8 @@ export class DashboardPdfService {
 
     return {
       ...report,
-      specialAnalysis: {
-        ...report.specialAnalysis,
-        osDiaAnalysis: mergeOrderExtrasAndSort(report.specialAnalysis?.osDiaAnalysis ?? [], 'OS Dia'),
-        utilizacaoAnalysis: mergeOrderExtrasAndSort(report.specialAnalysis?.utilizacaoAnalysis ?? [], 'Utilização'),
-      },
       kpis: (report.kpis ?? []).map((kpi: any) => ({
         ...kpi,
-        evidenceAnalysis: mergeOrderExtrasAndSort(kpi.evidenceAnalysis ?? [], 'Eficiência'),
-        tmeImpAnalysis: mergeOrderExtrasAndSort(kpi.tmeImpAnalysis ?? [], 'TME IMP'),
         primeiroLoginAnalysis: mergeDayExtras(kpi.primeiroLoginAnalysis ?? [], '1\u00ba Login'),
         primeiroDeslocAnalysis: mergeDayExtras(kpi.primeiroDeslocAnalysis ?? [], '1\u00ba Desloc.'),
         retornoBaseAnalysis: mergeDayExtras(kpi.retornoBaseAnalysis ?? [], 'Retorno Base'),

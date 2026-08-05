@@ -340,6 +340,13 @@ export function getEvidenceColor(ev: any): 'red' | 'yellow' | 'green' {
   if (ev.flags && ev.flags.length > 0) return 'red';
 
   const segments = buildTimelineSegments(ev, false, false);
+  
+  for (const seg of segments) {
+    if (seg.flags && seg.flags.length > 0) {
+      return 'red';
+    }
+  }
+
   let yellowCount = 0;
   let greenCount = 0;
   
