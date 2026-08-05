@@ -191,6 +191,14 @@ type SavedFilterState = {
                 </div>
               </div>
             </div>
+            
+            <button class="rf-chip" (click)="clearFilters()" style="background: rgba(192, 18, 45, 0.05); border-color: rgba(192, 18, 45, 0.2); color: #c0122d; margin-left: 8px; cursor: pointer; padding: 0 8px; display: flex; align-items: center; justify-content: center;" title="Limpar todos os filtros e recarregar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px; opacity: 0.9;">
+                <path d="M13.013 3H2l8 9.46V19l4 2v-8.54l.9-1.055"></path>
+                <path d="m22 3-5 5"></path>
+                <path d="m17 3 5 5"></path>
+              </svg>
+            </button>
           </div>
         </header>
 
@@ -5216,6 +5224,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     localStorage.setItem('spotfire_pass', val);
   }
 
+  protected clearFilters(): void {
+    localStorage.removeItem(STORAGE_KEY);
+    window.location.reload();
+  }
+
   toggleTrendLine(base: string, teamType: string) {
     const id = `${base}|${teamType}`;
     if (this.selectedTrendLine() === id) {
@@ -6533,8 +6546,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       if (allDates.length === 1 && false /* placeholder for pdf logic if needed */) {
         visibleItems = allItems;
       } else {
-        visibleItems = allItems.slice(0, 3);
-        hiddenItems = allItems.slice(3);
+        const nonGreenItems = allItems.filter(ev => this.getEvidenceColorHelper(ev) !== 'green');
+        const greenItems = allItems.filter(ev => this.getEvidenceColorHelper(ev) === 'green');
+
+        visibleItems = nonGreenItems.slice(0, 3);
+        hiddenItems = [...nonGreenItems.slice(3), ...greenItems];
       }
 
       return {
