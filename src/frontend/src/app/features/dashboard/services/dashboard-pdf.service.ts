@@ -2,7 +2,7 @@
 // Software proprietário e confidencial. Uso não autorizado é proibido.
 import { Injectable } from '@angular/core';
 import type { GeneratedReport, ReportKpiInsight } from '../../../core/api/scanner-api.service';
-import { TimelineSegment, buildTimelineSegments, extractTime, parseDt, tlFlexGrow } from '../../../shared/utils/timeline-segment.utils';
+import { TimelineSegment, buildTimelineSegments, extractTime, parseDt, tlFlexGrow, getEvidenceColor } from '../../../shared/utils/timeline-segment.utils';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfMake = require('pdfmake/build/pdfmake');
@@ -87,7 +87,8 @@ export class DashboardPdfService {
       if (dates.length === 1 || isExpanded) {
         result.push(...items);
       } else {
-        result.push(...items.slice(0, 3));
+        const nonGreenItems = items.filter((ev) => getEvidenceColor(ev) !== 'green');
+        result.push(...nonGreenItems.slice(0, 3));
       }
     }
     return result;
