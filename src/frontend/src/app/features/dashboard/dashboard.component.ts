@@ -6427,6 +6427,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       loginAlertBody: (flag: string, ev: any) => this.loginAlertBody(flag, ev),
       deslocAlertBody: (flag: string, ev: any) => this.deslocAlertBody(flag, ev),
       retornoAlertBody: (flag: string, ev: any) => this.retornoAlertBody(flag, ev),
+      getAlerts: (kpi: string, ev: any) => this.getAlerts(kpi, ev),
     };
   }
 

@@ -37,6 +37,7 @@ export interface PdfHelpers {
   loginAlertBody: (flag: string, ev: { alertTexts?: Record<string, string> }) => string;
   deslocAlertBody: (flag: string, ev: { alertTexts?: Record<string, string> }) => string;
   retornoAlertBody: (flag: string, ev: { alertTexts?: Record<string, string> }) => string;
+  getAlerts: (kpi: string, ev: any) => any[];
 }
 
 export interface SemOsDetail {
@@ -58,7 +59,7 @@ export interface SemOsDetail {
 @Injectable({ providedIn: 'root' })
 export class DashboardPdfService {
 
-  private limitOrdersPerDay(orders: any[], extraOrders: any[]): any[] {
+  private limitOrdersPerDay(orders: any[], extraOrders: any[], kpiName?: string, team?: string, expandedKeys?: Set<string>): any[] {
     const all = [...(orders || []), ...(extraOrders || [])];
     if (all.length === 0) return [];
     
@@ -80,7 +81,10 @@ export class DashboardPdfService {
         const oB = this.getOciosoTotal(b) || 0;
         return oB - oA;
       });
-      if (dates.length === 1) {
+      
+      const isExpanded = expandedKeys && kpiName && team && (expandedKeys.has(`${kpiName}|${team}|${d}`) || expandedKeys.has(`${kpiName}|${team}|__extra__`));
+      
+      if (dates.length === 1 || isExpanded) {
         result.push(...items);
       } else {
         result.push(...items.slice(0, 3));
@@ -313,7 +317,7 @@ export class DashboardPdfService {
    */
   downloadPdf(section: PdfSection, safeName: string, helpers: PdfHelpers, expandedKeys?: Set<string>, reportType: 'operacional' | 'analitico' = 'operacional'): void {
     const effectiveSection = { ...section, report: this.injectExpandedOrders(section.report, expandedKeys) };
-    const docDef = reportType === 'analitico' ? this.buildAnalyticPdfDocDef(effectiveSection, helpers) : this.buildPdfDocDef(effectiveSection, helpers);
+    const docDef = reportType === 'analitico' ? this.buildAnalyticPdfDocDef(effectiveSection, helpers) : this.buildPdfDocDef(effectiveSection, helpers, expandedKeys);
     pdfMake.createPdf(docDef).download(`${safeName}.pdf`);
   }
 
@@ -323,7 +327,7 @@ export class DashboardPdfService {
    */
   async generatePdfFile(section: PdfSection, safeName: string, helpers: PdfHelpers, expandedKeys?: Set<string>, reportType: 'operacional' | 'analitico' = 'operacional'): Promise<File> {
     const effectiveSection = { ...section, report: this.injectExpandedOrders(section.report, expandedKeys) };
-    const docDef = reportType === 'analitico' ? this.buildAnalyticPdfDocDef(effectiveSection, helpers) : this.buildPdfDocDef(effectiveSection, helpers);
+    const docDef = reportType === 'analitico' ? this.buildAnalyticPdfDocDef(effectiveSection, helpers) : this.buildPdfDocDef(effectiveSection, helpers, expandedKeys);
     const pdfDocGenerator = pdfMake.createPdf(docDef);
     const blob: Blob = await pdfDocGenerator.getBlob();
     if (!blob || blob.size === 0) {
@@ -533,7 +537,7 @@ export class DashboardPdfService {
   /**
    * Constrói a definição completa do documento PDF para pdfmake.
    */
-  buildPdfDocDef(section: PdfSection, helpers: PdfHelpers): any {
+  buildPdfDocDef(section: PdfSection, helpers: PdfHelpers, expandedKeys?: Set<string>): any {
     const { report, title, subtitle, dateRangeLabel } = section;
 
     const barPct = (value: number, kpi: ReportKpiInsight): number => {
@@ -1034,9 +1038,15 @@ export class DashboardPdfService {
               ...(analysis.idleAnalysis.horasExtras > 0 ? [`Horas Extras Méd/dia: ${Math.round(analysis.idleAnalysis.horasExtras)} min`] : []),
             ]));
           }
-          const pdfOrders = this.limitOrdersPerDay(analysis.flaggedOrders, analysis.extraFlaggedOrders);
+          const pdfOrders = this.limitOrdersPerDay(analysis.flaggedOrders, analysis.extraFlaggedOrders, kpi.kpi, analysis.team, expandedKeys);
           if (pdfOrders.length > 0) {
+            let lastDateRef = '';
             pdfOrders.forEach((ev: any, evIdx: number, evArr: any[]) => {
+              const curDateRef = ev.date_ref || 'Sem data';
+              if (curDateRef !== lastDateRef) {
+                teamItems.push({ text: curDateRef, fontSize: 8, bold: true, color: DARK, fillColor: '#e2e8f0', margin: [0, 4, 0, 2], padding: [4, 2, 4, 2] });
+                lastDateRef = curDateRef;
+              }
               const orderItems: any[] = [];
               const ccParts: string[] = [];
               if (ev.classe) ccParts.push(`Classe: ${ev.classe}`);
@@ -1053,32 +1063,17 @@ export class DashboardPdfService {
               if (ccParts.length > 0) orderItems.push({ text: ccParts.join(''), fontSize: 7, color: GRAY, margin: [0, 0, 0, 2] });
               const osDiaTl = this.buildTimelinePdfBlock(ev);
               if (osDiaTl) orderItems.push(osDiaTl);
-              if (ev.flags?.includes('tr_excede_hd')) orderItems.push(alertItem(`Tempo de Reparo alto: ${helpers.osDiaAlertBody('tr_excede_hd', ev)}`));
-              if (ev.flags?.includes('tl_excede_hd')) orderItems.push(alertItem(`Tempo de Deslocamento alto: ${helpers.osDiaAlertBody('tl_excede_hd', ev)}`));
-              if (ev.flags?.includes('temp_prep_alto')) orderItems.push(alertItem(`Tempo de Partida elevado: ${helpers.osDiaAlertBody('temp_prep_alto', ev)}`));
-              if (ev.flags?.includes('triagem_alto')) orderItems.push(alertItem(`2º Desp.: ${helpers.osDiaAlertBody('triagem_alto', ev)}`));
-              if (ev.flags?.includes('primeiro_desloc_alto')) orderItems.push(alertItem(`1º Desloc.: ${helpers.osDiaAlertBody('primeiro_desloc_alto', ev)}`));
-              if (ev.flags?.includes('inicio_jornada_alto')) orderItems.push(alertItem(`${ev.flags.includes('login_atrasado') ? '1º Desp. tardio após login atrasado:' : '1º Desp.:'} ${helpers.osDiaAlertBody('inicio_jornada_alto', ev)}`));
-              if (ev.flags?.includes('desloc_intervalo_alto')) orderItems.push(alertItem(`Desl. Intervalo | Sem OS: ${helpers.osDiaAlertBody('desloc_intervalo_alto', ev)}`));
-              if (ev.flags?.includes('sem_os_alto')) orderItems.push(alertItem(`Sem OS: ${helpers.osDiaAlertBody('sem_os_alto', ev)}`));
-              if (ev.flags?.includes('login_atrasado')) orderItems.push(alertItem(`Log In atrasado: ${helpers.osDiaAlertBody('login_atrasado', ev)}`));
-              if (ev.flags?.includes('calendario_errado')) orderItems.push(alertItem(`Calendário errado: ${helpers.osDiaAlertBody('calendario_errado', ev)}`));
-              if (ev.flags?.includes('intervalo_por_ultimo')) orderItems.push(alertItem(`Intervalo por último: ${helpers.osDiaAlertBody('intervalo_por_ultimo', ev)}`));
-              if (ev.nr_ordem_despacho_anterior) {
-                const horaFmt = (ev.hora_despacho_anterior || '').replace(/^(\d{2}\/\d{2})\/\d{4}\s+(\d{2}:\d{2}).*$/, '$1 $2');
-                orderItems.push(alertWarnItemRuns('Despacho anterior da 1ªOS', [
-                  { text: 'a OS ', color: DARK },
-                  { text: ev.nr_ordem_despacho_anterior, bold: true, color: AMBER_DARK },
-                  { text: `${horaFmt ? ' foi despachada em ' + horaFmt : ''} antes do deslocamento da 1ª OS desta equipe, provavelmente por motivo de prioridade, dessa forma o despacho da 1ªOS pode ficar elevado.`, color: DARK },
-                ]));
-              }
-              if (ev.flags?.includes('retorno_excedente')) {
-                const rDetail = ev.retorno_excedente_details;
-                if (rDetail) {
-                  const fjBody = rDetail.body;
-                  orderItems.push(alertWarnItem(`Retorno Excedente: ${fjBody}`));
+
+              const alerts = helpers.getAlerts(kpi.kpi, ev);
+              alerts.forEach((alert: any) => {
+                const cleanBody = alert.bodyHtml.replace(/<[^>]*>/g, '');
+                if (alert.isWarn) {
+                  orderItems.push(alertWarnItemRuns(alert.title, [{ text: cleanBody, color: DARK }]));
+                } else {
+                  orderItems.push(alertItem(`${alert.title} ${cleanBody}`));
                 }
-              }
+              });
+
               const customFlags: string[] = [];
               if (ev.sem_os_details?.find((d: any) => d.type === 'entre_os' && d.interval_discounted && d.min >= 10)) {
                 customFlags.push('Sem OS\u226510min');
@@ -1087,10 +1082,10 @@ export class DashboardPdfService {
               if (ociosoTotal != null) {
                 customFlags.push(`Ocioso: ${Math.round(ociosoTotal)} min`);
               }
-              const orderBlock: any[] = [orderHead(ev.nr_ordem, ev.flags ?? [], (f) => helpers.osDiaFlagLabel(f), ev.date_ref || undefined, !ev.prev_liberada, customFlags)];
+              const orderBlock: any[] = [orderHead(ev.nr_ordem, ev.flags ?? [], (f) => helpers.osDiaFlagLabel(f), undefined, !ev.prev_liberada, customFlags)];
               if (orderItems.length > 0) orderBlock.push(indentBlock(orderItems, '#94a3b8', 6));
               teamItems.push({ stack: orderBlock, unbreakable: true });
-              if (evIdx < evArr.length - 1) teamItems.push(orderDivider());
+              if (evIdx < evArr.length - 1 && evArr[evIdx + 1].date_ref === curDateRef) teamItems.push(orderDivider());
             });
           }
           const osDiaBarColor = isAbove(kpi, analysis.osDiaValue) ? BLUE : RED;
@@ -1126,34 +1121,48 @@ export class DashboardPdfService {
               ...(analysis.flags.includes('short_displacement') ? [`TL curto: ${analysis.avgDeslocamentoMin?.toFixed(0)} min (\u2264 ${(analysis.globalAvgDeslocamentoMin * 0.25)?.toFixed(0)} min – 25% global)`] : []),
             ]));
           }
-          const pdfOrders = this.limitOrdersPerDay(analysis.flaggedOrders, analysis.extraFlaggedOrders);
-          pdfOrders.forEach((ev: any, evIdx: number, evArr: any[]) => {
-            const orderItems: any[] = [];
-            const efCcParts: string[] = [];
-            if (ev.classe) efCcParts.push(`Classe: ${ev.classe}`);
-            if (ev.classe && ev.causa) efCcParts.push('  \u00b7  ');
-            if (ev.causa) efCcParts.push(`Causa: ${ev.causa}`);
-            const _efDesp = ev.despachada || ev.hora_primeiro_despacho;
-            if (_efDesp && ev.prev_liberada) {
-              const _efPrevTs = parseDt(ev.prev_liberada), _efDespTs = parseDt(_efDesp);
-              if (_efPrevTs > 0 && _efDespTs > 0 && _efPrevTs > _efDespTs) {
-                if (efCcParts.length > 0) efCcParts.push('  \u00b7  ');
-                efCcParts.push(`Desp.: ${extractTime(_efDesp)}`);
+          const pdfOrders = this.limitOrdersPerDay(analysis.flaggedOrders, analysis.extraFlaggedOrders, kpi.kpi, analysis.team, expandedKeys);
+          if (pdfOrders.length > 0) {
+            let lastDateRef = '';
+            pdfOrders.forEach((ev: any, evIdx: number, evArr: any[]) => {
+              const curDateRef = ev.date_ref || 'Sem data';
+              if (curDateRef !== lastDateRef) {
+                teamItems.push({ text: curDateRef, fontSize: 8, bold: true, color: DARK, fillColor: '#e2e8f0', margin: [0, 4, 0, 2], padding: [4, 2, 4, 2] });
+                lastDateRef = curDateRef;
               }
-            }
-            if (efCcParts.length > 0) orderItems.push({ text: efCcParts.join(''), fontSize: 7, color: GRAY, margin: [0, 0, 0, 2] });
-            const efTl = this.buildTimelinePdfBlock(ev, true, true);
-            if (efTl) orderItems.push(efTl);
-            if (ev.flags?.includes('baixa_eficiencia')) orderItems.push(alertItem(`Baixa Eficiência: ${helpers.eficienciaAlertBody('baixa_eficiencia', ev)}`));
-            if (ev.flags?.includes('tr_muito_baixo')) orderItems.push(alertItem(`Tempo de Reparo muito baixo: ${helpers.eficienciaAlertBody('tr_muito_baixo', ev)}`));
-            if (ev.flags?.includes('deslocamento_curto')) orderItems.push(alertItem(`Deslocamento (TL) muito curto: ${helpers.eficienciaAlertBody('deslocamento_curto', ev)}`));
-            if (ev.flags?.includes('tr_excede_hd')) orderItems.push(alertItem(`Tempo de Reparo alto: ${helpers.eficienciaAlertBody('tr_excede_hd', ev)}`));
-            if (ev.flags?.includes('tempo_padrao_vazio')) orderItems.push(alertItem(`Tempo Padrão ausente: ${helpers.eficienciaAlertBody('tempo_padrao_vazio', ev)}`));
-            const orderBlock: any[] = [orderHead(ev.nr_ordem, ev.flags ?? [], (f) => helpers.eficienciaFlagLabel(f), ev.date_ref || undefined, !ev.prev_liberada)];
-            if (orderItems.length > 0) orderBlock.push(indentBlock(orderItems, '#94a3b8', 6));
-            teamItems.push({ stack: orderBlock, unbreakable: true });
-            if (evIdx < evArr.length - 1) teamItems.push(orderDivider());
-          });
+              const orderItems: any[] = [];
+              const efCcParts: string[] = [];
+              if (ev.classe) efCcParts.push(`Classe: ${ev.classe}`);
+              if (ev.classe && ev.causa) efCcParts.push('  \u00b7  ');
+              if (ev.causa) efCcParts.push(`Causa: ${ev.causa}`);
+              const _efDesp = ev.despachada || ev.hora_primeiro_despacho;
+              if (_efDesp && ev.prev_liberada) {
+                const _efPrevTs = parseDt(ev.prev_liberada), _efDespTs = parseDt(_efDesp);
+                if (_efPrevTs > 0 && _efDespTs > 0 && _efPrevTs > _efDespTs) {
+                  if (efCcParts.length > 0) efCcParts.push('  \u00b7  ');
+                  efCcParts.push(`Desp.: ${extractTime(_efDesp)}`);
+                }
+              }
+              if (efCcParts.length > 0) orderItems.push({ text: efCcParts.join(''), fontSize: 7, color: GRAY, margin: [0, 0, 0, 2] });
+              const efTl = this.buildTimelinePdfBlock(ev, true, true);
+              if (efTl) orderItems.push(efTl);
+
+              const alerts = helpers.getAlerts(kpi.kpi, ev);
+              alerts.forEach((alert: any) => {
+                const cleanBody = alert.bodyHtml.replace(/<[^>]*>/g, '');
+                if (alert.isWarn) {
+                  orderItems.push(alertWarnItemRuns(alert.title, [{ text: cleanBody, color: DARK }]));
+                } else {
+                  orderItems.push(alertItem(`${alert.title} ${cleanBody}`));
+                }
+              });
+
+              const orderBlock: any[] = [orderHead(ev.nr_ordem, ev.flags ?? [], (f) => helpers.eficienciaFlagLabel(f), undefined, !ev.prev_liberada)];
+              if (orderItems.length > 0) orderBlock.push(indentBlock(orderItems, '#94a3b8', 6));
+              teamItems.push({ stack: orderBlock, unbreakable: true });
+              if (evIdx < evArr.length - 1 && evArr[evIdx + 1].date_ref === curDateRef) teamItems.push(orderDivider());
+            });
+          }
           if (analysis.summary?.countTempoPadraoVazio > 0) {
             teamItems.push({ text: `Equipe penalizada por ausência de Tempo Padrão: ${analysis.summary.countTempoPadraoVazio} ordem(ns) sem tempo padrão.${analysis.simulatedEficiencia != null ? ` Simulação com TR médio global: ${analysis.simulatedEficiencia?.toFixed(1)}% vs. atual ${analysis.eficienciaValue}%.` : ''}`, fontSize: 7, color: RED, margin: [0, 3, 0, 2] });
           }
@@ -1198,62 +1207,56 @@ export class DashboardPdfService {
               ...(analysis.idleAnalysis.horasExtras > 0 ? [`Horas Extras Méd/dia: ${Math.round(analysis.idleAnalysis.horasExtras)} min`] : []),
             ]));
           }
-          const pdfOrders = this.limitOrdersPerDay(analysis.flaggedOrders, analysis.extraFlaggedOrders);
-          pdfOrders.forEach((ev: any, evIdx: number, evArr: any[]) => {
-            const orderItems: any[] = [];
-            const utilCcParts: string[] = [];
-            if (ev.classe) utilCcParts.push(`Classe: ${ev.classe}`);
-            if (ev.classe && ev.causa) utilCcParts.push('  \u00b7  ');
-            if (ev.causa) utilCcParts.push(`Causa: ${ev.causa}`);
-            const _utilDesp = ev.despachada || ev.hora_primeiro_despacho;
-            if (_utilDesp && ev.prev_liberada) {
-              const _utilPrevTs = parseDt(ev.prev_liberada), _utilDespTs = parseDt(_utilDesp);
-              if (_utilPrevTs > 0 && _utilDespTs > 0 && _utilPrevTs > _utilDespTs) {
-                if (utilCcParts.length > 0) utilCcParts.push('  \u00b7  ');
-                utilCcParts.push(`Desp.: ${extractTime(_utilDesp)}`);
+          const pdfOrders = this.limitOrdersPerDay(analysis.flaggedOrders, analysis.extraFlaggedOrders, kpi.kpi, analysis.team, expandedKeys);
+          if (pdfOrders.length > 0) {
+            let lastDateRef = '';
+            pdfOrders.forEach((ev: any, evIdx: number, evArr: any[]) => {
+              const curDateRef = ev.date_ref || 'Sem data';
+              if (curDateRef !== lastDateRef) {
+                teamItems.push({ text: curDateRef, fontSize: 8, bold: true, color: DARK, fillColor: '#e2e8f0', margin: [0, 4, 0, 2], padding: [4, 2, 4, 2] });
+                lastDateRef = curDateRef;
               }
-            }
-            if (utilCcParts.length > 0) orderItems.push({ text: utilCcParts.join(''), fontSize: 7, color: GRAY, margin: [0, 0, 0, 2] });
-            const utilTl = this.buildTimelinePdfBlock(ev);
-            if (utilTl) orderItems.push(utilTl);
-            if (ev.flags?.includes('tr_excede_hd')) orderItems.push(alertItem(`Tempo de Reparo alto: ${helpers.osDiaAlertBody('tr_excede_hd', ev)}`));
-            if (ev.flags?.includes('temp_prep_alto')) orderItems.push(alertItem(`Tempo de Partida elevado: ${helpers.osDiaAlertBody('temp_prep_alto', ev)}`));
-            if (ev.flags?.includes('triagem_alto')) orderItems.push(alertItem(`2º Desp.: ${helpers.osDiaAlertBody('triagem_alto', ev)}`));
-            if (ev.flags?.includes('primeiro_desloc_alto')) orderItems.push(alertItem(`1º Desloc.: ${helpers.osDiaAlertBody('primeiro_desloc_alto', ev)}`));
-            if (ev.flags?.includes('inicio_jornada_alto')) orderItems.push(alertItem(`${ev.flags.includes('login_atrasado') ? '1º Desp. tardio após login atrasado:' : '1º Desp.:'} ${helpers.osDiaAlertBody('inicio_jornada_alto', ev)}`));
-            if (ev.flags?.includes('desloc_intervalo_alto')) orderItems.push(alertItem(`Desl. Intervalo | Sem OS: ${helpers.osDiaAlertBody('desloc_intervalo_alto', ev)}`));
-            if (ev.flags?.includes('sem_os_alto')) orderItems.push(alertItem(`Sem OS: ${helpers.osDiaAlertBody('sem_os_alto', ev)}`));
-            if (ev.flags?.includes('login_atrasado')) orderItems.push(alertItem(`Log In atrasado: ${helpers.osDiaAlertBody('login_atrasado', ev)}`));
-            if (ev.flags?.includes('calendario_errado')) orderItems.push(alertItem(`Calendário errado: ${helpers.osDiaAlertBody('calendario_errado', ev)}`));
-            if (ev.flags?.includes('intervalo_por_ultimo')) orderItems.push(alertItem(`Intervalo por último: ${helpers.osDiaAlertBody('intervalo_por_ultimo', ev)}`));
-            if (ev.nr_ordem_despacho_anterior) {
-              const obsHoraFmt = (ev.hora_despacho_anterior || '').replace(/^(\d{2}\/\d{2})\/\d{4}\s+(\d{2}:\d{2}).*$/, '$1 $2');
-              orderItems.push(alertWarnItemRuns('Despacho anterior da 1ªOS', [
-                { text: 'a OS ', color: DARK },
-                { text: ev.nr_ordem_despacho_anterior, bold: true, color: AMBER_DARK },
-                { text: `${obsHoraFmt ? ' foi despachada em ' + obsHoraFmt : ''} antes do deslocamento da 1ª OS desta equipe, provavelmente por motivo de prioridade, dessa forma o despacho da 1ªOS pode ficar elevado.`, color: DARK },
-              ]));
-            }
-            if (ev.flags?.includes('retorno_excedente')) {
-              const rDetail = ev.retorno_excedente_details;
-              if (rDetail) {
-                const fjBody = rDetail.body;
-                orderItems.push(alertWarnItem(`Retorno Excedente: ${fjBody}`));
+              const orderItems: any[] = [];
+              const utilCcParts: string[] = [];
+              if (ev.classe) utilCcParts.push(`Classe: ${ev.classe}`);
+              if (ev.classe && ev.causa) utilCcParts.push('  \u00b7  ');
+              if (ev.causa) utilCcParts.push(`Causa: ${ev.causa}`);
+              const _utilDesp = ev.despachada || ev.hora_primeiro_despacho;
+              if (_utilDesp && ev.prev_liberada) {
+                const _utilPrevTs = parseDt(ev.prev_liberada), _utilDespTs = parseDt(_utilDesp);
+                if (_utilPrevTs > 0 && _utilDespTs > 0 && _utilPrevTs > _utilDespTs) {
+                  if (utilCcParts.length > 0) utilCcParts.push('  \u00b7  ');
+                  utilCcParts.push(`Desp.: ${extractTime(_utilDesp)}`);
+                }
               }
-            }
-            const customFlags: string[] = [];
-            if (ev.sem_os_details?.find((d: any) => d.type === 'entre_os' && d.interval_discounted && d.min >= 10)) {
-              customFlags.push('Sem OS\u226510min');
-            }
-            const ociosoTotal = this.getOciosoTotal(ev);
-            if (ociosoTotal != null) {
-              customFlags.push(`Ocioso: ${Math.round(ociosoTotal)} min`);
-            }
-            const orderBlock: any[] = [orderHead(ev.nr_ordem, ev.flags ?? [], (f) => helpers.osDiaFlagLabel(f), ev.date_ref || undefined, !ev.prev_liberada, customFlags)];
-            if (orderItems.length > 0) orderBlock.push(indentBlock(orderItems, '#94a3b8', 6));
-            teamItems.push({ stack: orderBlock, unbreakable: true });
-            if (evIdx < evArr.length - 1) teamItems.push(orderDivider());
-          });
+              if (utilCcParts.length > 0) orderItems.push({ text: utilCcParts.join(''), fontSize: 7, color: GRAY, margin: [0, 0, 0, 2] });
+              const utilTl = this.buildTimelinePdfBlock(ev);
+              if (utilTl) orderItems.push(utilTl);
+
+              const alerts = helpers.getAlerts(kpi.kpi, ev);
+              alerts.forEach((alert: any) => {
+                const cleanBody = alert.bodyHtml.replace(/<[^>]*>/g, '');
+                if (alert.isWarn) {
+                  orderItems.push(alertWarnItemRuns(alert.title, [{ text: cleanBody, color: DARK }]));
+                } else {
+                  orderItems.push(alertItem(`${alert.title} ${cleanBody}`));
+                }
+              });
+
+              const customFlags: string[] = [];
+              if (ev.sem_os_details?.find((d: any) => d.type === 'entre_os' && d.interval_discounted && d.min >= 10)) {
+                customFlags.push('Sem OS\u226510min');
+              }
+              const ociosoTotal = this.getOciosoTotal(ev);
+              if (ociosoTotal != null) {
+                customFlags.push(`Ocioso: ${Math.round(ociosoTotal)} min`);
+              }
+              const orderBlock: any[] = [orderHead(ev.nr_ordem, ev.flags ?? [], (f) => helpers.osDiaFlagLabel(f), undefined, !ev.prev_liberada, customFlags)];
+              if (orderItems.length > 0) orderBlock.push(indentBlock(orderItems, '#94a3b8', 6));
+              teamItems.push({ stack: orderBlock, unbreakable: true });
+              if (evIdx < evArr.length - 1 && evArr[evIdx + 1].date_ref === curDateRef) teamItems.push(orderDivider());
+            });
+          }
           const utilizacaoBarColor = (analysis.utilizacaoValue ?? 0) >= (analysis.metaTarget ?? 0) ? BLUE : RED;
           const utilHdr = cardHeader(analysis.team, `Gap ${analysis.gap?.toFixed(1)}%`, true);
           const utilBlock = indentBlock(teamItems, utilizacaoBarColor, 8);
@@ -1280,24 +1283,40 @@ export class DashboardPdfService {
           if (analysis.summary?.countTmeMuitoAlto > 0) chips.push(`TME\u22651.5\u00d7avg: ${analysis.summary.countTmeMuitoAlto}`);
           if (analysis.summary?.countSemDeslocamento > 0) chips.push(`Sem desloc.: ${analysis.summary.countSemDeslocamento}`);
           const teamItems: any[] = [chipRow(chips)];
-          const pdfOrders = this.limitOrdersPerDay(analysis.flaggedOrders, analysis.extraFlaggedOrders);
-          pdfOrders.forEach((ev: any, evIdx: number, evArr: any[]) => {
-            const orderItems: any[] = [];
-            if (ev.classe || ev.causa) {
-              orderItems.push({ text: [ev.classe ? `Classe: ${ev.classe}` : '', ev.classe && ev.causa ? '  \u00b7  ' : '', ev.causa ? `Causa: ${ev.causa}` : ''].join(''), fontSize: 7, color: GRAY, margin: [0, 0, 0, 2] });
-            }
-            if (ev.prev_liberada) {
-              orderItems.push(tl('OS Anterior', `Lib.: ${ev.prev_liberada}`));
-            }
-            orderItems.push(tl('OS Atual', `Despachada: ${ev.despachada || '\u2014'}`, `A Caminho: ${ev.a_caminho || '\u2014'}`, `No Local: ${ev.no_local || '\u2014'}`, `Liberada: ${ev.liberada || '\u2014'}`));
-            if (ev.flags?.includes('tme_muito_alto')) orderItems.push(alertItem(`TME IMP elevado: ${helpers.tmeImpAlertBody('tme_muito_alto', ev)}`));
-            if (ev.flags?.includes('sem_deslocamento')) orderItems.push(alertItem(`Sem registro de deslocamento: ${helpers.tmeImpAlertBody('sem_deslocamento', ev)}`));
-            if (ev.flags?.includes('sem_execucao')) orderItems.push(alertItem(`Sem TR Ordem: ${helpers.tmeImpAlertBody('sem_execucao', ev)}`));
-            const orderBlock: any[] = [orderHead(ev.nr_ordem, ev.flags ?? [], (f) => helpers.tmeImpFlagLabel(f), ev.date_ref || undefined)];
-            if (orderItems.length > 0) orderBlock.push(indentBlock(orderItems, '#94a3b8', 6));
-            teamItems.push({ stack: orderBlock, unbreakable: true });
-            if (evIdx < evArr.length - 1) teamItems.push(orderDivider());
-          });
+          const pdfOrders = this.limitOrdersPerDay(analysis.flaggedOrders, analysis.extraFlaggedOrders, kpi.kpi, analysis.team, expandedKeys);
+          if (pdfOrders.length > 0) {
+            let lastDateRef = '';
+            pdfOrders.forEach((ev: any, evIdx: number, evArr: any[]) => {
+              const curDateRef = ev.date_ref || 'Sem data';
+              if (curDateRef !== lastDateRef) {
+                teamItems.push({ text: curDateRef, fontSize: 8, bold: true, color: DARK, fillColor: '#e2e8f0', margin: [0, 4, 0, 2], padding: [4, 2, 4, 2] });
+                lastDateRef = curDateRef;
+              }
+              const orderItems: any[] = [];
+              if (ev.classe || ev.causa) {
+                orderItems.push({ text: [ev.classe ? `Classe: ${ev.classe}` : '', ev.classe && ev.causa ? '  \u00b7  ' : '', ev.causa ? `Causa: ${ev.causa}` : ''].join(''), fontSize: 7, color: GRAY, margin: [0, 0, 0, 2] });
+              }
+              if (ev.prev_liberada) {
+                orderItems.push(tl('OS Anterior', `Lib.: ${ev.prev_liberada}`));
+              }
+              orderItems.push(tl('OS Atual', `Despachada: ${ev.despachada || '\u2014'}`, `A Caminho: ${ev.a_caminho || '\u2014'}`, `No Local: ${ev.no_local || '\u2014'}`, `Liberada: ${ev.liberada || '\u2014'}`));
+
+              const alerts = helpers.getAlerts(kpi.kpi, ev);
+              alerts.forEach((alert: any) => {
+                const cleanBody = alert.bodyHtml.replace(/<[^>]*>/g, '');
+                if (alert.isWarn) {
+                  orderItems.push(alertWarnItemRuns(alert.title, [{ text: cleanBody, color: DARK }]));
+                } else {
+                  orderItems.push(alertItem(`${alert.title} ${cleanBody}`));
+                }
+              });
+
+              const orderBlock: any[] = [orderHead(ev.nr_ordem, ev.flags ?? [], (f) => helpers.tmeImpFlagLabel(f), undefined)];
+              if (orderItems.length > 0) orderBlock.push(indentBlock(orderItems, '#94a3b8', 6));
+              teamItems.push({ stack: orderBlock, unbreakable: true });
+              if (evIdx < evArr.length - 1 && evArr[evIdx + 1].date_ref === curDateRef) teamItems.push(orderDivider());
+            });
+          }
           const tmeBarColor = (analysis.gap ?? 1) <= 0 ? BLUE : RED;
           const tmeHdr = cardHeader(analysis.team, `${analysis.gap > 0 ? '+' : ''}${analysis.gap?.toFixed(0)} min s/meta`, true);
           const tmeBlock = indentBlock(teamItems, tmeBarColor, 8);
@@ -1326,9 +1345,17 @@ export class DashboardPdfService {
           analysis.flaggedDays?.forEach((ev: any, evIdx: number, evArr: any[]) => {
             const dayItems: any[] = [];
             dayItems.push(tl('Inicio Cal.', ev.inicio_calendario || '\u2014', `Log In: ${ev.log_in_corrigido || '\u2014'}`));
-            if (ev.flags?.includes('login_muito_tardio')) dayItems.push(alertItem(`Login muito tardio: ${helpers.loginAlertBody('login_muito_tardio', ev)}`));
-            else if (ev.flags?.includes('login_tardio')) dayItems.push(alertItem(`Login tardio: ${helpers.loginAlertBody('login_tardio', ev)}`));
-            if (ev.flags?.includes('calendario_errado')) dayItems.push(alertItem(`Calendário errado: ${helpers.loginAlertBody('calendario_errado', ev)}`));
+            
+            const alerts = helpers.getAlerts(kpi.kpi, ev);
+            alerts.forEach((alert: any) => {
+              const cleanBody = alert.bodyHtml.replace(/<[^>]*>/g, '');
+              if (alert.isWarn) {
+                dayItems.push(alertWarnItemRuns(alert.title, [{ text: cleanBody, color: DARK }]));
+              } else {
+                dayItems.push(alertItem(`${alert.title} ${cleanBody}`));
+              }
+            });
+
             teamItems.push({ stack: [
               {
                 text: [
@@ -1377,21 +1404,17 @@ export class DashboardPdfService {
             const dayItems: any[] = [];
             const deslocTl = this.buildTimelinePdfBlock(ev);
             if (deslocTl) dayItems.push(deslocTl);
-            if (ev.flags?.includes('despacho_tardio')) dayItems.push(alertItem(`${ev.flags.includes('login_atrasado') ? '1º Desp. tardio após login atrasado:' : 'Despacho tardio:'} ${helpers.deslocAlertBody('despacho_tardio', ev)}`));
-            if (ev.flags?.includes('login_atrasado')) dayItems.push(alertItem(`Log In atrasado: ${helpers.deslocAlertBody('login_atrasado', ev)}`));
-            if (ev.flags?.includes('desloc_muito_lento')) dayItems.push(alertItem(`1º Desloc.: ${helpers.deslocAlertBody('desloc_muito_lento', ev)}`));
-            else if (ev.flags?.includes('desloc_lento')) dayItems.push(alertItem(`1º Desloc.: ${helpers.deslocAlertBody('desloc_lento', ev)}`));
-            if (ev.flags?.includes('triagem_alto')) dayItems.push(alertItem(`2º Desp.: ${helpers.deslocAlertBody('triagem_alto', ev)}`));
-            if (ev.flags?.includes('sem_desloc_registrado')) dayItems.push(alertItem(`Sem deslocamento registrado: ${helpers.deslocAlertBody('sem_desloc_registrado', ev)}`));
-            if (ev.flags?.includes('calendario_errado')) dayItems.push(alertItem(`Calendário errado: ${helpers.deslocAlertBody('calendario_errado', ev)}`));
-            if (ev.nr_ordem_despacho_anterior) {
-              const horaFmt = (ev.hora_despacho_anterior || '').replace(/^(\d{2}\/\d{2})\/\d{4}\s+(\d{2}:\d{2}).*$/, '$1 $2');
-              dayItems.push(alertWarnItemRuns('Despacho anterior da 1ªOS', [
-                { text: 'a OS ', color: DARK },
-                { text: ev.nr_ordem_despacho_anterior, bold: true, color: AMBER_DARK },
-                { text: `${horaFmt ? ' foi despachada em ' + horaFmt : ''} antes do deslocamento da 1ª OS desta equipe, provavelmente por motivo de prioridade, dessa forma o despacho da 1ªOS pode ficar elevado.`, color: DARK },
-              ]));
-            }
+            
+            const alerts = helpers.getAlerts(kpi.kpi, ev);
+            alerts.forEach((alert: any) => {
+              const cleanBody = alert.bodyHtml.replace(/<[^>]*>/g, '');
+              if (alert.isWarn) {
+                dayItems.push(alertWarnItemRuns(alert.title, [{ text: cleanBody, color: DARK }]));
+              } else {
+                dayItems.push(alertItem(`${alert.title} ${cleanBody}`));
+              }
+            });
+
             teamItems.push({ stack: [
               {
                 text: [
@@ -1436,9 +1459,17 @@ export class DashboardPdfService {
           analysis.flaggedDays?.forEach((ev: any, evIdx: number, evArr: any[]) => {
             const dayItems: any[] = [];
             dayItems.push(tl('Ultima OS Lib.', ev.hora_ultima_ordem || '\u2014', `Log Off: ${ev.log_off_corrigido || '\u2014'}`));
-            if (ev.flags?.includes('retorno_divergente')) dayItems.push(alertItem(`Divergência detectada: ${helpers.retornoAlertBody('retorno_divergente', ev)}`));
-            if (ev.flags?.includes('retorno_muito_alto')) dayItems.push(alertItem(`Retorno muito alto: ${helpers.retornoAlertBody('retorno_muito_alto', ev)}`));
-            else if (ev.flags?.includes('retorno_alto')) dayItems.push(alertItem(`Retorno acima da meta: ${helpers.retornoAlertBody('retorno_alto', ev)}`));
+            
+            const alerts = helpers.getAlerts(kpi.kpi, ev);
+            alerts.forEach((alert: any) => {
+              const cleanBody = alert.bodyHtml.replace(/<[^>]*>/g, '');
+              if (alert.isWarn) {
+                dayItems.push(alertWarnItemRuns(alert.title, [{ text: cleanBody, color: DARK }]));
+              } else {
+                dayItems.push(alertItem(`${alert.title} ${cleanBody}`));
+              }
+            });
+
             teamItems.push({ stack: [
               {
                 text: [
