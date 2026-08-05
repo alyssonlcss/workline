@@ -8,7 +8,7 @@ export class TempStorageService {
   private readonly baseDataDir: string;
 
   public constructor(baseDir?: string) {
-    this.baseDataDir = baseDir ?? resolve(process.cwd(), 'src/data');
+    this.baseDataDir = baseDir ?? resolve(process.cwd(), '../data');
   }
 
   public getJobDirectory(sessionId: string, jobId: string): string {

@@ -53,6 +53,7 @@ htmlcov/
 /temp
 /src/data/*.*
 /src/data/*/*.*
+/src/data/sessions/
 
 # vscode settings.json
 .vscode/settings.json
