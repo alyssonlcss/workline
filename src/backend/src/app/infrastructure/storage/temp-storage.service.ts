@@ -11,8 +11,32 @@ export class TempStorageService {
     this.baseDataDir = baseDir ?? resolve(process.cwd(), '../data');
   }
 
+  public getSessionDirectory(sessionId: string): string {
+    return join(this.baseDataDir, 'sessions', sessionId);
+  }
+
+  public async getActiveJobDirectory(sessionId: string): Promise<string | undefined> {
+    const sessionDir = this.getSessionDirectory(sessionId);
+    if (!existsSync(sessionDir)) return undefined;
+    
+    const { readdir } = await import('node:fs/promises');
+    const entries = await readdir(sessionDir, { withFileTypes: true });
+    const jobDirs = entries.filter(e => e.isDirectory());
+    if (jobDirs.length > 0) {
+      return join(sessionDir, jobDirs[0].name);
+    }
+    return undefined;
+  }
+
   public getJobDirectory(sessionId: string, jobId: string): string {
-    return join(this.baseDataDir, 'sessions', sessionId, jobId);
+    return join(this.getSessionDirectory(sessionId), jobId);
+  }
+
+  public async cleanupSessionDirectory(sessionId: string): Promise<void> {
+    const dir = this.getSessionDirectory(sessionId);
+    if (existsSync(dir)) {
+      await rm(dir, { recursive: true, force: true });
+    }
   }
 
   public async prepareJobDirectory(sessionId: string, jobId: string): Promise<string> {

@@ -185,6 +185,7 @@ export async function createServer() {
         onProgress,
         task: async () => {
           throwIfAborted(controller.signal);
+          await tempStorage.cleanupSessionDirectory(sessionId);
           const jobDirectory = await tempStorage.prepareJobDirectory(sessionId, jobId);
           onProgress('Diretório isolado preparado. Iniciando extração no Spotfire...');
 
@@ -301,6 +302,9 @@ export async function createServer() {
     let outputDir = environment.spotfire.outputDirectory;
     if (query.jobId) {
       outputDir = tempStorage.getJobDirectory(sessionId, query.jobId);
+    } else {
+      const activeJobDir = await tempStorage.getActiveJobDirectory(sessionId);
+      if (activeJobDir) outputDir = activeJobDir;
     }
 
     const { dataDirectory, downloadedFiles } = await resolveReportFiles(
@@ -319,6 +323,9 @@ export async function createServer() {
     let outputDir = environment.spotfire.outputDirectory;
     if (payload.jobId) {
       outputDir = tempStorage.getJobDirectory(sessionId, payload.jobId);
+    } else {
+      const activeJobDir = await tempStorage.getActiveJobDirectory(sessionId);
+      if (activeJobDir) outputDir = activeJobDir;
     }
 
     const { dataDirectory, downloadedFiles } = await resolveReportFiles(
@@ -351,6 +358,9 @@ export async function createServer() {
     let outputDir = environment.spotfire.outputDirectory;
     if (payload.jobId) {
       outputDir = tempStorage.getJobDirectory(sessionId, payload.jobId);
+    } else {
+      const activeJobDir = await tempStorage.getActiveJobDirectory(sessionId);
+      if (activeJobDir) outputDir = activeJobDir;
     }
 
     const { dataDirectory, downloadedFiles } = await resolveReportFiles(
