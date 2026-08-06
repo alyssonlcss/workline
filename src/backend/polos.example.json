@@ -1,0 +1,88 @@
+{
+  "extraTeamTags": [
+    "-PD-",
+    "-ML-"
+  ],
+  "polos": [
+    {
+      "name": "Polo Norte",
+      "ignoreTeamTags": [
+        "-AP-"
+      ],
+      "matchType": "direct_prefix",
+      "bases": [
+        {
+          "name": "Base Alpha",
+          "propria": [
+            "ALP-"
+          ],
+          "parceira": [
+            "ALB-"
+          ]
+        },
+        {
+          "name": "Base Beta",
+          "propria": [
+            "BET-"
+          ],
+          "parceira": [
+            "BEP-"
+          ]
+        }
+      ],
+      "limits": {
+        "LIMIT_SEM_OS_MIN": 10,
+        "LIMIT_TEMP_PREP_MIN": 10,
+        "LIMIT_PRIMEIRO_DESLOC_MIN": 25,
+        "LIMIT_TR_EXCEDE_HD_PCT": 20,
+        "LIMIT_OCIOSIDADE_PCT": 15
+      }
+    },
+    {
+      "name": "Polo Sul",
+      "ignoreTeamTags": [
+        "-AP-"
+      ],
+      "matchType": "infix_type_with_base_prefix",
+      "typeIdentifiers": {
+        "propria": [
+          "-EN-"
+        ],
+        "parceira": [
+          "-RD-"
+        ]
+      },
+      "bases": [
+        {
+          "name": "Base Gama",
+          "prefixes": [
+            "GAM-",
+            "GMC-"
+          ]
+        }
+      ],
+      "limits": {
+        "LIMIT_SEM_OS_MIN": 15,
+        "LIMIT_TEMP_PREP_MIN": 15,
+        "LIMIT_PRIMEIRO_DESLOC_MIN": 30,
+        "LIMIT_TR_EXCEDE_HD_PCT": 25,
+        "LIMIT_OCIOSIDADE_PCT": 20
+      }
+    }
+  ],
+  "limits": {
+    "LIMIT_SEM_OS_MIN": 10,
+    "LIMIT_TEMP_PREP_MIN": 10,
+    "LIMIT_PRIMEIRO_DESLOC_MIN": 25,
+    "LIMIT_CALENDARIO_ERRADO_MIN": 15,
+    "LIMIT_TRIAGEM_MIN": 10,
+    "LIMIT_DESLOC_INTERVALO_MIN": 10,
+    "LIMIT_INICIO_JORNADA_MIN": 10,
+    "LIMIT_RETORNO_EXCEDENTE_MIN": 60,
+    "LIMIT_DESPACHO_PRIORITARIO_MIN": 20,
+    "LIMIT_DESPACHO_TARDIO_MIN": 10,
+    "LIMIT_LOGIN_ATRASADO_MIN": 8,
+    "LIMIT_TR_EXCEDE_HD_PCT": 20,
+    "LIMIT_OCIOSIDADE_PCT": 15
+  }
+}

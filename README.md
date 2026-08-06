@@ -30,6 +30,20 @@ O WorkLine não apenas exibe dados brutos, mas realiza uma série de cruzamentos
 - **TME (Tempo Médio de Execução) Improdutivo**: Avalia o excesso de tempo gasto em deslocamento frente à execução. Picos de improdutividade geram alertas imediatos e são cruzados com o raio de atuação.
 - **Eventos de Jornada (1º Login / 1º Deslocamento / Retorno à Base)**: Auditoria diária de rotina. Algoritmos identificam equipes que sistematicamente iniciam a jornada com atraso ou encerram a rota de forma prematura.
 
+### 🚩 Alertas e Red Flags (Limites e Cenários)
+O sistema emite alertas (*Red Flags*) baseados em regras rígidas de negócio ou médias globais. Os limites numéricos são configuráveis por polo via `polos.json`:
+
+- **`tr_excede_hd`** (TR Excede Limite): Ocorre quando o Tempo de Reparo (TR) consome uma porcentagem desproporcional do dia da equipe (por padrão, > 20% das Horas Disponíveis) E também ultrapassa o Tempo Padrão estipulado para a OS.
+- **`tl_excede_hd`** (Deslocamento Excede Limite): Ocorre quando o Tempo de Deslocamento (TL) é superior a 30% da jornada diária e acima da média global da operação.
+- **`temp_prep_alto`** (Preparação Alta): Falha de agilidade na saída. Tempo entre a OS ser "Despachada" e a equipe entrar "A Caminho" excede a margem (padrão 10 min).
+- **`triagem_alto`** (Triagem Alta): Falha do despacho. O tempo em que a equipe fica aguardando serviço (entre a última liberação e receber o novo despacho) excede o aceitável (padrão 10 min).
+- **`sem_os_alto` / `entre_ordens`** (Ociosidade Entre Ordens): Lacuna ociosa severa entre finalizar um serviço (Liberada) e ser despachado para o próximo.
+- **`primeiro_desloc_alto` / `inicio_jornada_alto`** (Início de Jornada Atrasado): Na primeira OS do dia, cruza-se o "Início Calendário" ou "Hora do 1º Despacho" com a real saída ("A Caminho" ou "Despachada"). Pune o atraso matinal.
+- **`desloc_intervalo_alto`** (Deslocamento para Intervalo): Quando a equipe finaliza a OS da manhã e demora excessivamente viajando/ociosa antes de efetivamente bater o ponto de início de intervalo.
+- **`Antes Log Off` / `Retorno a base`** (Fim de Jornada Prematuro): Ocorre no fim do dia, caso a lacuna entre a última OS e o Log Off exceda drasticamente a média do polo ou ultrapasse um corte estático (padrão 60 min).
+- **`tr_muito_baixo` / `deslocamento_curto`** (Falsa Eficiência): Exclusivo para *Top Performers*. Detecta ordens onde o TR é inferior a 20% da média global e 20% do Tempo Padrão. Indica fraude de status (equipe "passando o rádio" no sistema sem executar o serviço real).
+- **`tempo_padrao_vazio`** (Cadastro Incompleto): Alerta de dados inconsistentes quando a ordem tem duração (TR), mas falta o Tempo Padrão no sistema original, mascarando o cálculo geral.
+
 ## 📑 Tipos de Relatórios Gerados
 
 Ao exportar os PDFs pelo painel, o relatório é inteligentemente dividido em duas frentes de diagnóstico:
@@ -95,9 +109,10 @@ Após o build inicial, o aplicativo frontend estará acessível em `http://local
 
 O WorkLine foi desenhado para operar na rede interna corporativa sem necessidade de infraestrutura pesada de banco de dados SQL/NoSQL. O sistema gerencia múltiplos acessos concorrentes através dos seguintes mecanismos:
 
-- **Credenciais Per-User no Frontend**: Cada usuário insere seu **Usuário** e **Senha** do Spotfire no painel lateral de extração. O frontend salva localmente no navegador (`localStorage`) de forma isolada, possui um alternador de visibilidade de senha (olhinho 👁️) e transmite as credenciais na requisição de extração.
+- **Gerenciamento de Sessões (`SessionService`)**: O backend implementa um serviço em memória para controle persistente do ciclo de vida das sessões. Cada usuário recebe um UUID integrado a cookies HTTP-only com TTL (Time-To-Live) configurável (ex: 8 horas). Isso garante segurança na autenticação das requisições e preserva o estado de acesso sem depender de bancos de dados persistentes.
+- **Credenciais Per-User no Frontend**: Cada usuário insere seu **Usuário** e **Senha** do Spotfire no painel lateral de extração. O frontend salva localmente no navegador (`localStorage`) de forma isolada, possui um alternador de visibilidade de senha (olhinho 👁️) e transmite as credenciais de forma segura.
 - **Fila de Execução Concorrente (`ExtractionQueueManager`)**: Orquestra as requisições com um limite de navegações simultâneas via `p-limit`. Quando o número de requisições excede a capacidade do servidor, o usuário recebe um evento SSE com sua posição exata na fila (*ex: "Solicitação na fila — Posição 2"*).
-- **Isolamento de Sessões e Arquivos Temporários**: Cada extração é processada em um diretório temporário exclusivo (`src/data/sessions/<sessionId>/<jobId>/`). Um **Garbage Collector** periódico elimina automaticamente arquivos temporários com mais de 30 minutos.
+- **Isolamento de Diretórios Temporários**: Cada extração é processada em um diretório temporário exclusivo atrelado à sessão do usuário (`src/data/sessions/<sessionId>/<jobId>/`). Um **Garbage Collector** periódico elimina automaticamente arquivos e processos órfãos gerados há mais de 30 minutos.
 - **Cache de Extrações em Memória (`ExtractionCacheService`)**: Requisições com filtros idênticos reutilizam os resultados recentemente extraídos (hash SHA-256), retornando dados em menos de 100ms sem abrir instâncias desnecessárias do Puppeteer.
 
 ---
@@ -111,16 +126,12 @@ O backend requer as URLs do sistema corporativo para que o robô Puppeteer possa
 # Porta do Servidor API (Opcional, Padrão: 3000)
 PORT=3000
 
-# URLs da Ferramenta de BI (Substitua pelos links internos da sua organização)
-SPOTFIRE_LOGIN_URL=http://<SEU-DOMINIO-BI>:8090/spotfire/wp/login
+# URL da Ferramenta de BI (Substitua pelo link interno da sua organização)
 SPOTFIRE_ANALYSIS_URL=http://<SEU-DOMINIO-BI>:8090/spotfire/wp/analysis?file=/Caminho/do/Relatorio
 
 # Credenciais do Robô / Fallback (Opcional - usuários informam no modal da interface)
 SPOTFIRE_USERNAME=
 SPOTFIRE_PASSWORD=
-
-# Título do Relatório no BI
-SPOTFIRE_DEFAULT_REPORT_TITLE=Nome do Relatorio
 
 # Configurações do Navegador (Puppeteer)
 SPOTFIRE_DEBUG=false
@@ -136,4 +147,44 @@ REPORT_OUTPUT_FILE_NAME=workline-report.json
 > **Aviso de Segurança**: Por padrão, o arquivo `.env` está incluso no `.gitignore` para prevenir o vazamento acidental de senhas e URLs corporativas em repositórios públicos. Nunca o versione!
 
 ### Configuração de Polos e Bases
-- A estrutura hierárquica de **polos** e **bases operacionais** que aparecem nos menus e no exportador é construída de maneira dinâmica e pode ser integralmente customizada através do arquivo de metadados localizado em `src/backend/bases.json`.
+A estrutura hierárquica de **polos** e **bases operacionais** que aparecem nos menus e no exportador é construída de maneira dinâmica e pode ser integralmente customizada através do arquivo de metadados localizado em `src/backend/polos.json`. 
+
+#### Como adicionar ou editar Polos e Bases
+O sistema classifica automaticamente a qual polo, base e tipo (Própria ou Parceira) uma equipe pertence através da extração de prefixos e sufixos do nome da equipe. Existem dois modos de mapeamento (`matchType`):
+
+**1. `direct_prefix` (Mapeamento Direto por Prefixo)**
+Ideal quando o prefixo da equipe já determina exatamente a base e se ela é Própria ou Parceira.
+```json
+{
+  "name": "Norte",
+  "matchType": "direct_prefix",
+  "bases": [
+    {
+      "name": "Sobral",
+      "propria": ["SBL-"],            // Equipes Próprias (ex: SBL-01)
+      "parceira": ["SBC-", "SBM-"]    // Equipes Parceiras (ex: SBC-02)
+    }
+  ]
+}
+```
+
+**2. `infix_type_with_base_prefix` (Mapeamento Híbrido)**
+Ideal quando o prefixo indica apenas a localidade, e um sufixo/infixo interno indica a propriedade (ex: `QXD-EN-01` onde `QXD` é a base Quixadá e `-EN-` significa equipe própria).
+```json
+{
+  "name": "Centro-Norte",
+  "matchType": "infix_type_with_base_prefix",
+  "typeIdentifiers": {
+    "propria": ["-EN-"],
+    "parceira": ["-RD-"]
+  },
+  "bases": [
+    {
+      "name": "Quixadá",
+      "prefixes": ["QXD-", "CNQ-"] // O sistema fará a junção: se tiver QXD- e -EN- será Quixadá Própria.
+    }
+  ]
+}
+```
+
+- **Limites de Alertas (Red Flags):** O arquivo `polos.json` também permite a configuração opcional de parâmetros e limites críticos de operação (ex: tempo limite para deslocamentos e ociosidade) através da propriedade `limits`. Esses limites podem ser configurados de forma global (na raiz do JSON) ou segmentados especificamente dentro do bloco de um polo.

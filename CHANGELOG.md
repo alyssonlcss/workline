@@ -3,6 +3,19 @@
 Todos os recursos notáveis, correções e melhorias neste projeto serão documentados neste arquivo.
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [1.3.0] - 2026-08-06
+
+Esta release consolida a padronização do nome do projeto para **WorkLine** e introduz a gestão dinâmica de limites operacionais e sessões de usuários.
+
+### Adicionado
+- **Limites Dinâmicos de KPIs:** Migração da configuração dos limites de "Red Flag" (ex: tempo máximo de deslocamento e ociosidade) para o arquivo `polos.json`, suportando configuração global e por polo específico.
+- **Serviço de Sessão (`SessionService`):** Implementação de gerenciamento persistente e ciclo de vida de sessões de usuário no backend.
+
+### Alterado
+- **Nome do Projeto:** Oficialização do nome da aplicação como **WorkLine** em todos os arquivos de UI, PDFs, `package.json` e documentações.
+- **Menu do Setup:** Remoção da opção interativa de configuração do Spotfire do menu principal do `setup.bat`. O script agora gerencia a configuração automaticamente caso o `.env` esteja ausente ou incompleto.
+- **Limpeza de Configurações:** O arquivo de configuração central foi consolidado em `src/backend/polos.json` com remoção da versão estática da raiz. Além disso, credenciais de URL sensíveis e chaves não utilizadas (ex: `SPOTFIRE_LOGIN_URL`) foram removidas do arquivo `.env.example`.
+
 ## [1.2.0] - 2026-07-29
 
 Esta release introduz a nova **Arquitetura Multi-Usuário em Alta Concorrência (Sem Banco de Dados)** e o módulo de **Credenciais Dinâmicas Spotfire Per-User**.

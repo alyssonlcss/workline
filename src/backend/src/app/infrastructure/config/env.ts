@@ -120,10 +120,10 @@ export type BasesConfig = {
 
 let basesConfig: BasesConfig = { polos: [] };
 try {
-  const basesConfigPath = join(process.cwd(), 'bases.json');
+  const basesConfigPath = join(process.cwd(), 'polos.json');
   basesConfig = JSON.parse(readFileSync(basesConfigPath, 'utf-8'));
 } catch (err) {
-  console.warn('Failed to load bases.json, bases filtering might not work properly.', err);
+  console.warn('Failed to load polos.json, bases filtering might not work properly.', err);
 }
 
 export const environment = {

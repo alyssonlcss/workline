@@ -47,6 +47,10 @@ htmlcov/
 .env
 *.env
 
+# Configuration files with sensitive metadata
+polos.json
+bases.json
+
 # Temporary files
 *.tmp
 *.temp
