@@ -233,24 +233,52 @@ export function buildActionPlans(
             );
           }
 
+          // Flag: login_atrasado
+          const loginAtrasado = orders.filter((o) => o.flags.includes('login_atrasado' as any));
+          if (loginAtrasado.length > 0) {
+            issues.push(
+              `Log In atrasado: ${loginAtrasado.length} OS/dias com acesso ao sistema registrado com atraso em relação ao Início Calendário da jornada.` +
+              kpiCtx('Utilização'),
+            );
+            recommendations.push(
+              `Log In atrasado — O supervisor deve orientar a equipe a priorizar o Log In imediato no Início Calendário, antes mesmo de separar materiais na base. Atrasar o Log In oculta a disponibilidade da equipe, empurra o primeiro atendimento para mais tarde e camufla a ociosidade matinal real.`,
+            );
+          }
+
+          // Flag: calendario_errado
+          const calErrado = orders.filter((o) => o.flags.includes('calendario_errado' as any));
+          if (calErrado.length > 0) {
+            issues.push(
+              `Calendário incorreto: ${calErrado.length} OS/dias com acesso ao sistema muito antes do Início Calendário estipulado.` +
+              kpiCtx('Utilização'),
+            );
+            recommendations.push(
+              `Calendário incorreto — Verificar se a equipe está chegando mais cedo ou se o Início Calendário está defasado no sistema. O supervisor deve solicitar ao backoffice o ajuste da parametrização do turno no M300 para refletir a realidade operacional.`,
+            );
+          }
+
+          // Flag: primeiro_desloc_alto
+          const primDeslocAlto = orders.filter((o) => o.flags.includes('primeiro_desloc_alto' as any));
+          if (primDeslocAlto.length > 0) {
+            issues.push(
+              `1º Deslocamento lento: ${primDeslocAlto.length} OS/dias com demora elevada desde o Início Calendário (ou Log In) até acionar o primeiro "A Caminho".` +
+              kpiCtx('Utilização'),
+            );
+            recommendations.push(
+              `1º Deslocamento lento — Demora crônica no primeiro 'A Caminho' indica retenção excessiva na base (reuniões longas, organização de material). O supervisor deve reestruturar a rotina matinal para garantir que o deslocamento para a primeira OS não seja sacrificado, evitando tempo ocioso logo no início do dia.`,
+            );
+          }
+
           // Flag: TempPrep≥10min — demora entre despacho e saída
           const tempPrepOrders = orders.filter((o) => o.flags.includes('temp_prep_alto'));
           if (tempPrepOrders.length > 0) {
             const avgTp = round2(tempPrepOrders.reduce((s, o) => s + (o.temp_prep_os_min ?? 0), 0) / tempPrepOrders.length);
-            const firstOs = tempPrepOrders.filter((o) => !o.prev_liberada);
-            const betweenOs = tempPrepOrders.filter((o) => Boolean(o.prev_liberada));
-            const ctx = firstOs.length > 0 && betweenOs.length > 0
-              ? `${betweenOs.length} entre ordens e ${firstOs.length} na 1ª OS do dia`
-              : firstOs.length > 0 ? `${firstOs.length} na 1ª OS do dia — demora desde o início de calendário até o primeiro deslocamento`
-              : `${betweenOs.length} entre ordens — demora após receber um novo despacho`;
             issues.push(
-              `Temp. Partida elevado: ${tempPrepOrders.length} OS com tempo de preparação elevado (média ${avgTp} min — ${ctx}).` +
+              `Temp. Partida elevado: ${tempPrepOrders.length} OS com demora na saída após receber o despacho (média de ${avgTp} min aguardando para acionar "A Caminho").` +
               kpiCtx('Utilização'),
             );
             recommendations.push(
-              `Temp. Partida elevado — Ao receber o despacho, acionar imediatamente o status "A Caminho" sem aguardar na base.` +
-              (firstOs.length > 0 ? ` Para a 1ª OS do dia, o limite é de 25 min (Início Calendário → A Caminho); para as demais ordens o limite é de 10 min (Lib. Anterior → A Caminho).` : '') +
-              ` Reforçar no próximo alinhamento que Temp. Partida alto é descontado diretamente na Utilização.`,
+              `Temp. Partida elevado — O supervisor deve investigar por que a equipe está retida após o despacho. Orientar que ao receber a ordem, o status "A Caminho" deve ser acionado assim que o veículo entrar em movimento. Omissão ou esquecimento gera ociosidade forçada nos indicadores.`,
             );
           }
 
@@ -260,16 +288,25 @@ export function buildActionPlans(
             const avgMin = semOsOrders.length > 0
               ? round2(semOsOrders.reduce((s, o) => s + (o.sem_os_total_min ?? 0), 0) / semOsOrders.length)
               : round2(idleAnalysis.semOrdemTotalMin);
-            const hasEntreOrdens = semOsOrders.some((o) => o.sem_os_details?.some((d) => d.type === 'entre_ordens'));
-            const hasInicio = semOsOrders.some((o) => o.sem_os_details?.some((d) => d.type === 'inicio_jornada'));
-            const semOsCtx = hasEntreOrdens && hasInicio ? 'entre ordens e no início de jornada'
-              : hasEntreOrdens ? 'entre ordens' : 'no início de jornada';
+
+            // Dynamic from_label extraction
+            const fromLabels = new Set<string>();
+            semOsOrders.forEach((o) => {
+              o.sem_os_details?.forEach((d) => {
+                if ((d as any).from_label) fromLabels.add((d as any).from_label);
+                else if (d.type === 'inicio_jornada') fromLabels.add('Início Cal.');
+                else if (d.type === 'entre_ordens') fromLabels.add('Lib. Anterior');
+              });
+            });
+            const labelsArray = Array.from(fromLabels);
+            const semOsCtx = labelsArray.length > 0 ? `frequentemente após: ${labelsArray.join(', ')}` : `ocasionando vácuos na jornada`;
+
             issues.push(
-              `SemOrdem≥10min: ${idleAnalysis.summary.countSemOsAlto} OS/dias com tempo ocioso acima de 10 min (média ${avgMin} min — ${semOsCtx}).` +
+              `SemOrdem≥10min (Espera Passiva): ${idleAnalysis.summary.countSemOsAlto} ocorrências com tempo ocioso sem OS na tela acima de 10 min (média ${avgMin} min — ${semOsCtx}).` +
               kpiCtx('Utilização'),
             );
             recommendations.push(
-              `SemOrdem≥10min — Ao liberar uma OS, acionar imediatamente a central para receber o próximo despacho; cobrar que o técnico não aguarde passivamente. Se o gargalo for da central (fila vazia), mapear o horário de pico e ajustar a priorização de despacho.`,
+              `SemOrdem≥10min — O supervisor deve cobrar a equipe para comunicar a central imediatamente após a liberação da ordem anterior, exigindo o próximo despacho. Uma espera prolongada após "${labelsArray[0] ?? 'a última ação'}" indica falta de proatividade do técnico ou gargalo na distribuição da central.`,
             );
 
             // Intervalo de almoço suspeito
@@ -280,12 +317,36 @@ export function buildActionPlans(
                 return s + (d?.min ?? 0);
               }, 0) / intervaloDesl.length);
               issues.push(
-                `Desl. para intervalo suspeito: ${intervaloDesl.length} OS com deslocamento de ${avgItvMin} min antes do intervalo de almoço — possível saída de ponto para realizar o intervalo.`,
+                `Desl. longo pré-intervalo: ${intervaloDesl.length} OS com deslocamento médio de ${avgItvMin} min antes da pausa de almoço — possível abandono de setor para almoçar na base ou residência.`,
               );
               recommendations.push(
-                `Desl. para intervalo — Orientar que o intervalo de almoço deve ser iniciado a partir do ponto atual de atendimento, não de um novo endereço; deslocamentos longos pré-intervalo são contabilizados no SemOrdem.`,
+                `Desl. longo pré-intervalo — O supervisor deve orientar a equipe a realizar a pausa para o almoço nas imediações do último ponto de atendimento. Deslocamentos longos e não produtivos antes do intervalo geram ociosidade severa e consumo desnecessário de combustível.`,
               );
             }
+          }
+          
+          // Flag: intervalo_por_ultimo
+          const intUltimo = orders.filter((o) => o.flags.includes('intervalo_por_ultimo' as any));
+          if (intUltimo.length > 0) {
+            issues.push(
+              `Intervalo no fim da jornada: ${intUltimo.length} ocorrências com o intervalo de almoço lançado na última OS do dia.` +
+              kpiCtx('Utilização'),
+            );
+            recommendations.push(
+              `Intervalo no fim da jornada — Registrar o intervalo no fim do expediente mascara a produtividade do meio do dia e pode gerar horas extras fantasmas. O supervisor deve exigir o lançamento da pausa em tempo real no aplicativo, no momento em que ela de fato ocorre.`,
+            );
+          }
+
+          // Flag: antes_log_off_alto
+          const antesLogOff = orders.filter((o) => o.flags.includes('antes_log_off_alto' as any));
+          if (antesLogOff.length > 0) {
+            issues.push(
+              `Ociosidade antes do Log Off: ${antesLogOff.length} ocorrências com tempo ocioso elevado entre a última OS e o encerramento do aplicativo.` +
+              kpiCtx('Utilização'),
+            );
+            recommendations.push(
+              `Ociosidade antes do Log Off — Permanecer logado sem produzir no final do dia derruba a Utilização. O supervisor deve cobrar o encerramento da jornada (Log Off) no sistema imediatamente após o retorno à base e a devolução dos materiais.`,
+            );
           }
 
           // Horas extras + ociosidade elevada
@@ -423,26 +484,21 @@ export function buildActionPlans(
               .filter((d) => d.flags.includes('login_muito_tardio'))
               .sort((a, b) => b.primeiro_login_min - a.primeiro_login_min)[0];
             issues.push(
-              `Login muito tardio: ${login.summary.countLoginMuitoTardio} dia(s) com acesso ao sistema com mais do dobro da meta de ${login.metaTarget} min — caso crítico ${worst.date_ref} com ${round2(worst.primeiro_login_min)} min. Atrasa o primeiro despacho e reduz os atendimentos possíveis no dia.` +
+              `Furo de Jornada (Log In Extremo): ${login.summary.countLoginMuitoTardio} dia(s) com acesso ao sistema absurdamente tarde. Caso mais grave: dia ${worst.date_ref} com ${round2(worst.primeiro_login_min)} min de atraso após o horário oficial.` +
               kpiCtx('1º Login'),
             );
             recommendations.push(
-              `Login muito tardio — Investigar a causa específica (problema técnico, hábito operacional ou evento pontual) no(s) dia(s) identificado(s). Reforçar que o login deve ser a primeira ação ao iniciar a jornada; cada minuto de atraso retarda o primeiro despacho diretamente.`,
+              `Furo de Jornada (Log In Extremo) — O supervisor deve confrontar o técnico sobre as datas específicas. Atrasos extremos no sistema indicam que a equipe iniciou o turno "às cegas" ou chegou muito atrasada na base. Exigir o Log In no horário exato do contrato.`,
             );
           } else if (login.summary.countLoginTardio > 0) {
             const lateOnes = login.flaggedDays.filter((d) => d.flags.includes('login_tardio'));
             const avgLate = lateOnes.length > 0 ? round2(lateOnes.reduce((s, d) => s + d.primeiro_login_min, 0) / lateOnes.length) : 0;
             issues.push(
-              `Login tardio: ${login.summary.countLoginTardio} dia(s) com login acima da meta de ${login.metaTarget} min (média ${avgLate} min nesse(s) dia(s)).` +
+              `Indisciplina Matinal (Log In Atrasado): ${login.summary.countLoginTardio} dia(s) com o primeiro acesso ao sistema fora do horário padrão (média de ${avgLate} min de atraso).` +
               kpiCtx('1º Login'),
             );
             recommendations.push(
-              `Login tardio — Orientar login imediato ao iniciar a jornada. Se o atraso for recorrente nos mesmos dias da semana, investigar causa estrutural (trânsito, escala, problema técnico) e tratar com o supervisor.`,
-            );
-          }
-          if (login.diasAcimaMetaCount > 1) {
-            recommendations.push(
-              `Login tardio recorrente em ${login.diasAcimaMetaCount}/${login.totalDays} dias — verificar se há problema técnico de acesso ao sistema ou hábito operacional; abordar no próximo alinhamento de equipe com foco em rotina de início de turno.`,
+              `Indisciplina Matinal (Log In Atrasado) — O supervisor deve alertar que o início do trabalho só é computado após o login. Atrasar o login bloqueia a visualização da equipe pelo despachador e atrasa a saída para o campo. Cobrar mudança imediata de rotina.`,
             );
           }
         }
@@ -457,28 +513,28 @@ export function buildActionPlans(
               .filter((d) => d.flags.includes('desloc_muito_lento'))
               .sort((a, b) => b.primeiro_desloc_min - a.primeiro_desloc_min)[0];
             issues.push(
-              `1º Desloc. muito lento: ${desloc.summary.countDeslocMuitoLento} dia(s) com mais de 1,5× a meta de ${desloc.metaTarget} min entre o primeiro despacho e "A Caminho" — caso crítico ${worst.date_ref} com ${round2(worst.primeiro_desloc_min)} min parado antes de sair.` +
+              `Retenção Crítica na Base (1º Deslocamento): ${desloc.summary.countDeslocMuitoLento} dia(s) com demora inaceitável para sair após o 1º despacho. Pior caso: dia ${worst.date_ref} com ${round2(worst.primeiro_desloc_min)} min de imobilidade.` +
               kpiCtx('1º Desloc.'),
             );
             recommendations.push(
-              `1º Desloc. muito lento — Investigar o que reteve o técnico antes de sair no(s) dia(s) identificado(s) (preparação de material, reunião, etc.). Reforçar que ao receber o primeiro despacho o status "A Caminho" deve ser acionado imediatamente.`,
+              `Retenção Crítica na Base — O supervisor deve exigir justificativa para esse tempo perdido na base. Se for excesso de burocracia (entrega de material, reuniões diárias prolongadas), a gestão deve rever o formato para não sangrar o horário produtivo da equipe.`,
             );
           } else if (desloc.summary.countDeslocLento > 0) {
             issues.push(
-              `1º Desloc. lento: ${desloc.summary.countDeslocLento} dia(s) com tempo entre despacho e "A Caminho" acima de ${desloc.metaTarget} min — saída tardia para o primeiro atendimento reduz o aproveitamento da jornada.` +
+              `Saída Matinal Lenta: ${desloc.summary.countDeslocLento} dia(s) com letargia entre o recebimento da primeira OS e a saída efetiva para a rua ("A Caminho").` +
               kpiCtx('1º Desloc.'),
             );
             recommendations.push(
-              `1º Desloc. lento — Cobrar que "A Caminho" seja acionado imediatamente ao receber o despacho; se houver preparação prévia necessária, antecipar essa etapa antes da janela de despacho.`,
+              `Saída Matinal Lenta — O supervisor deve estabelecer um teto de tempo para a saída matinal. Ao pingar a primeira OS na tela, o veículo precisa entrar em movimento rapidamente. A rotina de carregamento do carro deve ser antecipada.`,
             );
           }
           if (desloc.summary.countSemDeslocRegistrado > 0) {
             issues.push(
-              `Sem "A Caminho" no 1º despacho: ${desloc.summary.countSemDeslocRegistrado} dia(s) sem registro de saída após o primeiro despacho — impossível calcular o 1º Desloc. real.` +
+              `Vício de Apontamento (1ª OS sem "A Caminho"): ${desloc.summary.countSemDeslocRegistrado} dia(s) onde a equipe saiu para a 1ª OS sem bater o status de deslocamento no celular.` +
               kpiCtx('1º Desloc.'),
             );
             recommendations.push(
-              `Sem "A Caminho" no 1º despacho — Reforçar uso correto do aplicativo: acionar "A Caminho" ao sair, mesmo que já esteja em deslocamento. A ausência prejudica o cálculo do KPI e impede identificar atrasos reais.`,
+              `Vício de Apontamento (1ª OS sem "A Caminho") — O supervisor deve cobrar a obrigatoriedade da marcação correta. Sem o "A Caminho", o sistema presume que o técnico não se deslocou, distorcendo as métricas de tempo produtivo do dia inteiro.`,
             );
           }
           if (desloc.summary.countDespachoTardio > 0) {
@@ -486,13 +542,12 @@ export function buildActionPlans(
             const avgTardio  = tardioOnes.length > 0 ? round2(tardioOnes.reduce((s, d) => s + d.despacho_apos_inicio_min, 0) / tardioOnes.length) : 0;
             const loginDelay = tardioOnes.length > 0 ? round2(tardioOnes.reduce((s, d) => s + d.login_atraso_min, 0) / tardioOnes.length) : 0;
             issues.push(
-              `Despacho tardio: ${desloc.summary.countDespachoTardio} dia(s) com o primeiro despacho recebido com mais de 10 min após o início de jornada — média de ${avgTardio} min` +
-              (loginDelay > 0 ? ` (inclui ${loginDelay} min de atraso de login)` : '') + `.` +
+              `Ociosidade por Falta de Serviço: ${desloc.summary.countDespachoTardio} dia(s) com "vácuo" matinal — a 1ª OS demorou mais de 10 min para cair na tela (média ${avgTardio} min retidos).` +
+              (loginDelay > 0 ? ` Atenção: parte desse tempo foi auto-infligido pelo Log In atrasado da própria equipe (${loginDelay} min de atraso).` : '') +
               kpiCtx('1º Desloc.'),
             );
             recommendations.push(
-              `Despacho tardio — ${loginDelay > 0 ? 'Parte do atraso origina-se do login tardio: garantir que o técnico esteja logado antes do início da janela de despacho. ' : ''}` +
-              `Alinhar com a central o horário de início dos despachos para esta equipe e garantir prontidão desde o início do turno.`,
+              `Ociosidade por Falta de Serviço — O supervisor deve intervir junto ao Despacho (Central). Não é aceitável que a equipe inicie o turno e fique ociosa esperando ordens. ${loginDelay > 0 ? 'Contudo, cobrar primeiro que a equipe realize o Log In no horário certo para ficar visível à central.' : ''}`,
             );
           }
         }
@@ -507,24 +562,19 @@ export function buildActionPlans(
               .filter((d) => d.flags.includes('retorno_muito_alto'))
               .sort((a, b) => (b.true_retorno_min ?? b.retorno_base_min) - (a.true_retorno_min ?? a.retorno_base_min))[0];
             issues.push(
-              `Retorno Base muito alto: ${retorno.summary.countRetornoMuitoAlto} dia(s) com retorno acima de 1,5× a meta de ${retorno.metaTarget} min — caso crítico ${worst.date_ref} com ${round2(worst.true_retorno_min ?? worst.retorno_base_min)} min. Esse tempo é descontado diretamente na Utilização.` +
+              `Fuga de Produtividade no Retorno: ${retorno.summary.countRetornoMuitoAlto} dia(s) com demora exorbitante entre a última OS e o encerramento da jornada (dia ${worst.date_ref} com ${round2(worst.true_retorno_min ?? worst.retorno_base_min)} min ociosos).` +
               kpiCtx('Retorno Base'),
             );
             recommendations.push(
-              `Retorno muito alto — Avaliar com o planejamento se a última OS do dia pode ser encerrada geograficamente mais próxima da base; se o trajeto de retorno for sistematicamente longo, propor ajuste no roteiro de encerramento de turno.`,
+              `Fuga de Produtividade no Retorno — O supervisor deve mapear o roteiro da equipe no fim do dia. Pode estar ocorrendo desvio de rota, paradas não autorizadas ou falha grave de roteirização do despacho (mandar a equipe para longe no final do turno).`,
             );
           } else if (retorno.summary.countRetornoAlto > 0) {
             issues.push(
-              `Retorno Base acima da meta: ${retorno.summary.countRetornoAlto} dia(s) com retorno entre a última OS e a base acima de ${retorno.metaTarget} min — esse tempo é descontado na Utilização.` +
+              `Deslocamento Final Improdutivo: ${retorno.summary.countRetornoAlto} dia(s) com trânsito de retorno para a base consumindo mais tempo que o aceitável.` +
               kpiCtx('Retorno Base'),
             );
             recommendations.push(
-              `Retorno acima da meta — Avaliar a possibilidade de encerrar a jornada com OS mais próximas da base; discutir redistribuição geográfica das últimas ordens do dia com o planejamento.`,
-            );
-          }
-          if (retorno.diasAcimaMetaCount > 1) {
-            recommendations.push(
-              `Retorno recorrente acima da meta em ${retorno.diasAcimaMetaCount}/${retorno.totalDays} dias — padrão sistêmico; discutir ajuste de rota de encerramento de turno ou redistribuição das últimas OS do dia.`,
+              `Deslocamento Final Improdutivo — O supervisor deve alinhar estrategicamente com o Despacho para que a última OS do dia seja sempre direcionada para perto da Base/Residência da equipe, minimizando a Utilização perdida no final da tarde.`,
             );
           }
         }
