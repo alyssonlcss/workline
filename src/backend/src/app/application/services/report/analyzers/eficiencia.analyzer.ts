@@ -1,8 +1,8 @@
-import type { CsvRow } from '../csv-utils.js';
+﻿import type { CsvRow } from '../csv-utils.js';
 import type { EficienciaTeamAnalysis, EficienciaOrderEvidence, KpiInsight, GlobalAveragesMap } from '../types.js';
 import { createAccessor, parseNumber, normalizeToken, parseDateTimeBr, round2, percentile } from '../csv-utils.js';
 import { getLimit } from '../../../../infrastructure/config/env.js';
-import { enrichEficienciaEvidence } from './enrich-utils.js';
+import { enrichEficienciaEvidence } from './domain-enrichers.js';
 import { countDistinctDates, mergeEvidenceFlags } from './os-dia.analyzer.js';
 
 export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAverages?: GlobalAveragesMap): EficienciaTeamAnalysis[] {
@@ -12,13 +12,13 @@ export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[], glob
     }
 
     // 1. Get Eficiencia KPI insight and determine teams to analyze
-    const eficienciaKpi = kpis.find((k) => normalizeToken(k.kpi) === normalizeToken('Eficiência'));
+    const eficienciaKpi = kpis.find((k) => normalizeToken(k.kpi) === normalizeToken('EficiÃªncia'));
     if (!eficienciaKpi) {
-      console.log('[Eficiencia Analysis] Eficiência KPI not found in kpis:', kpis.map(k => k.kpi));
+      console.log('[Eficiencia Analysis] EficiÃªncia KPI not found in kpis:', kpis.map(k => k.kpi));
       return [];
     }
 
-    console.log('[Eficiencia Analysis] Found Eficiência KPI:', {
+    console.log('[Eficiencia Analysis] Found EficiÃªncia KPI:', {
       average: eficienciaKpi.average,
       topTeams: eficienciaKpi.topTeams,
       opportunityTeams: eficienciaKpi.opportunityTeams,
@@ -58,8 +58,8 @@ export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[], glob
     const trOrdemCol = deslocAcc.resolve(['TR Ordem', 'TR_Ordem']);
     const tempoPadraoCol = deslocAcc.resolve(['tempo_padrao', 'Tempo Padrao', 'Tempo_Padrao', 'TempoPadrao']);
     const hdTotalCol = deslocAcc.resolve(['HD Total', 'HD_Total']);
-    const dateCol = deslocAcc.resolve(['Data Referência', 'Data Referencia']);
-    const inicioIntervaloCol = deslocAcc.resolve(['Inicio_Intervalo', 'Inicio Intervalo', 'Início Intervalo', 'Início_Intervalo']);
+    const dateCol = deslocAcc.resolve(['Data ReferÃªncia', 'Data Referencia']);
+    const inicioIntervaloCol = deslocAcc.resolve(['Inicio_Intervalo', 'Inicio Intervalo', 'InÃ­cio Intervalo', 'InÃ­cio_Intervalo']);
     const fimIntervaloCol    = deslocAcc.resolve(['Fim_Intervalo', 'Fim Intervalo']);
 
     if (!teamCol || !aCaminhoCol || !noLocalCol || !liberadaCol) {
@@ -102,7 +102,7 @@ export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[], glob
     const result: EficienciaTeamAnalysis[] = [];
 
     for (const [team, { value: eficienciaValue, type: analysisType }] of teamsToAnalyze.entries()) {
-      // Get all orders for this team — try exact match first, then normalized fallback
+      // Get all orders for this team â€” try exact match first, then normalized fallback
       const teamNorm = normalizeToken(team);
       let teamRows = deslocRows.filter((row) => String(row[teamCol] ?? '').trim() === team);
       if (teamRows.length === 0) {
@@ -155,7 +155,7 @@ export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[], glob
       const polo = globalAverages?.teamAverages[team.toUpperCase()]?.polo;
       const TR_HD_THRESHOLD = (getLimit('LIMIT_TR_EXCEDE_HD_PCT', polo, 20)) / 100;
 
-      // Simulation: what would efficiency be if missing tempo_padrão were replaced with global avg TR?
+      // Simulation: what would efficiency be if missing tempo_padrÃ£o were replaced with global avg TR?
       const tempoPadraoVazioOrders: EficienciaOrderEvidence[] = [];
       let simSumTp = 0;
       let simSumTr = 0;
@@ -215,8 +215,8 @@ export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[], glob
           const hdPctTr = hdMin > 0 && trMin !== null && Number.isFinite(trMin) ? round2((trMin / hdMin) * 100) : 0;
           const orderFlags: EficienciaOrderEvidence['flags'] = [];
 
-          // TR muito baixo: TR < 20% do tempo_padrão OU TR < 20% da média global de TR
-          // TR muito baixo: evidência de falsa eficiência — apenas para top performers
+          // TR muito baixo: TR < 20% do tempo_padrÃ£o OU TR < 20% da mÃ©dia global de TR
+          // TR muito baixo: evidÃªncia de falsa eficiÃªncia â€” apenas para top performers
           const trIsValid = trMin !== null && Number.isFinite(trMin) && trMin > 0;
           const trMuitoBaixo = analysisType === 'top_performer' && trIsValid && (
             (tpMin !== null && Number.isFinite(tpMin) && tpMin > 0 && trMin! < tpMin * 0.20) &&
@@ -226,12 +226,12 @@ export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[], glob
             orderFlags.push('tr_muito_baixo');
           }
 
-          // deslocamento_curto: somente quando TR muito baixo E TL curto — apenas para top performers
+          // deslocamento_curto: somente quando TR muito baixo E TL curto â€” apenas para top performers
           if (trMuitoBaixo && shortDisplacementThreshold > 0 && tlMin !== null && Number.isFinite(tlMin) && tlMin > 0 && tlMin <= shortDisplacementThreshold) {
             orderFlags.push('deslocamento_curto');
           }
 
-          // TR excede HD E TR excede tempo_padrão — apenas para equipes abaixo da média
+          // TR excede HD E TR excede tempo_padrÃ£o â€” apenas para equipes abaixo da mÃ©dia
           if (analysisType === 'underperformer') {
             const trExcedeHd = hdMin > 0 && trMin !== null && Number.isFinite(trMin) && trMin > hdMin * TR_HD_THRESHOLD;
             const trExcedeTempoPadrao = tpMin !== null && Number.isFinite(tpMin) && tpMin > 0 &&
@@ -289,7 +289,7 @@ export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[], glob
             });
           }
 
-          // Vazio: order has TR but no tempo_padrão
+          // Vazio: order has TR but no tempo_padrÃ£o
           const isTpVazio = (tpMin === null || !Number.isFinite(tpMin) || tpMin <= 0) &&
             trMin !== null && Number.isFinite(trMin) && trMin > 0;
           if (isTpVazio) {
@@ -321,8 +321,8 @@ export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[], glob
       const flaggedOrdersMap = new Map(mergedFlaggedOrders.map((o) => [o.nr_ordem || `${o.despachada}|${o.a_caminho}`, o]));
 
       // Merge tempoPadraoVazioOrders into flaggedOrders:
-      // - if OS already in flaggedOrders → add 'tempo_padrao_vazio' flag
-      // - otherwise → append to flaggedOrders directly (all flags in one place)
+      // - if OS already in flaggedOrders â†’ add 'tempo_padrao_vazio' flag
+      // - otherwise â†’ append to flaggedOrders directly (all flags in one place)
       const tempoPadraoVazioDeduped = mergeEvidenceFlags(tempoPadraoVazioOrders);
       for (const order of tempoPadraoVazioDeduped) {
         const key = order.nr_ordem || `${order.despachada}|${order.a_caminho}`;
@@ -349,7 +349,7 @@ export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[], glob
         }
       }
 
-      // Ordenação estritamente decrescente pelo tempo de reparo
+      // OrdenaÃ§Ã£o estritamente decrescente pelo tempo de reparo
       finalAllMerged.sort((a, b) => {
         const trA = a.tr_ordem_min ?? 0;
         const trB = b.tr_ordem_min ?? 0;
@@ -367,7 +367,7 @@ export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[], glob
         }
       }
 
-      // Team-level flags — computed after order loop
+      // Team-level flags â€” computed after order loop
       const flags: EficienciaTeamAnalysis['flags'] = [];
       const countDeslocamentoCurtoCalc = mergedFlaggedOrders.filter((o) => o.flags.includes('deslocamento_curto')).length;
       if (countDeslocamentoCurtoCalc > 0) {

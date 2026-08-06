@@ -1,7 +1,7 @@
-import type { CsvRow } from '../csv-utils.js';
+﻿import type { CsvRow } from '../csv-utils.js';
 import type { PrimeiroLoginTeamAnalysis, PrimeiroLoginDayEvidence, KpiInsight, GlobalAveragesMap } from '../types.js';
 import { createAccessor, parseNumber, normalizeToken, round2, parseDateTimeBr, minutesBetween } from '../csv-utils.js';
-import { enrichLoginEvidence } from './enrich-utils.js';
+import { enrichLoginEvidence } from './domain-enrichers.js';
 import { countDistinctDates } from './os-dia.analyzer.js';
 
 export function analyzePrimeiroLogin(deslocRows: CsvRow[], kpis: KpiInsight[], globalAverages?: GlobalAveragesMap): PrimeiroLoginTeamAnalysis[] {
@@ -9,7 +9,7 @@ export function analyzePrimeiroLogin(deslocRows: CsvRow[], kpis: KpiInsight[], g
 
     const LOGIN_META = 8;
 
-    const loginKpi = kpis.find((k) => normalizeToken(k.kpi) === normalizeToken('1º Login'));
+    const loginKpi = kpis.find((k) => normalizeToken(k.kpi) === normalizeToken('1Âº Login'));
     if (!loginKpi) return [];
 
     const teamsToAnalyze = new Map<string, { value: number }>();
@@ -22,14 +22,14 @@ export function analyzePrimeiroLogin(deslocRows: CsvRow[], kpis: KpiInsight[], g
 
     const deslocAcc = createAccessor(deslocRows[0]);
     const teamCol            = deslocAcc.resolve(['Equipe']);
-    const dateCol            = deslocAcc.resolve(['Data Referência', 'Data Referencia']);
-    const inicioCalCol       = deslocAcc.resolve(['Inicio Calendario', 'Início Calendário', 'Inicio Calendário', 'Início Calendario']);
+    const dateCol            = deslocAcc.resolve(['Data ReferÃªncia', 'Data Referencia']);
+    const inicioCalCol       = deslocAcc.resolve(['Inicio Calendario', 'InÃ­cio CalendÃ¡rio', 'Inicio CalendÃ¡rio', 'InÃ­cio Calendario']);
     const logInCorrigidoCol  = deslocAcc.resolve(['Log In Corrigido', 'LogIn Corrigido', 'Login Corrigido']);
-    const primeiroLoginCorCol = deslocAcc.resolve(['1º Login Corrigido', '1o Login Corrigido']);
-    const primeiroLoginCol   = deslocAcc.resolve(['1º Login', '1o Login']);
+    const primeiroLoginCorCol = deslocAcc.resolve(['1Âº Login Corrigido', '1o Login Corrigido']);
+    const primeiroLoginCol   = deslocAcc.resolve(['1Âº Login', '1o Login']);
 
     // Resolves the login-delay in minutes for a given row.
-    // Priority: pre-computed numeric column → time-difference fallback (Log In Corrigido − Inicio Calendário).
+    // Priority: pre-computed numeric column â†’ time-difference fallback (Log In Corrigido âˆ’ Inicio CalendÃ¡rio).
     const resolveLoginMin = (row: CsvRow): number | null => {
       if (primeiroLoginCorCol) {
         const v = parseNumber(String(row[primeiroLoginCorCol] ?? ''));
@@ -152,4 +152,4 @@ export function analyzePrimeiroLogin(deslocRows: CsvRow[], kpis: KpiInsight[], g
     return result.sort((a, b) => b.primeiroLoginValue - a.primeiroLoginValue);
   }
 
-  // ─── 1º Desloc. Analyzer ──────────────────────────────────────────────────
+  // â”€â”€â”€ 1Âº Desloc. Analyzer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

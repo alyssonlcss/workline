@@ -2,7 +2,8 @@ import type { CsvRow } from '../csv-utils.js';
 import type { UtilizacaoTeamAnalysis, UtilizacaoOrderEvidence, KpiInsight, GlobalAveragesMap } from '../types.js';
 import { createAccessor, parseNumber, normalizeToken, round2, parseDateTimeBr, minutesBetween, applyIntervalDiscount, safeSum } from '../csv-utils.js';
 import { calculateTempPrepValue, calculateSemOsValue } from '../builders/team-stats.builder.js';
-import { enrichUtilizacaoEvidence, nfBr } from './enrich-utils.js';
+import { enrichUtilizacaoEvidence } from './domain-enrichers.js';
+import { nfBr } from './formatters.js';
 import { countDistinctDates, mergeEvidenceFlags } from './os-dia.analyzer.js';
 import { getLimit } from '../../../../infrastructure/config/env.js';
 export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[], globalAverages?: GlobalAveragesMap): UtilizacaoTeamAnalysis[] {

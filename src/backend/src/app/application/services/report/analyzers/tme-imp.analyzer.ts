@@ -1,7 +1,7 @@
-import type { CsvRow } from '../csv-utils.js';
+﻿import type { CsvRow } from '../csv-utils.js';
 import type { TmeImpTeamAnalysis, TmeImpOrderEvidence, KpiInsight, GlobalAveragesMap } from '../types.js';
 import { createAccessor, parseNumber, normalizeToken, round2, parseDateTimeBr, minutesBetween } from '../csv-utils.js';
-import { enrichTmeImpEvidence } from './enrich-utils.js';
+import { enrichTmeImpEvidence } from './domain-enrichers.js';
 import { countDistinctDates } from './os-dia.analyzer.js';
 
 export function analyzeTmeImp(deslocRows: CsvRow[], kpis: KpiInsight[], globalAverages?: GlobalAveragesMap): TmeImpTeamAnalysis[] {
@@ -23,7 +23,7 @@ export function analyzeTmeImp(deslocRows: CsvRow[], kpis: KpiInsight[], globalAv
 
     const deslocAcc = createAccessor(deslocRows[0]);
     const teamCol      = deslocAcc.resolve(['Equipe']);
-    const dateCol      = deslocAcc.resolve(['Data Referência', 'Data Referencia']);
+    const dateCol      = deslocAcc.resolve(['Data ReferÃªncia', 'Data Referencia']);
     const nrOrdemCol   = deslocAcc.resolve(['Nr_Ordem', 'Nr Ordem', 'Numero Ordem']);
     const classeCol    = deslocAcc.resolve(['CLASSE', 'Classe']);
     const causaCol     = deslocAcc.resolve(['CAUSA', 'Causa']);
@@ -160,7 +160,7 @@ export function analyzeTmeImp(deslocRows: CsvRow[], kpis: KpiInsight[], globalAv
         }
       }
 
-      // Ordenação estritamente decrescente pelo tempo de reparo
+      // OrdenaÃ§Ã£o estritamente decrescente pelo tempo de reparo
       allMergedTme.sort((a, b) => b.tr_ordem_min - a.tr_ordem_min);
 
       const finalFlagged: TmeImpOrderEvidence[] = [];
@@ -194,4 +194,4 @@ export function analyzeTmeImp(deslocRows: CsvRow[], kpis: KpiInsight[], globalAv
     return result.sort((a, b) => b.tmeImpValue - a.tmeImpValue);
   }
 
-  // ─── 1º Login Analyzer ────────────────────────────────────────────────────
+  // â”€â”€â”€ 1Âº Login Analyzer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

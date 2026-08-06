@@ -19,10 +19,11 @@ import {
 } from './report/builders/kpi-insights.builder.js';
 import { buildGlobalAverages } from './report/builders/global-averages.builder.js';
 import { calculateTempPrepSemOs, buildTeamMetrics } from './report/builders/team-stats.builder.js';
-import {
-  buildDeviationInsights, buildCrossedInsights, buildActionPlans,
-  buildTeamScorecard, buildExecutiveSummary,
-} from './report/builders/report-summary.builder.js';
+import { buildDeviationInsights } from './report/builders/deviation-insights.builder.js';
+import { buildCrossedInsights } from './report/builders/crossed-insights.builder.js';
+import { buildActionPlans } from './report/builders/action-plans.builder.js';
+import { buildTeamScorecard } from './report/builders/team-scorecard.builder.js';
+import { buildExecutiveSummary } from './report/builders/executive-summary.builder.js';
 import { buildMarkdownReport } from './report/builders/markdown.builder.js';
 import { analyzeOsDia } from './report/analyzers/os-dia.analyzer.js';
 import { analyzeEficiencia } from './report/analyzers/eficiencia.analyzer.js';
