@@ -5,16 +5,21 @@ O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 
 ## [1.3.0] - 2026-08-06
 
-Esta release consolida a padronização do nome do projeto para **WorkLine** e introduz a gestão dinâmica de limites operacionais e sessões de usuários.
+Esta é uma grande atualização ("Mega Release") que renomeia oficialmente o projeto para **WorkLine** e adiciona uma arquitetura robusta de Relatórios em PDF, novos Analisadores de KPI e várias melhorias de Qualidade de Vida (QoL) no Setup.
 
 ### Adicionado
-- **Limites Dinâmicos de KPIs:** Migração da configuração dos limites de "Red Flag" (ex: tempo máximo de deslocamento e ociosidade) para o arquivo `polos.json`, suportando configuração global e por polo específico.
-- **Serviço de Sessão (`SessionService`):** Implementação de gerenciamento persistente e ciclo de vida de sessões de usuário no backend.
+- **Dashboard PDF Service:** Um novo e poderoso gerador de relatórios analíticos em PDF baseados em cronogramas (timeline), espelhando com perfeição a visualização da UI Web.
+- **Analisadores Modulares de KPI:** Novos módulos de inteligência para relatórios operacionais (ex: *Recurrent Warnings Analyzer*), calculando segmentos de tempo, ociosidades e eficiências com alta precisão.
+- **Tema "Semáforo":** Novas paletas de cores intuitivas (verde, amarelo, vermelho) aplicadas aos gráficos de cronograma (timeline) e relatórios de KPIs.
+- **Sincronização UI vs PDF:** Cumprimento da regra de ouro do projeto (Paridade Web vs PDF) garantindo que todas as *Red Flags* (excesso de deslocamento, ociosidades, ineficiências) processadas na interface gráfica também constem perfeitamente espelhadas na rotina de exportação dos PDFs.
+- **Auto-Run no Setup:** O script `setup.bat` agora pergunta se você deseja rodar a aplicação imediatamente após instalar/atualizar as dependências, e a "Opção 3" foi promovida a um *Hard Reset* (limpando todos os `node_modules` e `package-lock.json`).
 
 ### Alterado
 - **Nome do Projeto:** Oficialização do nome da aplicação como **WorkLine** em todos os arquivos de UI, PDFs, `package.json` e documentações.
-- **Menu do Setup:** Remoção da opção interativa de configuração do Spotfire do menu principal do `setup.bat`. O script agora gerencia a configuração automaticamente caso o `.env` esteja ausente ou incompleto.
-- **Limpeza de Configurações:** O arquivo de configuração central foi consolidado em `src/backend/polos.json` com remoção da versão estática da raiz. Além disso, credenciais de URL sensíveis e chaves não utilizadas (ex: `SPOTFIRE_LOGIN_URL`) foram removidas do arquivo `.env.example`.
+- **Limites Dinâmicos de KPIs:** Migração da configuração dos limites de "Red Flag" para o arquivo dinâmico `polos.json` (antigo `bases.json`), suportando configurações globais e limites customizados por polo específico. A base foi anonimizada por segurança.
+- **Retenção de Arquivos (TTL):** O tempo de vida (TTL) do *Garbage Collector* de arquivos temporários de extração foi estendido para **24 horas**, evitando limpezas prematuras de sessões longas.
+- **Abertura do Edge:** A incômoda abertura automática do navegador Edge em segundo plano ao rodar `npm run dev` foi removida, simplificando a inicialização do backend para desenvolvedores.
+- **Menu do Setup:** Remoção da opção interativa de configuração do Spotfire do menu principal do `setup.bat`. O script agora gerencia as credenciais automaticamente, e chaves de URLs sensíveis (ex: `SPOTFIRE_LOGIN_URL`) foram permanentemente erradicadas do `.env.example`.
 
 ## [1.2.0] - 2026-07-29
 
