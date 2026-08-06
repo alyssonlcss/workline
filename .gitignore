@@ -70,3 +70,6 @@ fix.js
 refactor*.js
 wa*.js
 report_*.json
+
+# IA Agent Configuration
+.agents/
