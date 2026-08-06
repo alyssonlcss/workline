@@ -7,6 +7,7 @@ import {
   PrimeiroDeslocTeamAnalysis, 
   PrimeiroLoginTeamAnalysis 
 } from '../types.js';
+import { getLimit } from '../../../../infrastructure/config/env.js';
 
 export function buildRecurrentWarnings(
   teamScorecard: TeamKpiScorecard[],
@@ -18,14 +19,15 @@ export function buildRecurrentWarnings(
 ): TeamRecurrentWarning[] {
   const warnings: TeamRecurrentWarning[] = [];
 
-  const SEM_OS_LIMIT = Number(process.env.SEM_OS_LIMIT) || 10;
-  const CCI_SEM_OS_LIMIT = Number(process.env.LIMIT_CCI_SEM_OS_MIN) || 15;
+  const getSemOsLimit = (polo?: string) => getLimit('LIMIT_SEM_OS_MIN', polo, 10);
+  const getCciSemOsLimit = (polo?: string) => getLimit('LIMIT_CCI_SEM_OS_MIN', polo, 15);
 
   for (const sc of teamScorecard) {
     const teamDesvios: { name: string; priority: number; avgMin: number; count: number; globalAvg: number }[] = [];
     const util = utilizacaoAnalysis.find((u) => u.team === sc.team);
     const diasTrab = util?.totalJornadas || retornoBaseAnalysis.find(a => a.team === sc.team)?.totalDays || primeiroDeslocAnalysis.find(a => a.team === sc.team)?.totalDays || 1;
     const totalOrders = util?.totalOrders || tmeImpAnalysis.find(a => a.team === sc.team)?.totalOrders || 0;
+    const polo = util?.polo;
 
     let entreOsData: TeamRecurrentWarning['entreOs'] = undefined;
 
@@ -40,6 +42,7 @@ export function buildRecurrentWarnings(
       // 2. Desl. Intervalo (desloc_intervalo_alto)
       const intervalosOverLimit = util.flaggedOrders.filter(o => o.flags?.includes('desloc_intervalo_alto'));
       if (intervalosOverLimit.length > 0) {
+        const SEM_OS_LIMIT = getSemOsLimit(polo);
         const badIntervalos = intervalosOverLimit.flatMap(o => o.sem_os_details?.filter(d => d.type === 'intervalo_deslocamento' && d.min >= SEM_OS_LIMIT) || []);
         const avg = Math.round(badIntervalos.reduce((acc, val) => acc + val.min, 0) / (badIntervalos.length || 1));
         const globalAvg = Math.round(badIntervalos.reduce((acc, val) => acc + (val.global_avg_min || 0), 0) / (badIntervalos.length || 1));
@@ -48,6 +51,7 @@ export function buildRecurrentWarnings(
 
       // 3. Sem OS (entre_ordens) -> Apenas para CCI
       const entreOsAll = util.flaggedOrders.flatMap(o => o.sem_os_details?.filter(d => d.type === 'entre_ordens' && d.min > 0) || []);
+      const CCI_SEM_OS_LIMIT = getCciSemOsLimit(polo);
       const entreOsOverCCI = entreOsAll.filter(d => d.min > CCI_SEM_OS_LIMIT);
       
       if (entreOsOverCCI.length > 0) {

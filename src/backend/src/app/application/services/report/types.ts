@@ -227,6 +227,7 @@ export interface OsDiaOrderEvidence {
     label?: string;
     /** Pre-computed body text describing the detail. */
     body?: string;
+    polo?: string;
   }>;
   retorno_excedente_details?: {
     type: 'retorno_excedente';
@@ -383,6 +384,7 @@ export interface UtilizacaoOrderEvidence {
     desp_anterior?: string;
     /** Label for the from-point (e.g. 'Lib. Anterior', 'Despachada', 'Fim Intervalo'). */
     from_label?: string;
+    polo?: string;
   }>;
   retorno_excedente_details?: {
     type: 'retorno_excedente';
@@ -420,6 +422,7 @@ export interface UtilizacaoOrderEvidence {
 
 export interface UtilizacaoTeamAnalysis {
   team: string;
+  polo?: string;
   utilizacaoValue: number;
   metaTarget: number;
   gap: number;

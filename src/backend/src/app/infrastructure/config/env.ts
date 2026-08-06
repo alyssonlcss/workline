@@ -102,10 +102,12 @@ if (!resolvedAnalysisUrl) {
 
 export type BasesConfig = {
   extraTeamTags?: string[];
+  limits?: Record<string, number>;
   polos: Array<{
     name: string;
     matchType: 'direct_prefix' | 'infix_type_with_base_prefix';
     ignoreTeamTags?: string[];
+    limits?: Record<string, number>;
     typeIdentifiers?: { propria: string[]; parceira: string[] };
     bases: Array<{
       name: string;
@@ -151,5 +153,18 @@ export const environment = {
     extraTeamTags: basesConfig.extraTeamTags || [],
   },
 } as const;
+
+export function getLimit(key: string, poloName?: string, fallback: number = 0): number {
+  if (poloName) {
+    const poloConfig = basesConfig.polos.find(p => p.name === poloName);
+    if (poloConfig?.limits && typeof poloConfig.limits[key] === 'number') {
+      return poloConfig.limits[key];
+    }
+  }
+  if (basesConfig.limits && typeof basesConfig.limits[key] === 'number') {
+    return basesConfig.limits[key];
+  }
+  return fallback;
+}
 
 export type Environment = typeof environment;

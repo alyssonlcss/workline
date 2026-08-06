@@ -1,6 +1,7 @@
 import type { CsvRow } from '../csv-utils.js';
 import type { EficienciaTeamAnalysis, EficienciaOrderEvidence, KpiInsight, GlobalAveragesMap } from '../types.js';
 import { createAccessor, parseNumber, normalizeToken, parseDateTimeBr, round2, percentile } from '../csv-utils.js';
+import { getLimit } from '../../../../infrastructure/config/env.js';
 import { enrichEficienciaEvidence } from './enrich-utils.js';
 import { countDistinctDates, mergeEvidenceFlags } from './os-dia.analyzer.js';
 
@@ -151,7 +152,8 @@ export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[], glob
       // 5. Thresholds
       const shortDisplacementThreshold = globalAvgDeslocamento > 0 ? globalAvgDeslocamento * 0.25 : 0;
       const lowTrThreshold = globalAvgExecucao > 0 ? globalAvgExecucao * 0.20 : 0;
-      const TR_HD_THRESHOLD = (Number(process.env['LIMIT_TR_EXCEDE_HD_PCT']) || 20) / 100;
+      const polo = globalAverages?.teamAverages[team.toUpperCase()]?.polo;
+      const TR_HD_THRESHOLD = (getLimit('LIMIT_TR_EXCEDE_HD_PCT', polo, 20)) / 100;
 
       // Simulation: what would efficiency be if missing tempo_padrão were replaced with global avg TR?
       const tempoPadraoVazioOrders: EficienciaOrderEvidence[] = [];

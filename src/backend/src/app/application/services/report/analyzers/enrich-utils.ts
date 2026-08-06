@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Alysson Pinheiro. Todos os direitos reservados.
 // Software proprietário e confidencial. Uso não autorizado é proibido.
 import type { OsDiaOrderEvidence, EficienciaOrderEvidence, TmeImpOrderEvidence, PrimeiroLoginDayEvidence, PrimeiroDeslocDayEvidence, RetornoBaseDayEvidence, UtilizacaoOrderEvidence, GlobalAveragesMap } from '../types.js';
+import { getLimit } from '../../../../infrastructure/config/env.js';
 
 export function nfBr(v: number, minDec = 0, maxDec = 0): string {
     return v.toLocaleString('pt-BR', { minimumFractionDigits: minDec, maximumFractionDigits: maxDec });
@@ -60,19 +61,19 @@ export function getAvgText(team: string | undefined, globalAverages: GlobalAvera
   return ` | Média da Equipe: ${nfBr(tAvg, 0, 1)} min | Média da Base (${base}): ${nfBr(bAvg, 0, 1)} min | Média do Polo (${polo}): ${nfBr(pAvg, 0, 1)} min`;
 }
 
-const getTempPrepLimit = () => Number(process.env['LIMIT_TEMP_PREP_MIN']) || 10;
-const getSemOsLimit = () => Number(process.env['LIMIT_SEM_OS_MIN']) || 10;
-const getPrimeiroDeslocLimit = () => Number(process.env['LIMIT_PRIMEIRO_DESLOC_MIN']) || 25;
-const getTriagemLimit = () => Number(process.env['LIMIT_TRIAGEM_MIN']) || 10;
-const getCalendarioErradoLimit = () => Number(process.env['LIMIT_CALENDARIO_ERRADO_MIN']) || 15;
-const getLoginAtrasadoLimit = () => Number(process.env['LIMIT_LOGIN_ATRASADO_MIN']) || 8;
+const getTempPrepLimit = (polo?: string) => getLimit('LIMIT_TEMP_PREP_MIN', polo, 10);
+const getSemOsLimit = (polo?: string) => getLimit('LIMIT_SEM_OS_MIN', polo, 10);
+const getPrimeiroDeslocLimit = (polo?: string) => getLimit('LIMIT_PRIMEIRO_DESLOC_MIN', polo, 25);
+const getTriagemLimit = (polo?: string) => getLimit('LIMIT_TRIAGEM_MIN', polo, 10);
+const getCalendarioErradoLimit = (polo?: string) => getLimit('LIMIT_CALENDARIO_ERRADO_MIN', polo, 15);
+const getLoginAtrasadoLimit = (polo?: string) => getLimit('LIMIT_LOGIN_ATRASADO_MIN', polo, 8);
 
   /** Computes a sem_os_details item's full display text (label: body). */
 export function semOsDetailText(d: {
     type: string; min: number; from?: string; to?: string;
     global_avg_min?: number; above_avg_pct?: number;
     interval_discounted?: boolean; retorno_base_discounted?: number;
-    retorno_base_used_row?: boolean; desp_anterior?: string; from_label?: string;
+    retorno_base_used_row?: boolean; desp_anterior?: string; from_label?: string; polo?: string;
   }): string {
     const fmtAvg = (pct: number | undefined, avg: number | undefined): string => {
       if (!Number.isFinite(pct) || !Number.isFinite(avg) || (avg ?? 0) <= 0) return '';
@@ -81,13 +82,13 @@ export function semOsDetailText(d: {
     };
     switch (d.type) {
       case 'inicio_jornada': {
-        const pctIJ = Math.round((d.min - getSemOsLimit()) / getSemOsLimit() * 100);
-        return `1º Despacho: ${d.min} min do Início Calendário (${d.from ?? '—'}) até o primeiro despacho (${d.to ?? '—'}) — ${pctIJ}% acima do limite (${getSemOsLimit()} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
+        const pctIJ = Math.round((d.min - getSemOsLimit(d.polo)) / getSemOsLimit(d.polo) * 100);
+        return `1º Despacho: ${d.min} min do Início Calendário (${d.from ?? '—'}) até o primeiro despacho (${d.to ?? '—'}) — ${pctIJ}% acima do limite (${getSemOsLimit(d.polo)} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
       }
       case 'entre_ordens': {
         const mEO = Math.round(d.min);
-        const pctEO = Math.round((mEO - getSemOsLimit()) / getSemOsLimit() * 100);
-        return `Entre OS: ${mEO} min sem nova OS — Lib. Anterior (${d.from ?? '—'})${d.desp_anterior ? ' · Desp. Anterior (' + d.desp_anterior + ')' : ''} até Despachada (${d.to ?? '—'})${d.interval_discounted ? ' — intervalo descontado' : ''} — ${pctEO}% acima do limite (${getSemOsLimit()} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
+        const pctEO = Math.round((mEO - getSemOsLimit(d.polo)) / getSemOsLimit(d.polo) * 100);
+        return `Entre OS: ${mEO} min sem nova OS — Lib. Anterior (${d.from ?? '—'})${d.desp_anterior ? ' · Desp. Anterior (' + d.desp_anterior + ')' : ''} até Despachada (${d.to ?? '—'})${d.interval_discounted ? ' — intervalo descontado' : ''} — ${pctEO}% acima do limite (${getSemOsLimit(d.polo)} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
       }
       case 'retorno_excedente': {
         const fromLabel = d.from_label ?? 'última Liberada';
@@ -95,11 +96,9 @@ export function semOsDetailText(d: {
         const globalAvgMin: number | undefined = (d as any).global_avg_min;
         if (d.retorno_base_discounted != null) {
           if (excessMin != null) {
-            // Case C: row present + excess — label must be "Retorno Excedente"
             const globalPart = globalAvgMin != null ? ` (${nfBr(globalAvgMin)} min)` : '';
             return `Retorno Excedente: ${nfBr(excessMin)} min acima da média geral de Retorno a base${globalPart} — Retorno a base: ${nfBr(d.min)} min entre ${fromLabel} (${d.from ?? '—'}) e Log Off (${d.to ?? '—'}).`;
           }
-          // Case B: row present, no excess — neutral info segment
           return `Retorno a base: ${nfBr(d.min)} min entre ${fromLabel} (${d.from ?? '—'}) e Log Off (${d.to ?? '—'}).`;
         }
         const excessText = excessMin != null
@@ -109,9 +108,9 @@ export function semOsDetailText(d: {
       }
       case 'intervalo_deslocamento': {
         const mID = Math.round(d.min);
-        const pctID = Math.round((mID - getSemOsLimit()) / getSemOsLimit() * 100);
+        const pctID = Math.round((mID - getSemOsLimit(d.polo)) / getSemOsLimit(d.polo) * 100);
         const fromLabel = d.from_label ?? 'Lib. Anterior';
-        return `Desl. Intervalo: ${mID} min entre ${fromLabel} (${d.from ?? '—'}) e Início Intervalo (${d.to ?? '—'}) — ${pctID}% acima do limite (${getSemOsLimit()} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
+        return `Desl. Intervalo: ${mID} min entre ${fromLabel} (${d.from ?? '—'}) e Início Intervalo (${d.to ?? '—'}) — ${pctID}% acima do limite (${getSemOsLimit(d.polo)} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
       }
       default:
         return `${d.type}: ${d.min} min (${d.from ?? '—'} → ${d.to ?? '—'})`;
@@ -119,6 +118,8 @@ export function semOsDetailText(d: {
   }
 
 export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string, globalAverages?: GlobalAveragesMap): OsDiaOrderEvidence[] {
+    const teamMap = team ? globalAverages?.teamAverages[team.toUpperCase()] : undefined;
+    const polo = teamMap?.polo;
     const parseDt = (s: string): number => {
       const parts = s.split(' ');
       if (parts.length < 2) return 0;
@@ -128,7 +129,6 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string,
     };
 
     return orders.map((ev) => {
-      // Fix for missing flags: synthesize based on exact frontend visual segments
       if (ev.inicio_intervalo) {
         const iniTs = parseDt(ev.inicio_intervalo);
         if (iniTs > 0) {
@@ -144,7 +144,7 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string,
             const best = candidates[0];
             const duration = Math.round((iniTs - best.ts) / 60000);
             
-            if (duration >= getSemOsLimit()) {
+            if (duration >= getSemOsLimit(polo)) {
               ev.sem_os_details = ev.sem_os_details ?? [];
               if (!ev.sem_os_details.some(d => d.type === 'intervalo_deslocamento')) {
                 ev.sem_os_details.push({
@@ -152,7 +152,8 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string,
                   min: duration,
                   from: best.raw,
                   to: ev.inicio_intervalo,
-                  from_label: best.label
+                  from_label: best.label,
+                  polo
                 });
               }
               if (!ev.flags.includes('desloc_intervalo_alto')) ev.flags.push('desloc_intervalo_alto');
@@ -175,7 +176,7 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string,
             const best = candidates[0];
             const duration = Math.round((despTs - best.ts) / 60000);
             
-            if (duration >= getSemOsLimit()) {
+            if (duration >= getSemOsLimit(polo)) {
               ev.sem_os_details = ev.sem_os_details ?? [];
               if (!ev.sem_os_details.some(d => d.type === 'entre_ordens' && d.from === best.raw)) {
                 ev.sem_os_details.push({
@@ -183,7 +184,8 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string,
                   min: duration,
                   from: best.raw,
                   to: ev.despachada,
-                  from_label: best.label
+                  from_label: best.label,
+                  polo
                 });
               }
               if (!ev.flags.includes('sem_os_alto')) ev.flags.push('sem_os_alto');
@@ -192,13 +194,11 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string,
         }
       }
 
-      // Synthesize intervalo_por_ultimo if interval is taken at end of shift
       if (ev.fim_intervalo) {
         const fInt = parseDt(ev.fim_intervalo);
         const aCam = ev.a_caminho ? parseDt(ev.a_caminho) : 0;
         const desp = ev.despachada ? parseDt(ev.despachada) : 0;
         
-        // Interval is ONLY 'por ultimo' if it didn't precede a productive event (A Caminho / Despachada)
         if (fInt > 0 && (aCam === 0 || fInt > aCam) && (desp === 0 || fInt > desp)) {
           const isEndInterval = ev.retorno_excedente_details?.from === ev.fim_intervalo ||
                                 ev.sem_os_details?.some((d: Record<string, any>) => d['type'] === 'fim_jornada' && d['from'] === ev.fim_intervalo) ||
@@ -211,18 +211,17 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string,
         }
       }
 
-      // Synthesize calendario_errado or login_atrasado (exclusive to 1st OS)
       const logInVal = (ev as any).log_in_corrigido || (ev as any).log_in;
       if (!ev.prev_liberada && ev.inicio_calendario && logInVal) {
         const icalTs = parseDt(ev.inicio_calendario);
         const linTs = parseDt(logInVal);
         if (icalTs > 0 && linTs > 0) {
           const earlyMin = Math.round((icalTs - linTs) / 60000);
-          if (earlyMin > getCalendarioErradoLimit()) {
+          if (earlyMin > getCalendarioErradoLimit(polo)) {
             if (!ev.flags.includes('calendario_errado' as any)) {
               ev.flags.push('calendario_errado' as any);
             }
-          } else if (earlyMin < -getLoginAtrasadoLimit()) {
+          } else if (earlyMin < -getLoginAtrasadoLimit(polo)) {
             if (!ev.flags.includes('login_atrasado' as any)) {
               ev.flags.push('login_atrasado' as any);
             }
@@ -234,7 +233,6 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string,
       for (const flag of ev.flags) {
         switch (flag as string) {
           case 'tr_excede_hd': {
-            // Compute effective TR by subtracting the interval when it falls within the repair window.
             let trEfetivo = ev.tr_ordem_min;
             let intervalNote = '';
             if (ev.no_local && ev.inicio_intervalo && ev.fim_intervalo) {
@@ -244,7 +242,6 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string,
               const liberadaTs = parseDt(ev.liberada);
               if (noLocalTs > 0 && iniIntTs > 0 && fimIntTs > 0 && liberadaTs > 0 &&
                   iniIntTs >= noLocalTs && fimIntTs <= liberadaTs) {
-                // Effective = Fim Intervalo → Liberada (the actual "Reparo" segment).
                 trEfetivo = Math.round((liberadaTs - fimIntTs) / 60000);
                 const totalDiscounted = ev.tr_ordem_min - trEfetivo;
                 intervalNote = ` (efetivo: ${trEfetivo} min, descontados ${totalDiscounted} min)`;
@@ -266,7 +263,6 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string,
               const liberadaTs = parseDt(ev.liberada || '');
               if (noLocalTs > 0 && iniIntTs > 0 && fimIntTs > 0 && liberadaTs > 0 &&
                   iniIntTs >= noLocalTs && fimIntTs <= liberadaTs) {
-                // Effective = Fim Intervalo → Liberada (the actual "Reparo" segment).
                 trEfetivo = Math.round((liberadaTs - fimIntTs) / 60000);
                 const totalDiscounted = ev.tr_ordem_min - trEfetivo;
                 intervalNote = ` (efetivo: ${trEfetivo} min, descontados ${totalDiscounted} min)`;
@@ -283,17 +279,18 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string,
             break;
           case 'temp_prep_alto': {
             const tempPrepMin = ev.temp_prep_os_min ?? 0;
-            const pct = Math.round((tempPrepMin - getTempPrepLimit()) / getTempPrepLimit() * 100);
+            const limit = getTempPrepLimit(polo);
+            const pct = Math.round((tempPrepMin - limit) / limit * 100);
             const subject = ev.prev_liberada
               ? 'a Despachada e o registro de saída nesta OS'
               : 'a Despachada e o registro de saída desta 1ª OS';
-            alertTexts[flag] = `o técnico levou ${tempPrepMin} min entre ${subject} — ${pct}% acima do limite de ${getTempPrepLimit()} min. Esse tempo representa espera antes de se deslocar para o próximo atendimento.${getAvgText(team, globalAverages, 'temp_prep')}`;
+            alertTexts[flag] = `o técnico levou ${tempPrepMin} min entre ${subject} — ${pct}% acima do limite de ${limit} min. Esse tempo representa espera antes de se deslocar para o próximo atendimento.${getAvgText(team, globalAverages, 'temp_prep')}`;
             break;
           }
           case 'sem_os_alto': {
             const detail = ev.sem_os_details?.find(d => d.type === 'entre_ordens');
-            const minVal = Math.round(detail?.min ?? ev.sem_os_total_min ?? getSemOsLimit());
-            alertTexts[flag] = `${minVal} min sem OS registrada — acima do limite de ${getSemOsLimit()} min. Esse tempo representa intervalos ociosos em que o técnico não estava atendendo nem a caminho de um chamado.${getAvgText(team, globalAverages, 'sem_os')}`;
+            const minVal = Math.round(detail?.min ?? ev.sem_os_total_min ?? getSemOsLimit(polo));
+            alertTexts[flag] = `${minVal} min sem OS registrada — acima do limite de ${getSemOsLimit(polo)} min. Esse tempo representa intervalos ociosos em que o técnico não estava atendendo nem a caminho de um chamado.${getAvgText(team, globalAverages, 'sem_os')}`;
             break;
           }
           case 'inicio_jornada_alto': {
@@ -303,17 +300,17 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string,
               const logInVal = (ev as any).log_in_corrigido || (ev as any).log_in;
               const icalTs = parseDt(ev.inicio_calendario || '');
               const linTs = parseDt(logInVal || '');
-              const delayMin = icalTs > 0 && linTs > 0 ? Math.round((linTs - icalTs) / 60000) : getLoginAtrasadoLimit();
+              const delayMin = icalTs > 0 && linTs > 0 ? Math.round((linTs - icalTs) / 60000) : getLoginAtrasadoLimit(polo);
               const waitMin = Math.max(0, totalMin - delayMin);
               alertTexts[flag] = `a distribuição de OS ocorre apenas após o acesso ao sistema. Como a equipe iniciou com ${nfBr(delayMin)} min de atraso no Log In, o despacho da primeira OS foi naturalmente impactado. No total, passaram-se ${nfBr(totalMin)} min entre o início da jornada programada e o recebimento da OS (sendo ${nfBr(waitMin)} min de espera após o acesso).${getAvgText(team, globalAverages, 'sem_os')}`;
             } else {
-              alertTexts[flag] = `${nfBr(totalMin)} min do Início Calendário até o primeiro despacho — acima do limite de ${getSemOsLimit()} min. Esse tempo representa espera ociosa no início da jornada.${getAvgText(team, globalAverages, 'sem_os')}`;
+              alertTexts[flag] = `${nfBr(totalMin)} min do Início Calendário até o primeiro despacho — acima do limite de ${getSemOsLimit(polo)} min. Esse tempo representa espera ociosa no início da jornada.${getAvgText(team, globalAverages, 'sem_os')}`;
             }
             break;
           }
           case 'desloc_intervalo_alto': {
             const detail = ev.sem_os_details?.find(d => d.type === 'intervalo_deslocamento');
-            alertTexts[flag] = `${Math.round(detail?.min ?? 0)} min de Deslocamento de Intervalo — acima do limite de ${getSemOsLimit()} min. Esse tempo ocioso ocorreu antes de iniciar o deslocamento ou durante a pausa.${getAvgText(team, globalAverages, 'sem_os')}`;
+            alertTexts[flag] = `${Math.round(detail?.min ?? 0)} min de Deslocamento de Intervalo — acima do limite de ${getSemOsLimit(polo)} min. Esse tempo ocioso ocorreu antes de iniciar o deslocamento ou durante a pausa.${getAvgText(team, globalAverages, 'sem_os')}`;
             break;
           }
           case 'intervalo_por_ultimo':
@@ -323,16 +320,16 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string,
             const logInVal = (ev as any).log_in_corrigido || (ev as any).log_in;
             const icalTs = parseDt(ev.inicio_calendario || '');
             const linTs = parseDt(logInVal || '');
-            const delayMin = icalTs > 0 && linTs > 0 ? Math.round((linTs - icalTs) / 60000) : getLoginAtrasadoLimit();
-            alertTexts[flag] = `a equipe registrou acesso ao sistema (Log In) com ${delayMin} min de atraso em relação ao Início Calendário (acima do limite de ${getLoginAtrasadoLimit()} min). O atraso compromete diretamente o tempo de deslocamento.${getAvgText(team, globalAverages, 'login')}`;
+            const delayMin = icalTs > 0 && linTs > 0 ? Math.round((linTs - icalTs) / 60000) : getLoginAtrasadoLimit(polo);
+            alertTexts[flag] = `a equipe registrou acesso ao sistema (Log In) com ${delayMin} min de atraso em relação ao Início Calendário (acima do limite de ${getLoginAtrasadoLimit(polo)} min). O atraso compromete diretamente o tempo de deslocamento.${getAvgText(team, globalAverages, 'login')}`;
             break;
           }
           case 'calendario_errado': {
             const logInVal2 = (ev as any).log_in_corrigido || (ev as any).log_in;
             const icalTs = parseDt(ev.inicio_calendario || '');
             const linTs = parseDt(logInVal2 || '');
-            const earlyMin = icalTs > 0 && linTs > 0 ? Math.round((icalTs - linTs) / 60000) : getCalendarioErradoLimit();
-            alertTexts[flag] = `o login foi realizado ${earlyMin} min antes do Início Calendário (acima do limite de ${getCalendarioErradoLimit()} min de antecedência). Verifique se o horário do calendário de trabalho da equipe está configurado corretamente.`;
+            const earlyMin = icalTs > 0 && linTs > 0 ? Math.round((icalTs - linTs) / 60000) : getCalendarioErradoLimit(polo);
+            alertTexts[flag] = `o login foi realizado ${earlyMin} min antes do Início Calendário (acima do limite de ${getCalendarioErradoLimit(polo)} min de antecedência). Verifique se o horário do calendário de trabalho da equipe está configurado corretamente.`;
             break;
           }
           case 'retorno_excedente':
@@ -345,8 +342,9 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string,
               return m ? m[1] : raw;
             };
             const val = ev.triagem_min ?? 0;
-            const pct2 = Math.round((val - getTriagemLimit()) / getTriagemLimit() * 100);
-            let trText = `${nfBr(val)} min entre o 1º Despacho (${fmtTs(ev.hora_despacho_anterior)}) e o Despacho (${fmtTs(ev.despachada)}) — ${pct2}% acima do limite (${getTriagemLimit()} min)`;
+            const limit = getTriagemLimit(polo);
+            const pct2 = Math.round((val - limit) / limit * 100);
+            let trText = `${nfBr(val)} min entre o 1º Despacho (${fmtTs(ev.hora_despacho_anterior)}) e o Despacho (${fmtTs(ev.despachada)}) — ${pct2}% acima do limite (${limit} min)`;
             if (ev.triagem_global_avg_min && ev.triagem_global_avg_min > 0) {
               const pctAvg = Math.round((val - ev.triagem_global_avg_min) / ev.triagem_global_avg_min * 100);
               const dir = pctAvg >= 0 ? 'acima' : 'abaixo';
@@ -357,15 +355,16 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string,
           }
           case 'primeiro_desloc_alto': {
             const val = ev.ocioso_min ?? 0;
-            const pct = Math.round((val - getPrimeiroDeslocLimit()) / getPrimeiroDeslocLimit() * 100);
-            alertTexts[flag] = `o tempo desde o Início Calendário até o primeiro registro de 'A Caminho' foi de ${nfBr(val)} min — ${pct}% acima do limite de ${getPrimeiroDeslocLimit()} min. Esse tempo reflete o tempo total ocioso no início da jornada antes do primeiro deslocamento.${getAvgText(team, globalAverages, 'desloc')}`;
+            const limit = getPrimeiroDeslocLimit(polo);
+            const pct = Math.round((val - limit) / limit * 100);
+            alertTexts[flag] = `o tempo desde o Início Calendário até o primeiro registro de 'A Caminho' foi de ${nfBr(val)} min — ${pct}% acima do limite de ${limit} min. Esse tempo reflete o tempo total ocioso no início da jornada antes do primeiro deslocamento.${getAvgText(team, globalAverages, 'desloc')}`;
             break;
           }
         }
       }
 
       const enrichedDetails = ev.sem_os_details?.map((d) => {
-        const text = semOsDetailText(d);
+        const text = semOsDetailText({ ...d, polo } as any);
         const sep = text.indexOf(': ');
         return { ...d, label: sep > -1 ? text.slice(0, sep) : text, body: sep > -1 ? text.slice(sep + 2) : '' };
       });
@@ -387,7 +386,7 @@ export function enrichOsDiaEvidence(orders: OsDiaOrderEvidence[], team?: string,
 
       let enrichedRetornoExcedente: typeof ev.retorno_excedente_details | undefined;
       if (ev.retorno_excedente_details) {
-        const text = semOsDetailText(ev.retorno_excedente_details as any);
+        const text = semOsDetailText({ ...ev.retorno_excedente_details, polo } as any);
         const sep = text.indexOf(': ');
         enrichedRetornoExcedente = {
           ...ev.retorno_excedente_details,
@@ -460,6 +459,8 @@ export function enrichEficienciaEvidence(
 
   /** Enriches Utilização evidence items with pre-computed alertTexts. */
 export function enrichUtilizacaoEvidence(orders: UtilizacaoOrderEvidence[], team?: string, globalAverages?: GlobalAveragesMap): UtilizacaoOrderEvidence[] {
+    const teamMap = team ? globalAverages?.teamAverages[team.toUpperCase()] : undefined;
+    const polo = teamMap?.polo;
     const parseDt = (s: string): number => {
       const parts = s.split(' ');
       if (parts.length < 2) return 0;
@@ -469,18 +470,17 @@ export function enrichUtilizacaoEvidence(orders: UtilizacaoOrderEvidence[], team
     };
 
     return orders.map((ev) => {
-      // Synthesize calendario_errado or login_atrasado (exclusive to 1st OS)
       const logInVal = (ev as any).log_in_corrigido || (ev as any).log_in;
       if (!ev.prev_liberada && ev.inicio_calendario && logInVal) {
         const icalTs = parseDt(ev.inicio_calendario);
         const linTs = parseDt(logInVal);
         if (icalTs > 0 && linTs > 0) {
           const earlyMin = Math.round((icalTs - linTs) / 60000);
-          if (earlyMin > getCalendarioErradoLimit()) {
+          if (earlyMin > getCalendarioErradoLimit(polo)) {
             if (!ev.flags.includes('calendario_errado' as any)) {
               ev.flags.push('calendario_errado' as any);
             }
-          } else if (earlyMin < -getLoginAtrasadoLimit()) {
+          } else if (earlyMin < -getLoginAtrasadoLimit(polo)) {
             if (!ev.flags.includes('login_atrasado' as any)) {
               ev.flags.push('login_atrasado' as any);
             }
@@ -514,7 +514,7 @@ export function enrichUtilizacaoEvidence(orders: UtilizacaoOrderEvidence[], team
           }
           case 'temp_prep_alto': {
             const tempPrepMin = ev.temp_prep_os_min ?? 0;
-            const limit = getTempPrepLimit();
+            const limit = getTempPrepLimit(polo);
             const pct = Math.round((tempPrepMin - limit) / limit * 100);
             const subject = ev.prev_liberada
               ? 'a Despachada e o registro de saída nesta OS'
@@ -524,8 +524,8 @@ export function enrichUtilizacaoEvidence(orders: UtilizacaoOrderEvidence[], team
           }
           case 'sem_os_alto': {
             const detail = ev.sem_os_details?.find(d => d.type === 'entre_ordens');
-            const minVal = Math.round(detail?.min ?? ev.sem_os_total_min ?? getSemOsLimit());
-            alertTexts[flag] = `${minVal} min sem OS registrada — acima do limite de ${getSemOsLimit()} min. Esse tempo representa intervalos ociosos em que o técnico não estava atendendo nem a caminho de um chamado.${getAvgText(team, globalAverages, 'sem_os')}`;
+            const minVal = Math.round(detail?.min ?? ev.sem_os_total_min ?? getSemOsLimit(polo));
+            alertTexts[flag] = `${minVal} min sem OS registrada — acima do limite de ${getSemOsLimit(polo)} min. Esse tempo representa intervalos ociosos em que o técnico não estava atendendo nem a caminho de um chamado.${getAvgText(team, globalAverages, 'sem_os')}`;
             break;
           }
           case 'inicio_jornada_alto': {
@@ -535,25 +535,25 @@ export function enrichUtilizacaoEvidence(orders: UtilizacaoOrderEvidence[], team
               const logInVal = (ev as any).log_in_corrigido || (ev as any).log_in;
               const icalTs = parseDt(ev.inicio_calendario || '');
               const linTs = parseDt(logInVal || '');
-              const delayMin = icalTs > 0 && linTs > 0 ? Math.round((linTs - icalTs) / 60000) : getLoginAtrasadoLimit();
+              const delayMin = icalTs > 0 && linTs > 0 ? Math.round((linTs - icalTs) / 60000) : getLoginAtrasadoLimit(polo);
               const waitMin = Math.max(0, totalMin - delayMin);
               alertTexts[flag] = `a distribuição de OS ocorre apenas após o acesso ao sistema. Como a equipe iniciou com ${nfBr(delayMin)} min de atraso no Log In, o despacho da primeira OS foi naturalmente impactado. No total, passaram-se ${nfBr(totalMin)} min entre o início da jornada programada e o recebimento da OS (sendo ${nfBr(waitMin)} min de espera após o acesso).${getAvgText(team, globalAverages, 'sem_os')}`;
             } else {
-              alertTexts[flag] = `${nfBr(totalMin)} min do Início Calendário até o primeiro despacho — acima do limite de ${getSemOsLimit()} min. Esse tempo representa espera ociosa no início da jornada.${getAvgText(team, globalAverages, 'sem_os')}`;
+              alertTexts[flag] = `${nfBr(totalMin)} min do Início Calendário até o primeiro despacho — acima do limite de ${getSemOsLimit(polo)} min. Esse tempo representa espera ociosa no início da jornada.${getAvgText(team, globalAverages, 'sem_os')}`;
             }
             break;
           }
           case 'desloc_intervalo_alto': {
             const detail = ev.sem_os_details?.find(d => d.type === 'intervalo_deslocamento');
-            alertTexts[flag] = `${Math.round(detail?.min ?? 0)} min de Deslocamento de Intervalo — acima do limite de ${getSemOsLimit()} min. Esse tempo ocioso ocorreu antes de iniciar o deslocamento ou durante a pausa.${getAvgText(team, globalAverages, 'sem_os')}`;
+            alertTexts[flag] = `${Math.round(detail?.min ?? 0)} min de Deslocamento de Intervalo — acima do limite de ${getSemOsLimit(polo)} min. Esse tempo ocioso ocorreu antes de iniciar o deslocamento ou durante a pausa.${getAvgText(team, globalAverages, 'sem_os')}`;
             break;
           }
           case 'login_atrasado': {
             const logInVal = (ev as any).log_in_corrigido || (ev as any).log_in;
             const icalTs = parseDt(ev.inicio_calendario || '');
             const linTs = parseDt(logInVal || '');
-            const delayMin = icalTs > 0 && linTs > 0 ? Math.round((linTs - icalTs) / 60000) : getLoginAtrasadoLimit();
-            alertTexts[flag] = `a equipe registrou acesso ao sistema (Log In) com ${delayMin} min de atraso em relação ao Início Calendário (acima do limite de ${getLoginAtrasadoLimit()} min). O atraso compromete diretamente o tempo de deslocamento.${getAvgText(team, globalAverages, 'login')}`;
+            const delayMin = icalTs > 0 && linTs > 0 ? Math.round((linTs - icalTs) / 60000) : getLoginAtrasadoLimit(polo);
+            alertTexts[flag] = `a equipe registrou acesso ao sistema (Log In) com ${delayMin} min de atraso em relação ao Início Calendário (acima do limite de ${getLoginAtrasadoLimit(polo)} min). O atraso compromete diretamente o tempo de deslocamento.${getAvgText(team, globalAverages, 'login')}`;
             break;
           }
           case 'retorno_excedente':
@@ -566,7 +566,7 @@ export function enrichUtilizacaoEvidence(orders: UtilizacaoOrderEvidence[], team
               return m ? m[1] : raw;
             };
             const val2 = ev.triagem_min ?? 0;
-            const limit3 = getTriagemLimit();
+            const limit3 = getTriagemLimit(polo);
             const pct3 = Math.round((val2 - limit3) / limit3 * 100);
             let trText2 = `${nfBr(val2)} min entre o 1º Despacho (${fmtTs2(ev.hora_despacho_anterior)}) e o Despacho (${fmtTs2(ev.despachada)}) — ${pct3}% acima do limite (${limit3} min)`;
             if (ev.triagem_global_avg_min && ev.triagem_global_avg_min > 0) {

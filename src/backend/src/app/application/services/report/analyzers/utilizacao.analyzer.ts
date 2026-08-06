@@ -4,20 +4,21 @@ import { createAccessor, parseNumber, normalizeToken, round2, parseDateTimeBr, m
 import { calculateTempPrepValue, calculateSemOsValue } from '../builders/team-stats.builder.js';
 import { enrichUtilizacaoEvidence, nfBr } from './enrich-utils.js';
 import { countDistinctDates, mergeEvidenceFlags } from './os-dia.analyzer.js';
+import { getLimit } from '../../../../infrastructure/config/env.js';
 export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[], globalAverages?: GlobalAveragesMap): UtilizacaoTeamAnalysis[] {
     if (deslocRows.length === 0) return [];
 
     const UTIL_META = 85;
     // Thresholds
-    const IDLE_THRESHOLD_PCT = Number(process.env['LIMIT_OCIOSIDADE_PCT']) || 15;
-    const OS_DIA_PCT_THRESHOLD = (Number(process.env['LIMIT_TR_EXCEDE_HD_PCT']) || 20) / 100;
-    const getTempPrepThreshold = () => Number(process.env['LIMIT_TEMP_PREP_MIN']) || 10;
-    const getSemOsThreshold = () => Number(process.env['LIMIT_SEM_OS_MIN']) || 10;
-    const getPrimeiroDeslocThreshold = () => Number(process.env['LIMIT_PRIMEIRO_DESLOC_MIN']) || 25;
-    const getTriagemThreshold = () => Number(process.env['LIMIT_TRIAGEM_MIN']) || 10;
-    const getDeslocIntervaloMin = () => Number(process.env['LIMIT_DESLOC_INTERVALO_MIN']) || 10;
-    const getInicioJornadaMin = () => Number(process.env['LIMIT_INICIO_JORNADA_MIN']) || 10;
-    const getRetornoExcedenteMin = () => Number(process.env['LIMIT_RETORNO_EXCEDENTE_MIN']) || 60;
+    const IDLE_THRESHOLD_PCT = (polo?: string) => getLimit('LIMIT_OCIOSIDADE_PCT', polo, 15);
+    const OS_DIA_PCT_THRESHOLD = (polo?: string) => getLimit('LIMIT_TR_EXCEDE_HD_PCT', polo, 20) / 100;
+    const getTempPrepThreshold = (polo?: string) => getLimit('LIMIT_TEMP_PREP_MIN', polo, 10);
+    const getSemOsThreshold = (polo?: string) => getLimit('LIMIT_SEM_OS_MIN', polo, 10);
+    const getPrimeiroDeslocThreshold = (polo?: string) => getLimit('LIMIT_PRIMEIRO_DESLOC_MIN', polo, 25);
+    const getTriagemThreshold = (polo?: string) => getLimit('LIMIT_TRIAGEM_MIN', polo, 10);
+    const getDeslocIntervaloMin = (polo?: string) => getLimit('LIMIT_DESLOC_INTERVALO_MIN', polo, 10);
+    const getInicioJornadaMin = (polo?: string) => getLimit('LIMIT_INICIO_JORNADA_MIN', polo, 10);
+    const getRetornoExcedenteMin = (polo?: string) => getLimit('LIMIT_RETORNO_EXCEDENTE_MIN', polo, 60);
     const TOLERANCE_MIN = 5; // invisible grace margin — keeps displayed limits unchanged
 
     const utilizacaoKpi = kpis.find((k) => normalizeToken(k.kpi) === normalizeToken('Utilização'));
@@ -219,6 +220,7 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[], glob
     const teamJornadas = new Map<string, Array<{ htTotalMin: number; hdTotalMin: number }>>();
 
     for (const { team, date: _date, rows: groupRows } of grouped.values()) {
+      const polo = globalAverages?.teamAverages[team.toUpperCase()]?.polo;
       teamDayCount.set(team, (teamDayCount.get(team) ?? 0) + 1);
       // Sort by A_Caminho ascending
       const ordered = [...groupRows].sort((a, b) => {
@@ -346,7 +348,7 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[], glob
           // Desl. Intervalo for end-of-day interval: Liberada → Início Intervalo is sem_os time
           if (hasIntervalInFimWindow && lastIntStart) {
             semOsFimDeslIntervalMin = round2(minutesBetween(lastIntStart, lastLiberada));
-            if (semOsFimDeslIntervalMin >= getSemOsThreshold() + TOLERANCE_MIN) {
+            if (semOsFimDeslIntervalMin >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
               semOsValues.push(semOsFimDeslIntervalMin);
             }
           }
@@ -370,8 +372,8 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[], glob
               
             }
           } else {
-            // No retorno base data: fall back to getSemOsThreshold() (Antes Log Off — separate flag)
-            if (directGapMin >= getSemOsThreshold() + TOLERANCE_MIN) {
+            // No retorno base data: fall back to getSemOsThreshold(polo) (Antes Log Off — separate flag)
+            if (directGapMin >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
               semOsFimJornadaMin = round2(directGapMin);
               
             }
@@ -434,7 +436,7 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[], glob
         if (Number.isFinite(v) && v > 0) teamSemOrdemSum.set(team, (teamSemOrdemSum.get(team) ?? 0) + v);
       }
       let dayRetornoExcedente = 0;
-      if (Number.isFinite(semOsFimDirectGapMin) && semOsFimDirectGapMin >= getRetornoExcedenteMin()) {
+      if (Number.isFinite(semOsFimDirectGapMin) && semOsFimDirectGapMin >= getRetornoExcedenteMin(polo)) {
         const excess = round2(semOsFimDirectGapMin - 60);
         teamRetornoExcedenteSum.set(team, (teamRetornoExcedenteSum.get(team) ?? 0) + excess);
         dayRetornoExcedente = excess;
@@ -571,21 +573,21 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[], glob
             }
           }
         }
-        const tempPrepThreshold = getTempPrepThreshold();
+        const tempPrepThreshold = getTempPrepThreshold(polo);
         if (Number.isFinite(tempPrepOs) && tempPrepOs >= tempPrepThreshold + TOLERANCE_MIN) {
           flags.push('temp_prep_alto');
         }
-        if (triagemMin !== undefined && triagemMin >= getTriagemThreshold() + TOLERANCE_MIN) {
+        if (triagemMin !== undefined && triagemMin >= getTriagemThreshold(polo) + TOLERANCE_MIN) {
           flags.push('triagem_alto');
         }
         // 1º Desloc.: Início Cal. → A Caminho, only for 1ª OS, threshold from env
         const ocisoForFlag = ocisoValues[i];
-        if (i === 0 && ocisoForFlag !== undefined && ocisoForFlag >= getPrimeiroDeslocThreshold()) {
+        if (i === 0 && ocisoForFlag !== undefined && ocisoForFlag >= getPrimeiroDeslocThreshold(polo)) {
           flags.push('primeiro_desloc_alto');
         }
-        if (Number.isFinite(semOsMin) && semOsMin >= getSemOsThreshold() + TOLERANCE_MIN) flags.push('sem_os_alto');
+        if (Number.isFinite(semOsMin) && semOsMin >= getSemOsThreshold(polo) + TOLERANCE_MIN) flags.push('sem_os_alto');
         if (
-          hdTotalMin > 0 && trOrdemMin > hdTotalMin * OS_DIA_PCT_THRESHOLD &&
+          hdTotalMin > 0 && trOrdemMin > hdTotalMin * OS_DIA_PCT_THRESHOLD(polo) &&
           tempoPadraoRaw !== null && Number.isFinite(tempoPadraoRaw) && tempoPadraoRaw > 0 &&
           trOrdemMin > tempoPadraoRaw
         ) {
@@ -660,7 +662,7 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[], glob
               );
               if (isInterceptsDispatch) {
                 const interceptMin = round2(semOsMin);
-                if (interceptMin >= getSemOsThreshold() + TOLERANCE_MIN) {
+                if (interceptMin >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
                   const overPct = globalAvgIntervaloDeslocMin > 0
                     ? round2(((interceptMin - globalAvgIntervaloDeslocMin) / globalAvgIntervaloDeslocMin) * 100)
                     : undefined;
@@ -674,7 +676,7 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[], glob
                   });
                 }
               } else {
-                if (intervaloDeslocMin !== null && intervaloDeslocMin >= getSemOsThreshold() + TOLERANCE_MIN) {
+                if (intervaloDeslocMin !== null && intervaloDeslocMin >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
                   const overPct = globalAvgIntervaloDeslocMin > 0
                     ? round2(((intervaloDeslocMin - globalAvgIntervaloDeslocMin) / globalAvgIntervaloDeslocMin) * 100)
                     : undefined;
@@ -689,7 +691,7 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[], glob
                 }
                 if (fimIntervaloDate) {
                   const postIntervalMin = round2(minutesBetween(despachadaDate, fimIntervaloDate));
-                  if (postIntervalMin >= getSemOsThreshold() + TOLERANCE_MIN) {
+                  if (postIntervalMin >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
                     semOsDetails.push({
                       type: 'entre_ordens',
                       min:  postIntervalMin,
@@ -715,7 +717,7 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[], glob
             }
           }
         }
-        if (intervaloDeslocAboveGlobalAvg && intervaloDeslocMin !== null && !semOsIntervalApplied[i] && intervaloDeslocMin >= getSemOsThreshold() + TOLERANCE_MIN) {
+        if (intervaloDeslocAboveGlobalAvg && intervaloDeslocMin !== null && !semOsIntervalApplied[i] && intervaloDeslocMin >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
           const despachadaAtualDate = despachadaCol ? parseDateTimeBr(String(row[despachadaCol] ?? '')) : null;
           const useDespachadaAsFrom = Boolean(
             despachadaAtualDate && prevLiberadaDate && inicioIntervaloDate &&
@@ -749,11 +751,11 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[], glob
           uniqueFlags.splice(idx, 1);
           let addedSemOs = false;
           for (const detail of semOsDetails) {
-            if (detail.type === 'inicio_jornada' && detail.min >= getSemOsThreshold() + TOLERANCE_MIN) {
+            if (detail.type === 'inicio_jornada' && detail.min >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
               if (!uniqueFlags.includes('inicio_jornada_alto' as any)) uniqueFlags.push('inicio_jornada_alto' as any);
-            } else if (detail.type === 'intervalo_deslocamento' && detail.min >= getSemOsThreshold() + TOLERANCE_MIN) {
+            } else if (detail.type === 'intervalo_deslocamento' && detail.min >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
               if (!uniqueFlags.includes('desloc_intervalo_alto' as any)) uniqueFlags.push('desloc_intervalo_alto' as any);
-            } else if (detail.type === 'entre_ordens' && detail.min >= getSemOsThreshold() + TOLERANCE_MIN) {
+            } else if (detail.type === 'entre_ordens' && detail.min >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
               if (!addedSemOs) {
                 uniqueFlags.push('sem_os_alto');
                 addedSemOs = true;
@@ -900,7 +902,7 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[], glob
                 ...(semOsAbove ? ['desloc_intervalo_alto' as any] : []),
                 ...(retornoExcedenteThreshold ? ['retorno_excedente' as const] : []),
                 ...((
-                  hdTotalMin > 0 && trOrdemMin > hdTotalMin * OS_DIA_PCT_THRESHOLD &&
+                  hdTotalMin > 0 && trOrdemMin > hdTotalMin * OS_DIA_PCT_THRESHOLD(polo) &&
                   tempoPadraoRaw !== null && Number.isFinite(tempoPadraoRaw) && tempoPadraoRaw > 0 &&
                   trOrdemMin > tempoPadraoRaw
                 ) ? ['tr_excede_hd' as const] : []),
@@ -937,6 +939,7 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[], glob
     const result: UtilizacaoTeamAnalysis[] = [];
 
     for (const team of teamsToAnalyze.keys()) {
+      const polo = globalAverages?.teamAverages[team.toUpperCase()]?.polo;
       const utilizacaoValue = teamsToAnalyze.get(team)?.value ?? 0;
 
       const flaggedOrders = mergeEvidenceFlags(teamEvidences.get(team) ?? []);
@@ -993,7 +996,7 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[], glob
         ? round2(aboveAvgIdles.reduce((a, b) => a + b, 0) / idleDays)
         : 0;
       const idleAnalysis: UtilizacaoTeamAnalysis['idleAnalysis'] =
-        avgHdTotal > 0 && idlePct >= IDLE_THRESHOLD_PCT
+        avgHdTotal > 0 && idlePct >= IDLE_THRESHOLD_PCT(polo)
           ? { idleMin, idlePct, horasExtras: round2((teamHorasExtrasSum.get(team) ?? 0) / dayCount) }
           : undefined;
 
@@ -1004,7 +1007,8 @@ export function analyzeUtilizacao(deslocRows: CsvRow[], kpis: KpiInsight[], glob
 
       result.push({
         team,
-        utilizacaoValue:  round2(utilizacaoValue),
+        polo,
+        utilizacaoValue: Number.isNaN(utilizacaoValue) ? 0 : utilizacaoValue,
         metaTarget:       UTIL_META,
         gap:              round2(UTIL_META - utilizacaoValue),
         hdTotalMin:       avgHdTotal,

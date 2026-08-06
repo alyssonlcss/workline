@@ -5,6 +5,7 @@ import type { OsDiaTeamAnalysis, OsDiaOrderEvidence, UtilizacaoOrderEvidence, Kp
 import { createAccessor, parseNumber, normalizeToken, parseDateTimeBr, minutesBetween, applyIntervalDiscount, round2, safeSum } from '../csv-utils.js';
 import { nfBr, semOsDetailText, enrichOsDiaEvidence } from './enrich-utils.js';
 import { calculateTempPrepValue, calculateSemOsValue } from '../builders/team-stats.builder.js';
+import { getLimit } from '../../../../infrastructure/config/env.js';
 import { KPI_ALIASES } from '../constants.js';
 
 export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAverages?: GlobalAveragesMap): OsDiaTeamAnalysis[] {
@@ -13,11 +14,11 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
     }
 
     const OS_DIA_META = 4.4;
-    const OS_DIA_PCT_THRESHOLD = (Number(process.env['LIMIT_TR_EXCEDE_HD_PCT']) || 20) / 100;
-    const getTempPrepThreshold = () => Number(process.env['LIMIT_TEMP_PREP_MIN']) || 10;
-    const getSemOsThreshold = () => Number(process.env['LIMIT_SEM_OS_MIN']) || 10;
-    const getPrimeiroDeslocThreshold = () => Number(process.env['LIMIT_PRIMEIRO_DESLOC_MIN']) || 25;
-    const getTriagemThreshold = () => Number(process.env['LIMIT_TRIAGEM_MIN']) || 10;
+    const OS_DIA_PCT_THRESHOLD = (polo?: string) => getLimit('LIMIT_TR_EXCEDE_HD_PCT', polo, 20) / 100;
+    const getTempPrepThreshold = (polo?: string) => getLimit('LIMIT_TEMP_PREP_MIN', polo, 10);
+    const getSemOsThreshold = (polo?: string) => getLimit('LIMIT_SEM_OS_MIN', polo, 10);
+    const getPrimeiroDeslocThreshold = (polo?: string) => getLimit('LIMIT_PRIMEIRO_DESLOC_MIN', polo, 25);
+    const getTriagemThreshold = (polo?: string) => getLimit('LIMIT_TRIAGEM_MIN', polo, 10);
     const TOLERANCE_MIN = 5; // invisible grace margin — keeps displayed limits unchanged
 
     // 1. Determine under-performing teams from KPI insight
@@ -204,6 +205,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
     const teamHorasExtrasSum = new Map<string, number>();
 
     for (const { team, rows: groupRows } of grouped.values()) {
+      const polo = globalAverages?.teamAverages[team.toUpperCase()]?.polo;
       teamDayCount.set(team, (teamDayCount.get(team) ?? 0) + 1);
       // sort by A_Caminho ascending (same logic as calculateTempPrepSemOs)
       const ordered = [...groupRows].sort((a, b) => {
@@ -337,7 +339,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
           // Desl. Intervalo for end-of-day interval: Liberada → Início Intervalo is sem_os time
           if (hasIntervalInFimWindow && lastIntStart) {
             semOsFimDeslIntervalMin = round2(minutesBetween(lastIntStart, lastLiberada));
-            if (semOsFimDeslIntervalMin >= getSemOsThreshold() + TOLERANCE_MIN) {
+            if (semOsFimDeslIntervalMin >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
               semOsValues.push(semOsFimDeslIntervalMin);
             }
           }
@@ -362,7 +364,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
             }
           } else {
             // No retorno base data: fall back to getSemOsThreshold() (Antes Log Off — separate flag)
-            if (directGapMin >= getSemOsThreshold() + TOLERANCE_MIN) {
+            if (directGapMin >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
               semOsFimJornadaMin = round2(directGapMin);
               /* Removed */
             }
@@ -514,7 +516,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
 
         const flags: OsDiaOrderEvidence['flags'] = [];
         if (
-          hdTotalMin > 0 && trOrdemMin > hdTotalMin * OS_DIA_PCT_THRESHOLD &&
+          hdTotalMin > 0 && trOrdemMin > hdTotalMin * OS_DIA_PCT_THRESHOLD(polo) &&
           tempoPadraoRaw !== null && Number.isFinite(tempoPadraoRaw) && tempoPadraoRaw > 0 &&
           trOrdemMin > tempoPadraoRaw
         ) {
@@ -554,19 +556,19 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
           }
         }
 
-        const tempPrepThreshold = getTempPrepThreshold();
+        const tempPrepThreshold = getTempPrepThreshold(polo);
         if (Number.isFinite(tempPrepOs) && tempPrepOs >= tempPrepThreshold + TOLERANCE_MIN) {
           flags.push('temp_prep_alto');
         }
-        if (triagemMin !== undefined && triagemMin >= getTriagemThreshold() + TOLERANCE_MIN) {
+        if (triagemMin !== undefined && triagemMin >= getTriagemThreshold(polo) + TOLERANCE_MIN) {
           flags.push('triagem_alto');
         }
         // 1º Desloc.: Início Cal. → A Caminho, only for 1ª OS, threshold from env
         const ocisoForFlag = ocisoValues[i];
-        if (i === 0 && ocisoForFlag !== undefined && ocisoForFlag >= getPrimeiroDeslocThreshold()) {
+        if (i === 0 && ocisoForFlag !== undefined && ocisoForFlag >= getPrimeiroDeslocThreshold(polo)) {
           flags.push('primeiro_desloc_alto');
         }
-        if (Number.isFinite(semOsMin) && semOsMin >= getSemOsThreshold() + TOLERANCE_MIN) {
+        if (Number.isFinite(semOsMin) && semOsMin >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
           flags.push('sem_os_alto');
         }
 
@@ -587,7 +589,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
         );
         if (hasIntervaloDeslocamento && inicioIntervaloDate && prevLiberadaDate) {
           const intDurMin = round2(minutesBetween(inicioIntervaloDate, prevLiberadaDate));
-          if (intDurMin >= getSemOsThreshold() + TOLERANCE_MIN) {
+          if (intDurMin >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
             flags.push('sem_os_alto');
           }
         }
@@ -653,7 +655,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
               );
               if (isInterceptsDispatch) {
                 const interceptMin = round2(semOsMin);
-                if (interceptMin >= getSemOsThreshold() + TOLERANCE_MIN) {
+                if (interceptMin >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
                   semOsDetails.push({
                     type: 'intervalo_deslocamento',
                     min:  interceptMin,
@@ -666,7 +668,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
                 // Split into: pre-interval travel (prevLiberada → inicioIntervalo) and
                 //             post-interval wait  (fimIntervalo → despachada).
                 const deslocIntervalMin = round2(minutesBetween(inicioIntervaloDate, prevLiberadaDate!));
-                if (deslocIntervalMin >= getSemOsThreshold() + TOLERANCE_MIN) {
+                if (deslocIntervalMin >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
                   semOsDetails.push({
                     type: 'intervalo_deslocamento',
                     min:  deslocIntervalMin,
@@ -676,7 +678,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
                 }
                 if (fimIntervaloDate) {
                   const postIntervalMin = round2(minutesBetween(despachadaDate, fimIntervaloDate));
-                  if (postIntervalMin >= getSemOsThreshold() + TOLERANCE_MIN) {
+                  if (postIntervalMin >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
                     semOsDetails.push({
                       type: 'entre_ordens',
                       min:  postIntervalMin,
@@ -719,7 +721,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
             ? (despachadaCol ? String(row[despachadaCol] ?? '').trim() || undefined : undefined)
             : (prevRow && liberadaCol ? String(prevRow[liberadaCol] ?? '').trim() || undefined : undefined);
           const intMin = round2(minutesBetween(inicioIntervaloDate, intFrom));
-          if (intMin >= getSemOsThreshold() + TOLERANCE_MIN) {
+          if (intMin >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
             semOsDetails.push({
               type: 'intervalo_deslocamento',
               min:  intMin,
@@ -737,11 +739,11 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
           uniqueFlags.splice(idx, 1);
           let addedSemOs = false;
           for (const detail of semOsDetails) {
-            if (detail.type === 'inicio_jornada' && detail.min >= getSemOsThreshold() + TOLERANCE_MIN) {
+            if (detail.type === 'inicio_jornada' && detail.min >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
               if (!uniqueFlags.includes('inicio_jornada_alto')) uniqueFlags.push('inicio_jornada_alto' as any);
-            } else if (detail.type === 'intervalo_deslocamento' && detail.min >= getSemOsThreshold() + TOLERANCE_MIN) {
+            } else if (detail.type === 'intervalo_deslocamento' && detail.min >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
               if (!uniqueFlags.includes('desloc_intervalo_alto')) uniqueFlags.push('desloc_intervalo_alto' as any);
-            } else if (detail.type === 'entre_ordens' && detail.min >= getSemOsThreshold() + TOLERANCE_MIN) {
+            } else if (detail.type === 'entre_ordens' && detail.min >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
               if (!addedSemOs) {
                 uniqueFlags.push('sem_os_alto');
                 addedSemOs = true;

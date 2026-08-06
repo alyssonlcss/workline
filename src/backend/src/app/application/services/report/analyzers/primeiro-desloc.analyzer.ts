@@ -2,6 +2,7 @@ import type { CsvRow } from '../csv-utils.js';
 import type { PrimeiroDeslocTeamAnalysis, PrimeiroDeslocDayEvidence, KpiInsight, GlobalAveragesMap } from '../types.js';
 import { createAccessor, parseNumber, normalizeToken, round2, parseDateTimeBr, minutesBetween } from '../csv-utils.js';
 import { enrichDeslocEvidence } from './enrich-utils.js';
+import { getLimit } from '../../../../infrastructure/config/env.js';
 import { countDistinctDates } from './os-dia.analyzer.js';
 
 export function analyzePrimeiroDesloc(deslocRows: CsvRow[], kpis: KpiInsight[], globalAverages?: GlobalAveragesMap): PrimeiroDeslocTeamAnalysis[] {
@@ -38,9 +39,9 @@ export function analyzePrimeiroDesloc(deslocRows: CsvRow[], kpis: KpiInsight[], 
     const distinctDates = dateCol ? countDistinctDates(deslocRows, dateCol) : 0;
 
     // Thresholds
-    const DESPACHO_TARDIO_MIN = Number(process.env['LIMIT_DESPACHO_TARDIO_MIN']) || 10;
-    const LOGIN_ATRASADO_MIN = Number(process.env['LIMIT_LOGIN_ATRASADO_MIN']) || 8;
-    const TRIAGEM_THRESHOLD = Number(process.env['LIMIT_TRIAGEM_MIN']) || 10;
+    const getDespachoTardioMin = (polo?: string) => getLimit('LIMIT_DESPACHO_TARDIO_MIN', polo, 10);
+    const getLoginAtrasadoMin = (polo?: string) => getLimit('LIMIT_LOGIN_ATRASADO_MIN', polo, 8);
+    const getTriagemThreshold = (polo?: string) => getLimit('LIMIT_TRIAGEM_MIN', polo, 10);
     const TRIAGEM_TOLERANCE = 5;
 
     // Global average
@@ -62,6 +63,11 @@ export function analyzePrimeiroDesloc(deslocRows: CsvRow[], kpis: KpiInsight[], 
 
     for (const [team, { value: deslocValue }] of teamsToAnalyze.entries()) {
       const teamNorm = normalizeToken(team);
+      const polo = globalAverages?.teamAverages[team.toUpperCase()]?.polo;
+      const TRIAGEM_THRESHOLD = getTriagemThreshold(polo);
+      const DESPACHO_TARDIO_MIN = getDespachoTardioMin(polo);
+      const LOGIN_ATRASADO_MIN = getLoginAtrasadoMin(polo);
+
       let teamRows = deslocRows.filter((r) => String(r[teamCol] ?? '').trim() === team);
       if (teamRows.length === 0) {
         teamRows = deslocRows.filter((r) => normalizeToken(String(r[teamCol] ?? '').trim()) === teamNorm);
