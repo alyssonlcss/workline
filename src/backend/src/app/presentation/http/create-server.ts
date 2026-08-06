@@ -19,7 +19,7 @@ import { SessionService } from '../../application/services/session.service.js';
 import { environment, resolveDefaultDataDir } from '../../infrastructure/config/env.js';
 import { InMemoryJobStore } from '../../infrastructure/runtime/in-memory-job-store.js';
 import { ExtractionQueueManager } from '../../infrastructure/runtime/extraction-queue.manager.js';
-import { ExtractionCacheService } from '../../infrastructure/cache/extraction-cache.service.js';
+
 import { TempStorageService } from '../../infrastructure/storage/temp-storage.service.js';
 import { FileGarbageCollector } from '../../infrastructure/storage/file-garbage-collector.js';
 import { PuppeteerSpotfireAutomation } from '../../infrastructure/spotfire/puppeteer-spotfire-automation.js';
@@ -82,7 +82,7 @@ export async function createServer() {
 
   const sessionService = new SessionService();
   const queueManager = new ExtractionQueueManager(3); // Max 3 concurrent Puppeteer workers
-  const cacheService = new ExtractionCacheService();
+
   const tempStorage = new TempStorageService();
   const garbageCollector = new FileGarbageCollector(tempStorage.getBaseDataDir());
   garbageCollector.start();
@@ -161,21 +161,7 @@ export async function createServer() {
       sendEvent('progress', { message });
     };
 
-    // Check In-Memory Cache first
-    const cacheKey = cacheService.generateKey({
-      reportTitle,
-      selectedFilters: payload.selectedFilters,
-      periodSelection: payload.periodSelection,
-      userCredentials: payload.userCredentials,
-    });
-
-    const cachedResult = cacheService.get(cacheKey);
-    if (cachedResult) {
-      onProgress('Dados recuperados instantaneamente do cache em memória!');
-      sendEvent('result', cachedResult);
-      reply.raw.end();
-      return;
-    }
+    // In-Memory Cache block removed to force Spotfire extraction on consecutive requests with same filters
 
     try {
       throwIfAborted(controller.signal);
@@ -265,8 +251,7 @@ export async function createServer() {
         },
       });
 
-      // Save to cache for subsequent requests
-      cacheService.set(cacheKey, resultData);
+      // Cache saving removed
 
       sendEvent('result', resultData);
       reply.raw.end();
