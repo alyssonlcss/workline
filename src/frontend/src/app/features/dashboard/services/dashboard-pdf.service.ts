@@ -551,8 +551,8 @@ export class DashboardPdfService {
 
     // Cover
     const cover: any[] = [
-      { text: 'Relatório Analítico de Campo', fontSize: 9, bold: true, color: MUTED, characterSpacing: 2, margin: [0, 0, 0, 10] },
-      { text: title, fontSize: 32, bold: true, color: DARK, margin: [0, 0, 0, 6] },
+      { text: 'WorkLine', fontSize: 32, bold: true, color: DARK, characterSpacing: 1, margin: [0, 0, 0, 4] },
+      { text: `Relatório Analítico de Campo | ${title}`, fontSize: 16, bold: true, color: GRAY, margin: [0, 0, 0, 6] },
       subtitle ? { text: subtitle, fontSize: 12, color: GRAY, margin: [0, 0, 0, 6] } : null,
       { text: `Gerado em ${today}`, fontSize: 9, color: MUTED, margin: [0, 0, 0, 2] },
       dateRangeLabel ? { text: `Período de referência: ${dateRangeLabel}`, fontSize: 9, color: MUTED, margin: [0, 0, 0, 4] } : null,
@@ -1610,8 +1610,8 @@ export class DashboardPdfService {
     const BG = '#f8f7f4';
 
     const cover: any[] = [
-      { text: 'Relatório Analítico de Diretoria', fontSize: 9, bold: true, color: MUTED, characterSpacing: 2, margin: [0, 0, 0, 10] },
-      { text: title, fontSize: 32, bold: true, color: DARK, margin: [0, 0, 0, 6] },
+      { text: 'WorkLine', fontSize: 32, bold: true, color: DARK, characterSpacing: 1, margin: [0, 0, 0, 4] },
+      { text: `Relatório Analítico de Diretoria | ${title}`, fontSize: 16, bold: true, color: GRAY, margin: [0, 0, 0, 6] },
       subtitle ? { text: subtitle, fontSize: 12, color: GRAY, margin: [0, 0, 0, 6] } : null,
       { text: `Gerado em ${today}`, fontSize: 9, color: MUTED, margin: [0, 0, 0, 2] },
       dateRangeLabel ? { text: `Período de referência: ${dateRangeLabel}`, fontSize: 9, color: MUTED, margin: [0, 0, 0, 4] } : null,

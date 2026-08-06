@@ -341,7 +341,8 @@ type SavedFilterState = {
             <!-- Hero header -->
             <div class="rpt-hero anim-el">
               <div class="rpt-hero-left">
-                <h1 class="rpt-hero-title">Relatório Analítico</h1>
+                <h1 class="rpt-hero-title">WorkLine</h1>
+                <span class="rpt-hero-meta" style="font-size: 1.1em; color: var(--text-dark); font-weight: 500; margin-bottom: 4px;">Relatório Analítico</span>
                 <span class="rpt-hero-meta">Gerado em {{ report.generatedAt | date:'dd/MM/yyyy HH:mm' }}</span>
                 <span *ngIf="periodRangeLabel()" class="rpt-hero-meta">Período de referência: {{ periodRangeLabel() }}</span>
                 <span class="rpt-hero-author">Autor: Alysson Pinheiro &mdash; Analista de Dados</span>
