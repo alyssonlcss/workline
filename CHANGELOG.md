@@ -3,7 +3,7 @@
 Todos os recursos notáveis, correções e melhorias neste projeto serão documentados neste arquivo.
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
-## [1.3.2] - 2026-08-06
+## [2.0.0] - 2026-08-06
 
 Esta é uma grande atualização ("Mega Release") que renomeia oficialmente o projeto para **WorkLine** e adiciona uma arquitetura robusta de Relatórios em PDF, novos Analisadores de KPI e várias melhorias de Qualidade de Vida (QoL) no Setup.
 
@@ -15,11 +15,16 @@ Esta é uma grande atualização ("Mega Release") que renomeia oficialmente o pr
 - **Auto-Run no Setup:** O script `setup.bat` agora pergunta se você deseja rodar a aplicação imediatamente após instalar/atualizar as dependências, e a "Opção 3" foi promovida a um *Hard Reset* (limpando todos os `node_modules` e `package-lock.json`).
 
 ### Alterado
+- **Arquitetura de Construtores de Relatório (Report Builders):** Refatoração da geração de relatórios com arquitetura baseada em *Builders* independentes (Planos de Ação, Insights Cruzados e Desvios), melhorando a manutenção e expansão.
+- **Interpretação de Planos de Ação:** Aprimoramento na interpretação e exibição dos cards de Planos de Ação nos relatórios operacionais.
 - **Nome do Projeto:** Oficialização do nome da aplicação como **WorkLine** em todos os arquivos de UI, PDFs, `package.json` e documentações.
 - **Limites Dinâmicos de KPIs:** Migração da configuração dos limites de "Red Flag" para o arquivo dinâmico `polos.json` (antigo `bases.json`), suportando configurações globais e limites customizados por polo específico. A base foi anonimizada por segurança.
 - **Retenção de Arquivos (TTL):** O tempo de vida (TTL) do *Garbage Collector* de arquivos temporários de extração foi estendido para **24 horas**, evitando limpezas prematuras de sessões longas.
 - **Abertura do Edge:** A incômoda abertura automática do navegador Edge em segundo plano ao rodar `npm run dev` foi removida, simplificando a inicialização do backend para desenvolvedores.
 - **Menu do Setup:** Remoção da opção interativa de configuração do Spotfire do menu principal do `setup.bat`. O script agora gerencia as credenciais automaticamente, e chaves de URLs sensíveis (ex: `SPOTFIRE_LOGIN_URL`) foram permanentemente erradicadas do `.env.example`.
+
+### Corrigido
+- **Geração Consecutiva de Relatórios:** Correção de um falso positivo (Erro 404) que impedia a geração de relatórios idênticos consecutivamente. O sistema agora permite extrações repetidas contornando a checagem restrita de arquivos baixados.
 
 ## [1.2.0] - 2026-07-29
 
