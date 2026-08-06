@@ -7960,7 +7960,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const effectiveTipos = selectedTipos.filter(t => t !== 'Contrastar');
 
     const config = this.basesConfig;
-    if (!config) return filters; // Not loaded yet
+    if (!config || this.availableTeams.length === 0) return filters; // Not loaded yet
 
     const activeBases = selectedBases.length > 0 ? selectedBases : this.reportBaseOptions;
 
@@ -8355,11 +8355,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object' && parsed.filters) {
-        const today = new Date().toISOString().slice(0, 10);
-        if (parsed.savedAt !== today) {
-          delete parsed.filters.ano;
-          delete parsed.filters.mes;
-        }
         return parsed as SavedFilterState;
       }
     } catch { /* corrupt data – ignore */ }
