@@ -19,7 +19,7 @@ jobs:
         run: |
           cat << 'EOF' > extract.js
           const fs = require('fs');
-          const version = process.env.GITHUB_REF_NAME.replace(/^v/, '');
+          const version = '${{ github.ref_name }}'.replace(/^v/, '');
           console.log('Buscando versão ' + version + ' no CHANGELOG.md...');
           const content = fs.readFileSync('CHANGELOG.md', 'utf8').replace(/\r\n/g, '\n');
           const lines = content.split('\n');
@@ -43,13 +43,15 @@ jobs:
             fs.writeFileSync('release_notes.txt', finalNotes);
             console.log('Conteúdo extraído com sucesso!');
           } else {
-            fs.writeFileSync('release_notes.txt', 'Notas não encontradas no CHANGELOG.md');
+            fs.writeFileSync('release_notes.txt', 'Notas não encontradas no CHANGELOG.md para a versão ' + version);
             console.log('Nenhuma nota encontrada.');
           }
           EOF
           node extract.js
           
-          echo "Conteúdo extraído com sucesso!"
+          echo "=== CONTEÚDO EXTRAÍDO ==="
+          cat release_notes.txt
+          echo "========================="
 
       - name: Criar ou Atualizar Release no GitHub
         env:
