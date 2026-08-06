@@ -18,17 +18,15 @@ echo          WorkLine - Menu Setup
 echo ===================================================
 echo.
 echo  1 - Executar (Iniciar Backend e Frontend)
-echo  2 - Configurar / Alterar credenciais e link Spotfire (.env)
-echo  3 - Instalar / Resetar dependencias e Executar
-echo  4 - Sair
+echo  2 - Instalar / Resetar dependencias e Executar
+echo  3 - Sair
 echo.
 echo ===================================================
-set /p CHOICE="Escolha uma opcao [1-4]: "
+set /p CHOICE="Escolha uma opcao [1-3]: "
 
 if "%CHOICE%"=="1" goto EXECUTAR
-if "%CHOICE%"=="2" goto CONFIGURAR_ENV
-if "%CHOICE%"=="3" goto INSTALAR_DEPENDENCIAS
-if "%CHOICE%"=="4" goto SAIR
+if "%CHOICE%"=="2" goto INSTALAR_DEPENDENCIAS
+if "%CHOICE%"=="3" goto SAIR
 
 echo.
 echo Opcao invalida! Tente novamente.
@@ -100,14 +98,7 @@ pause
 goto MENU
 
 
-:: ===================================================
-:: OPCAO 2: CONFIGURAR / ALTERAR CREDENCIAIS E LINK SPOTFIRE
-:: ===================================================
-:CONFIGURAR_ENV
-cls
-call :PROMPT_ENV
-pause
-goto MENU
+
 
 
 :: ===================================================
