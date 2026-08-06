@@ -59,7 +59,7 @@ const environmentSchema = z.object({
   SPOTFIRE_OUTPUT_DIR: z.string().optional().default(''),
   SPOTFIRE_DOWNLOAD_TABLES: z.string().default('Tab_Completa-Deslocamentos,Desvios-Relatório_Geral:Desvios'),
   SPOTFIRE_DEBUG: booleanFromEnvironment.default(false),
-  REPORT_OUTPUT_FILE_NAME: z.string().default('scanner-analytics-report.json'),
+  REPORT_OUTPUT_FILE_NAME: z.string().default('workline-report.json'),
 });
 
 function parseCsvList(raw: string): string[] {

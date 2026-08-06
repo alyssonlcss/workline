@@ -1,6 +1,6 @@
-# Scanner Analytics
+# WorkLine
 
-Scanner Analytics é uma aplicação Full-Stack desenvolvida para extração automatizada, processamento analítico e geração de relatórios de produtividade.
+WorkLine é uma aplicação Full-Stack desenvolvida para extração automatizada, processamento analítico e geração de relatórios de produtividade.
 
 O sistema utiliza automação de navegação (RPA) para baixar bases de dados operacionais de maneira autônoma via Puppeteer, processa esses dados em um backend robusto construído com Node.js + Fastify, e exibe as métricas de desempenho através de um dashboard interativo moderno desenvolvido em Angular. A partir do dashboard, é possível visualizar o desempenho operacional das equipes, verificar o status dos alertas e gerar/exportar relatórios analíticos em PDF de maneira dinâmica e segmentada.
 
@@ -17,7 +17,7 @@ O sistema utiliza automação de navegação (RPA) para baixar bases de dados op
 
 ## 📊 Métricas e Cálculos
 
-O Scanner Analytics não apenas exibe dados brutos, mas realiza uma série de cruzamentos analíticos (Deep Dive) para expor gargalos operacionais ocultos que geralmente passam despercebidos nas médias mensais.
+O WorkLine não apenas exibe dados brutos, mas realiza uma série de cruzamentos analíticos (Deep Dive) para expor gargalos operacionais ocultos que geralmente passam despercebidos nas médias mensais.
 
 ### Principais KPIs e Fórmulas Analíticas:
 - **Eficiência**: Mede a precisão da execução frente à expectativa. 
@@ -93,7 +93,7 @@ Após o build inicial, o aplicativo frontend estará acessível em `http://local
 
 ## 👥 Arquitetura Multi-Usuário e Alta Concorrência (Sem Banco de Dados)
 
-O Scanner Analytics foi desenhado para operar na rede interna corporativa sem necessidade de infraestrutura pesada de banco de dados SQL/NoSQL. O sistema gerencia múltiplos acessos concorrentes através dos seguintes mecanismos:
+O WorkLine foi desenhado para operar na rede interna corporativa sem necessidade de infraestrutura pesada de banco de dados SQL/NoSQL. O sistema gerencia múltiplos acessos concorrentes através dos seguintes mecanismos:
 
 - **Credenciais Per-User no Frontend**: Cada usuário insere seu **Usuário** e **Senha** do Spotfire no painel lateral de extração. O frontend salva localmente no navegador (`localStorage`) de forma isolada, possui um alternador de visibilidade de senha (olhinho 👁️) e transmite as credenciais na requisição de extração.
 - **Fila de Execução Concorrente (`ExtractionQueueManager`)**: Orquestra as requisições com um limite de navegações simultâneas via `p-limit`. Quando o número de requisições excede a capacidade do servidor, o usuário recebe um evento SSE com sua posição exata na fila (*ex: "Solicitação na fila — Posição 2"*).
@@ -129,8 +129,8 @@ SPOTFIRE_BROWSER_PATH=C:\Program Files (x86)\Microsoft\Edge\Application\msedge.e
 # Mapeamento de Tabelas a Baixar (Formato: Aba-Tabela)
 SPOTFIRE_DOWNLOAD_TABLES=Tab_Completa-Deslocamentos
 
-# Nome do Arquivo de Relatório Gerado (Opcional, Padrão: scanner-analytics-report.json)
-REPORT_OUTPUT_FILE_NAME=scanner-analytics-report.json
+# Nome do Arquivo de Relatório Gerado (Opcional, Padrão: workline-report.json)
+REPORT_OUTPUT_FILE_NAME=workline-report.json
 ```
 
 > **Aviso de Segurança**: Por padrão, o arquivo `.env` está incluso no `.gitignore` para prevenir o vazamento acidental de senhas e URLs corporativas em repositórios públicos. Nunca o versione!

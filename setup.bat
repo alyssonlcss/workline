@@ -6,7 +6,7 @@ set PROJECT_DIR=%PROJECT_DIR:~0,-1%
 :: Se nao estiver rodando dentro do Windows Terminal, re-lanca o script dentro dele
 if not defined WT_SESSION (
     if exist "%WT_PATH%" (
-        "%WT_PATH%" -d "%PROJECT_DIR%" --title "Scanner Analytics Setup" --suppressApplicationTitle cmd /k "%~f0"
+        "%WT_PATH%" -d "%PROJECT_DIR%" --title "WorkLine Setup" --suppressApplicationTitle cmd /k "%~f0"
         exit /b
     )
 )
@@ -14,7 +14,7 @@ if not defined WT_SESSION (
 :MENU
 cls
 echo ===================================================
-echo          Scanner Analytics - Menu Setup
+echo          WorkLine - Menu Setup
 echo ===================================================
 echo.
 echo  1 - Executar (Iniciar Backend e Frontend)
@@ -42,7 +42,7 @@ goto MENU
 :EXECUTAR
 cls
 echo ===================================================
-echo             Iniciando Scanner Analytics
+echo             Iniciando WorkLine
 echo ===================================================
 echo.
 

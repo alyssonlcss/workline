@@ -2,7 +2,7 @@
   "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
   "version": 1,
   "projects": {
-    "scanner-analytics-frontend": {
+    "workline-frontend": {
       "projectType": "application",
       "root": "",
       "sourceRoot": "src",
@@ -11,7 +11,7 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
-            "outputPath": "dist/scanner-analytics-frontend",
+            "outputPath": "dist/workline-frontend",
             "browser": "src/main.ts",
             "index": "src/index.html",
             "polyfills": ["zone.js"],
@@ -28,7 +28,7 @@
         "serve": {
           "builder": "@angular/build:dev-server",
           "options": {
-            "buildTarget": "scanner-analytics-frontend:build"
+            "buildTarget": "workline-frontend:build"
           }
         }
       }

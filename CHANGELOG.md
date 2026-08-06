@@ -38,7 +38,7 @@ Esta release consolida o novo módulo analítico "Relatório de Despacho", agreg
 
 ## [1.0.0] - Lançamento / Atualização Anterior
 
-Bem-vindo às atualizações do **Scanner Analytics**. Focamos em corrigir pendências críticas, acelerar o tempo de extração e simplificar a interface para trazer uma experiência muito mais rápida e intuitiva!
+Bem-vindo às atualizações do **WorkLine**. Focamos em corrigir pendências críticas, acelerar o tempo de extração e simplificar a interface para trazer uma experiência muito mais rápida e intuitiva!
 
 ### Corrigido (Bug Fixes)
 - **Correção Crítica no Motor de Extração:** Foi corrigido um problema severo de sintaxe no arquivo central do robô (`puppeteer-spotfire-automation.ts`) que estava corrompendo as assinaturas dos métodos e causando falha total na compilação (`build`) do backend. O projeto agora compila perfeitamente.
@@ -48,7 +48,7 @@ Bem-vindo às atualizações do **Scanner Analytics**. Focamos em corrigir pend�
 - **Zero Atrasos em Filtros:** O robô não utiliza mais tempos de espera engessados (ex: esperar 5 segundos "cegos" por garantia). Ele agora monitora em tempo real os elementos nativos de carregamento do HTML do Spotfire. Se o dado carrega em 10 milissegundos, o robô avança em 10 milissegundos.
 - **Bypass Automático de Login:** Para não perder tempo, a automação sempre verifica ativamente a sessão. Se você já estiver logado, ele pula a tela de autenticação e vai direto para os filtros. Caso a sessão morra no meio da extração (Timeout), ele possui um sistema de *recovery* que reconecta sozinho e continua exatamente de onde parou.
 - **Remoção do Filtro de Dia (Extração):** Toda a complexidade de selecionar sliders de dias precisos no momento da extração foi **completamente descartada**, tanto no visual quanto no robô.
-- **Maior Agilidade Operacional:** Essa remoção traz uma **praticidade enorme** para o seu dia a dia. Ao invés de afunilar a base bruta na origem (Spotfire), você extrai meses consolidados com 1 clique e faz a seleção fina de datas **diretamente nos Filtros de Relatório** do próprio Scanner Analytics! É mais inteligente analisar a base toda e filtrar localmente no frontend, sem precisar refazer extrações custosas só por causa de um dia a mais.
+- **Maior Agilidade Operacional:** Essa remoção traz uma **praticidade enorme** para o seu dia a dia. Ao invés de afunilar a base bruta na origem (Spotfire), você extrai meses consolidados com 1 clique e faz a seleção fina de datas **diretamente nos Filtros de Relatório** do próprio WorkLine! É mais inteligente analisar a base toda e filtrar localmente no frontend, sem precisar refazer extrações custosas só por causa de um dia a mais.
 
 ### Adicionado (Inteligência e UI)
 - **Inteligência de Estimativas:** Adicionado um módulo que prevê o peso dos arquivos e o tempo de download antes da extração começar. Ele calcula frações dinâmicas de tempo (ex: entende que se estivermos no dia 7 de Julho, o volume esperado é apenas `~22%` do total de um mês fechado de ~6MB).
@@ -57,5 +57,5 @@ Bem-vindo às atualizações do **Scanner Analytics**. Focamos em corrigir pend�
 ### Como Atualizar e Executar o Projeto (Guia)
 Caso você queira distribuir esta atualização para seus amigos ou rodar em outra máquina, o processo é muito simples:
 1. **Via Git:** Se a pasta já foi clonada, basta abrir o terminal dentro da pasta raiz do projeto e digitar `git pull`.
-2. **Via arquivo ZIP:** Acesse o link oficial do GitHub ([https://github.com/alyssonlcss/scanner_analytics](https://github.com/alyssonlcss/scanner_analytics)), clique no botão verde **"Code"** e depois em **"Download ZIP"**. Extraia o conteúdo e cole sobre a sua pasta antiga.
+2. **Via arquivo ZIP:** Acesse o link oficial do GitHub ([https://github.com/alyssonlcss/workline](https://github.com/alyssonlcss/workline)), clique no botão verde **"Code"** e depois em **"Download ZIP"**. Extraia o conteúdo e cole sobre a sua pasta antiga.
 3. **Instalação e Execução Mágica:** Navegue até a pasta raiz do projeto e dê um clique duplo no arquivo **`setup.bat`**. Ele instalará as dependências do front e back, iniciando os dois servidores automaticamente sem complicações!

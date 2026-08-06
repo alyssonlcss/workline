@@ -383,7 +383,7 @@ export class DashboardPdfService {
     // Header
     content.push({
       columns: [
-        { text: 'Scanner Analytics', style: 'headerTitle', width: '*' },
+        { text: 'WorkLine', style: 'headerTitle', width: '*' },
         { 
           stack: [
             { text: `Data de extração: ${today}`, style: 'headerDate' },
@@ -469,7 +469,7 @@ export class DashboardPdfService {
     }
 
     return {
-      info: { title: 'Relatório de Despacho', author: 'Scanner Analytics' },
+      info: { title: 'Relatório de Despacho', author: 'WorkLine' },
       pageSize: 'A4',
       pageMargins: [30, 36, 30, 36],
       content,
@@ -1833,7 +1833,7 @@ export class DashboardPdfService {
     }
 
     return {
-      info: { title: `${title}`, author: 'Scanner Analytics' },
+      info: { title: `${title}`, author: 'WorkLine' },
       pageSize: 'A4',
       pageMargins: [30, 36, 30, 36] as [number, number, number, number],
       content,
