@@ -9,7 +9,7 @@ export class FileGarbageCollector {
 
   public constructor(
     private readonly baseDataDir: string,
-    private readonly maxAgeMs: number = 30 * 60 * 1000, // 30 min TTL
+    private readonly maxAgeMs: number = 24 * 60 * 60 * 1000, // 24 hours TTL
     private readonly intervalMs: number = 5 * 60 * 1000, // Check every 5 min
   ) {}
 
