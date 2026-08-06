@@ -3,7 +3,7 @@
 Todos os recursos notáveis, correções e melhorias neste projeto serão documentados neste arquivo.
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
-## [1.3.0] - 2026-08-06
+## [1.3.1] - 2026-08-06
 
 Esta é uma grande atualização ("Mega Release") que renomeia oficialmente o projeto para **WorkLine** e adiciona uma arquitetura robusta de Relatórios em PDF, novos Analisadores de KPI e várias melhorias de Qualidade de Vida (QoL) no Setup.
 
