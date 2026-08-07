@@ -3,6 +3,23 @@
 Todos os recursos notáveis, correções e melhorias neste projeto serão documentados neste arquivo.
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [2.1.0] - 2026-08-07
+
+Esta release é uma atualização contínua focada em refinamentos lógicos e correções visuais na exportação de PDFs e geração da cronologia, elevando a precisão do diagnóstico de anomalias operacionais.
+
+### Adicionado
+- **Detecção de Anomalias na Cronologia:** O motor da Timeline agora identifica quebras lógicas no fluxo de trabalho (ex: registros fora de ordem ou retroativos), gerando uma flag em vermelho na Web e no PDF de "Cronologia Incorreta".
+- **Integração de Tempo Ocioso por Anomalia:** Os períodos de tempo "perdidos" em anomalias de cronologia agora são dinamicamente incorporados e somados ao indicador de Tempo Ocioso (tanto no *badge* visual do cartão quanto no motor de cálculos).
+
+### Alterado
+- **Ajuste de Meta Global:** A meta institucional do indicador "OS/Dia" foi calibrada e alterada de `4.4` para `5.0`. A nova referência impacta automaticamente todas as cores, painéis do Dashboard, cálculos CSV e textos dinâmicos do Relatório Executivo.
+- **Mapeamento de Duplo Despacho:** Adicionado suporte lógico transicional (`inicio_calendario` e `log_in` p/ `hora_despacho_anterior`) no dicionário de estados da Timeline. Com isso, OS subsequentes de duplo despacho deixam de disparar falsos positivos de anomalia, sendo validadas como "Espera pelo 1º Desp.".
+
+### Corrigido
+- **Corrupção de Símbolos no PDF (Encoding):** Ícones estáticos (como o ⚠ de Alertas) estavam sendo lidos incorretamente devido à codificação de fontes do gerador, gerando caracteres como `âš `. Foram substituídos pelo formato ASCII universal `[!]`, blindando o relatório contra quebras.
+- **Desalinhamento da Seta de Direção:** Na Web, a interface retomou sua aparência premium nativa usando a seta Unicode (`→`). Ao mesmo tempo, um "interceptador" foi criado no serviço local do `pdfmake` para converter dinamicamente essa mesma seta para o formato `->`, assegurando compatibilidade retroativa para a extração do PDF sem comprometer o design em tela.
+- **Sincronia de Cores UI vs PDF:** Corrigida a ausência da verificação `!!isAnomaly` no gerador do documento PDF. Segmentos anômalos agora herdam perfeitamente as cores rubro/vermelho definidas nos parâmetros de alerta estritos da interface web.
+
 ## [2.0.0] - 2026-08-06
 
 Esta é uma grande atualização ("Mega Release") que renomeia oficialmente o projeto para **WorkLine** e adiciona uma arquitetura robusta de Relatórios em PDF, novos Analisadores de KPI e várias melhorias de Qualidade de Vida (QoL) no Setup.
