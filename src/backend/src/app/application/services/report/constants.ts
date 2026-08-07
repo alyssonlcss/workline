@@ -31,7 +31,7 @@ export interface KpiThreshold {
 }
 
 export const KPI_THRESHOLDS: KpiThreshold[] = [
-  { kpi: 'OS Dia',        direction: 'higher-is-better', worst:  1.0,  meta:  4.4,  metaScore: 15,  best:  5.5,  maxScore: 16.5 },
+  { kpi: 'OS Dia',        direction: 'higher-is-better', worst:  1.0,  meta:  5.0,  metaScore: 15,  best:  6.0,  maxScore: 16.5 },
   { kpi: 'Eficiência',    direction: 'higher-is-better', worst: 80,    meta: 100,   metaScore: 10,  best: 125,   maxScore: 11.7 },
   { kpi: 'Utilização',    direction: 'higher-is-better', worst: 60,    meta:  85,   metaScore: 10,  best:  88,   maxScore: 11.2 },
   { kpi: 'TME IMP',       direction: 'lower-is-better',  worst: 28,    meta:  20,   metaScore: 10,  best:  17,   maxScore: 13.8 },

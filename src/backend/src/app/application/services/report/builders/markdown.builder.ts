@@ -79,7 +79,7 @@ export function buildMarkdownReport(report: GeneratedReport): string {
       if (insight.kpi === 'Eficiência' && insight.evidenceAnalysis && insight.evidenceAnalysis.length > 0) {
         lines.push('#### 🔍 Análise Detalhada — Evidências de Incidências');
         lines.push('');
-        lines.push('_Fonte: Scanner 4.4 - CE M300_');
+        lines.push('_Fonte: Scanner 5 - CE M300_');
         lines.push('');
 
         let firstEvidence = true;
@@ -239,7 +239,7 @@ export function buildMarkdownReport(report: GeneratedReport): string {
 
       lines.push('## 🔍 Análise Detalhada — OS/Dia');
       lines.push('');
-      lines.push('> Evidências por ordem das equipes abaixo da meta de OS/Dia (4.4). Fonte: **Scanner 4.4 - CE M300**');
+      lines.push('> Evidências por ordem das equipes abaixo da meta de OS/Dia (5). Fonte: **Scanner 5 - CE M300**');
       lines.push('');
 
       let firstOsDia = true;
