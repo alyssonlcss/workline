@@ -118,6 +118,8 @@ export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACami
     'log_in_inicio_calendario': 'Log In',
     'inicio_calendario_despachada': '1º Desp.',
     'log_in_despachada': '1º Desp.',
+    'inicio_calendario_hora_despacho_anterior': '1º Desp.',
+    'log_in_hora_despacho_anterior': '1º Desp.',
     'hora_despacho_anterior_despachada': '2º Desp.',
     'prev_liberada_despachada': 'Sem OS',
     'liberada_despachada': 'Sem OS',

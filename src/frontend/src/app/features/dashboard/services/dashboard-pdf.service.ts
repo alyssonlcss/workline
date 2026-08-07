@@ -115,7 +115,8 @@ export class DashboardPdfService {
         lbl === 'Sem OS' ||
         lbl === 'Desl. Intervalo | Sem OS' ||
         lbl === 'Partida' ||
-        lbl === '1º Desloc.'
+        lbl === '1º Desloc.' ||
+        !!seg.isAnomaly
       ) {
         total += seg.durationMin;
       } else if (lbl === 'Log In' && (seg.flags?.length ?? 0) > 0) {
