@@ -1,4 +1,4 @@
-﻿import type { CsvRow } from '../csv-utils.js';
+import type { CsvRow } from '../csv-utils.js';
 import type { EficienciaTeamAnalysis, EficienciaOrderEvidence, KpiInsight, GlobalAveragesMap } from '../types.js';
 import { createAccessor, parseNumber, normalizeToken, parseDateTimeBr, round2, percentile } from '../csv-utils.js';
 import { getLimit } from '../../../../infrastructure/config/env.js';
@@ -177,12 +177,12 @@ export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[], glob
         ? round2((simSumTp / simSumTr) * 100)
         : undefined;
 
-      // Build prev_liberada map: sort teamRows by date+despachada, track consecutive pairs per date
+      // Build prev_liberada map: sort teamRows by date+a_caminho, track consecutive pairs per date
       const prevLiberadaMap = new Map<string, string>();
-      if (nrOrdemCol && despachadaCol) {
+      if (nrOrdemCol && aCaminhoCol) {
         const sortedForPrev = [...teamRows].sort((a, b) => {
-          const da = parseDateTimeBr(String(a[despachadaCol] ?? ''));
-          const db = parseDateTimeBr(String(b[despachadaCol] ?? ''));
+          const da = parseDateTimeBr(String(a[aCaminhoCol] ?? ''));
+          const db = parseDateTimeBr(String(b[aCaminhoCol] ?? ''));
           if (!da && !db) return 0;
           if (!da) return 1;
           if (!db) return -1;

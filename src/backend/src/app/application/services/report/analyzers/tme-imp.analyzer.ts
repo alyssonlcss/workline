@@ -1,4 +1,4 @@
-﻿import type { CsvRow } from '../csv-utils.js';
+import type { CsvRow } from '../csv-utils.js';
 import type { TmeImpTeamAnalysis, TmeImpOrderEvidence, KpiInsight, GlobalAveragesMap } from '../types.js';
 import { createAccessor, parseNumber, normalizeToken, round2, parseDateTimeBr, minutesBetween } from '../csv-utils.js';
 import { enrichTmeImpEvidence } from './domain-enrichers.js';
@@ -64,10 +64,10 @@ export function analyzeTmeImp(deslocRows: CsvRow[], kpis: KpiInsight[], globalAv
       }
       const teamAvgTme = teamTmeValues.length > 0 ? teamTmeValues.reduce((s, x) => s + x, 0) / teamTmeValues.length : 0;
 
-      // Sort team rows by despachada time to find prev_liberada per order
+      // Sort team rows by a_caminho time to find prev_liberada per order
       const sortedTeamRows = [...teamRows].sort((a, b) => {
-        const da = despachadaCol ? parseDateTimeBr(String(a[despachadaCol] ?? '')) : null;
-        const db = despachadaCol ? parseDateTimeBr(String(b[despachadaCol] ?? '')) : null;
+        const da = aCaminhoCol ? parseDateTimeBr(String(a[aCaminhoCol] ?? '')) : null;
+        const db = aCaminhoCol ? parseDateTimeBr(String(b[aCaminhoCol] ?? '')) : null;
         if (!da && !db) return 0;
         if (!da) return 1;
         if (!db) return -1;
