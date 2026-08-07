@@ -226,11 +226,11 @@ export class TimelineVisualComponent implements OnInit {
   private static readonly IDLE_LABELS = new Set(['Sem OS', 'Desl. Intervalo | Sem OS', 'Partida', '1º Desloc.', 'Deslocamento p/OS', 'Antes Log Off']);
 
   isIdleSegment(seg: TimelineSegment): boolean {
-    return (TimelineVisualComponent.IDLE_LABELS.has(seg.label) || seg.label.startsWith('1º Desp.') || seg.label.startsWith('2º Desp.')) && seg.label !== 'Deslocamento p/OS';
+    return (TimelineVisualComponent.IDLE_LABELS.has(seg.label) || seg.label.startsWith('1º Desp.') || seg.label.startsWith('2º Desp.') || !!seg.isAnomaly) && seg.label !== 'Deslocamento p/OS';
   }
 
   isIdleHighSegment(seg: TimelineSegment): boolean {
-    return ((TimelineVisualComponent.IDLE_LABELS.has(seg.label) || seg.label.startsWith('1º Desp.') || seg.label.startsWith('2º Desp.')) && ((seg.flags?.length ?? 0) > 0))
+    return ((TimelineVisualComponent.IDLE_LABELS.has(seg.label) || seg.label.startsWith('1º Desp.') || seg.label.startsWith('2º Desp.') || !!seg.isAnomaly) && ((seg.flags?.length ?? 0) > 0))
       || ((seg.label === 'Retorno a base' || seg.label === 'Retorno Vazio' || seg.label === 'Log In') && (seg.flags?.length ?? 0) > 0);
   }
 

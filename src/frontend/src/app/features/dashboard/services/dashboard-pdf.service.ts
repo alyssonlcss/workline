@@ -132,7 +132,7 @@ export class DashboardPdfService {
     const IDLE = DashboardPdfService.TIMELINE_IDLE_LABELS;
     const isRepairAlarm = (s: TimelineSegment): boolean => (s.label === 'Reparo' || s.label === 'Log In') && (s.flags?.length ?? 0) > 0;
     const isDeslocAlarm = (s: TimelineSegment): boolean => s.label === 'Deslocamento p/OS' && (s.flags?.length ?? 0) > 0;
-    const isIdleLabel = (s: TimelineSegment): boolean => IDLE.has(s.label) || s.label.startsWith('1º Desp.') || s.label.startsWith('2º Desp.');
+    const isIdleLabel = (s: TimelineSegment): boolean => IDLE.has(s.label) || s.label.startsWith('1º Desp.') || s.label.startsWith('2º Desp.') || !!s.isAnomaly;
     const isRetornoBaseAlarm = (s: TimelineSegment): boolean => s.label === 'Retorno a base' && (s.flags?.length ?? 0) > 0;
     const getFill = (s: TimelineSegment): string =>
       s.isInterval ? '#dbeafe' : isRepairAlarm(s) || isDeslocAlarm(s) || isRetornoBaseAlarm(s) ? '#fca5a5' :
@@ -173,11 +173,12 @@ export class DashboardPdfService {
     const barRow = segs.map((s) => {
       const durStr = s.overrideDuration ?? `${s.durationMin}min`;
       const stack: any[] = [];
+      const cleanLabel = this.stripEmojiForPdf(s.label);
       if (s.subtitle) {
-        stack.push({ text: `${s.label} — ${durStr}`, fontSize: 6, bold: true, color: getTxtColor(s), alignment: 'center' as const });
+        stack.push({ text: `${cleanLabel} — ${durStr}`, fontSize: 6, bold: true, color: getTxtColor(s), alignment: 'center' as const });
         stack.push({ text: s.subtitle, fontSize: 5.1, bold: true, color: getTxtColor(s), alignment: 'center' as const });
       } else {
-        stack.push({ text: s.label, fontSize: 5.5, bold: true, color: getTxtColor(s), alignment: 'center' as const });
+        stack.push({ text: cleanLabel, fontSize: 5.5, bold: true, color: getTxtColor(s), alignment: 'center' as const });
         stack.push({ text: durStr, fontSize: 5, bold: true, color: getTxtColor(s), alignment: 'center' as const });
       }
       return { stack, fillColor: getFill(s) };
@@ -308,6 +309,7 @@ export class DashboardPdfService {
       .replace(/\u26A0\uFE0F/g, '\u26A0')
       .replace(/\u2191/g, '(+)')
       .replace(/\u2193/g, '(-)')
+      .replace(/\u2192/g, '->')
       .replace(/[\uFE0F]/g, '')
       .replace(/[\u{1F000}-\u{1FAFF}]/gu, '')
       .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '')
@@ -605,8 +607,8 @@ export class DashboardPdfService {
         content.push({ text: `Recorrentes: ${es.topActionIssues.map(shortLabel).join(' · ')}`, fontSize: 7.5, color: GRAY, margin: [0, 8, 0, 0] });
       }
       const alertBadges: string[] = [];
-      if (es.retornoBaseAlertCount > 0) alertBadges.push(`âš  ${es.retornoBaseAlertCount} equipe(s) com Retorno a Base acima da meta`);
-      if (es.tmeImpAlertCount > 0) alertBadges.push(`âš  ${es.tmeImpAlertCount} equipe(s) com TME IMP acima da meta`);
+      if (es.retornoBaseAlertCount > 0) alertBadges.push(`[!] ${es.retornoBaseAlertCount} equipe(s) com Retorno a Base acima da meta`);
+      if (es.tmeImpAlertCount > 0) alertBadges.push(`[!] ${es.tmeImpAlertCount} equipe(s) com TME IMP acima da meta`);
       if (alertBadges.length > 0) {
         content.push({ text: `ALERTAS: ${alertBadges.join('   ')}`, fontSize: 7.5, bold: true, color: RED, margin: [0, 6, 0, 0] });
       }

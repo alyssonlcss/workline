@@ -18,6 +18,7 @@ export interface TimelineSegment {
   startLabel: string;
   endLabel: string;
   flags: string[];
+  isAnomaly?: boolean;
 }
 
 /** Parseia string 'DD/MM/YYYY HH:MM:SS' ou variações → timestamp ms. */
@@ -143,7 +144,10 @@ export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACami
     if (durationMin < 0) continue;
 
     const isInterval = isInInterval(p1.ts + (p2.ts - p1.ts) / 2);
-    let label = isInterval ? 'Intervalo' : (labelMap[`${p1.key}_${p2.key}`] ?? `${p1.label} → ${p2.label}`);
+    const hasMappedLabel = !!labelMap[`${p1.key}_${p2.key}`];
+    let label = isInterval ? 'Intervalo' : (hasMappedLabel ? labelMap[`${p1.key}_${p2.key}`] : `${p1.label} \u2192 ${p2.label}`);
+    
+    const isAnomaly = !isInterval && !hasMappedLabel;
     
     // Anexa o número da OS no segmento se for 1º ou 2º Despacho
     if (label === '1º Desp.' || (p2.key === 'hora_despacho_anterior' && ev.nr_ordem_despacho_anterior)) {
@@ -307,10 +311,15 @@ export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACami
       }
     }
 
+    if (isAnomaly) {
+      flags.push(`Cronologia Incorreta no segmento "${label}": É fundamental respeitar as etapas e processos operacionais na ordem correta. O descumprimento prejudica severamente a análise e leitura de dados, levando a tempo ocioso ou má interpretação da cronologia do fluxo de trabalho da equipe. Para evitar isso, os eventos devem ser registrados em tempo real, respeitando a sequência lógica do atendimento.`);
+    }
+
     rawSegs.push({
       label, durationMin, overrideDuration, subtitle, isInterval,
       startTime: extractTime(p1.raw), endTime: extractTime(p2.raw),
       startLabel: p1.label, endLabel: p2.label, flags, excessMin: excessMinVal,
+      isAnomaly
     });
   }
 
@@ -320,7 +329,7 @@ export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACami
     let cur = { ...filtered[0] };
     for (let i = 1; i < filtered.length; i++) {
       const s = filtered[i];
-      if (s.label === cur.label && s.isInterval === cur.isInterval && JSON.stringify(s.flags) === JSON.stringify(cur.flags)) {
+      if (s.label === cur.label && s.isInterval === cur.isInterval && s.isAnomaly === cur.isAnomaly && JSON.stringify(s.flags) === JSON.stringify(cur.flags)) {
         cur = { ...cur, durationMin: cur.durationMin + s.durationMin, endTime: s.endTime, endLabel: s.endLabel };
       } else {
         merged.push(cur);
@@ -356,7 +365,7 @@ export function getEvidenceColor(ev: any): 'red' | 'yellow' | 'green' {
     if (seg.isInterval) {
       greenCount++;
     } else {
-      const isIdle = idleLabels.has(seg.label) || seg.label.startsWith('1º Desp.') || seg.label.startsWith('2º Desp.');
+      const isIdle = idleLabels.has(seg.label) || seg.label.startsWith('1º Desp.') || seg.label.startsWith('2º Desp.') || !!seg.isAnomaly;
       if (isIdle) {
         yellowCount++;
       } else {

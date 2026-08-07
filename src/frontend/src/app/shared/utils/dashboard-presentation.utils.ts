@@ -133,6 +133,17 @@ export function getDashboardAlerts(kpi: string, ev: any): DashboardAlert[] {
     }
   };
 
+  const segments = require('./timeline-segment.utils').buildTimelineSegments(ev, false, false);
+  const anomalySegments = segments.filter((s: any) => s.isAnomaly).map((s: any) => s.label);
+  if (anomalySegments.length > 0) {
+    const labelsStr = anomalySegments.join(', ');
+    alerts.push({
+      title: 'Cronologia Incorreta:',
+      bodyHtml: `os segmentos "${labelsStr}" apresentaram registros fora de ordem. É fundamental respeitar as etapas e processos operacionais na ordem correta. O descumprimento prejudica severamente a análise e leitura de dados, levando a tempo ocioso ou má interpretação da cronologia do fluxo de trabalho da equipe. Para evitar isso, os eventos devem ser registrados em tempo real, respeitando a sequência lógica do atendimento.`,
+      isWarn: false
+    });
+  }
+
   switch (kpi) {
     case 'OS Dia':
       addFlag('tr_excede_hd', 'Tempo de Reparo alto:');
