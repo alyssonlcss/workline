@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Alysson Pinheiro. Todos os direitos reservados.
-// Software proprietÃ¡rio e confidencial. Uso nÃ£o autorizado Ã© proibido.
+// Software proprietário e confidencial. Uso não autorizado é proibido.
 import type { OsDiaOrderEvidence, EficienciaOrderEvidence, TmeImpOrderEvidence, PrimeiroLoginDayEvidence, PrimeiroDeslocDayEvidence, RetornoBaseDayEvidence, UtilizacaoOrderEvidence, GlobalAveragesMap } from '../types.js';
 import { getLimit } from '../../../../infrastructure/config/env.js';
 
@@ -58,7 +58,7 @@ export function getAvgText(team: string | undefined, globalAverages: GlobalAvera
 
   if (tAvg <= 0 && bAvg <= 0 && pAvg <= 0) return '';
 
-  return ` | MÃ©dia da Equipe: ${nfBr(tAvg, 0, 1)} min | MÃ©dia da Base (${base}): ${nfBr(bAvg, 0, 1)} min | MÃ©dia do Polo (${polo}): ${nfBr(pAvg, 0, 1)} min`;
+  return ` | Média da Equipe: ${nfBr(tAvg, 0, 1)} min | Média da Base (${base}): ${nfBr(bAvg, 0, 1)} min | Média do Polo (${polo}): ${nfBr(pAvg, 0, 1)} min`;
 }
 
 export const getTempPrepLimit = (polo?: string) => getLimit('LIMIT_TEMP_PREP_MIN', polo, 10);
@@ -78,42 +78,42 @@ export function semOsDetailText(d: {
     const fmtAvg = (pct: number | undefined, avg: number | undefined): string => {
       if (!Number.isFinite(pct) || !Number.isFinite(avg) || (avg ?? 0) <= 0) return '';
       const dir = (pct! >= 0) ? 'acima' : 'abaixo';
-      return ` | ${nfBr(Math.abs(pct!), 0, 1)}% ${dir} da mÃ©dia geral (${nfBr(avg!)} min)`;
+      return ` | ${nfBr(Math.abs(pct!), 0, 1)}% ${dir} da média geral (${nfBr(avg!)} min)`;
     };
     switch (d.type) {
       case 'inicio_jornada': {
         const pctIJ = Math.round((d.min - getSemOsLimit(d.polo)) / getSemOsLimit(d.polo) * 100);
-        return `1Âº Despacho: ${d.min} min do InÃ­cio CalendÃ¡rio (${d.from ?? 'â€”'}) atÃ© o primeiro despacho (${d.to ?? 'â€”'}) â€” ${pctIJ}% acima do limite (${getSemOsLimit(d.polo)} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
+        return `1º Despacho: ${d.min} min do Início Calendário (${d.from ?? '—'}) até o primeiro despacho (${d.to ?? '—'}) — ${pctIJ}% acima do limite (${getSemOsLimit(d.polo)} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
       }
       case 'entre_ordens': {
         const mEO = Math.round(d.min);
         const pctEO = Math.round((mEO - getSemOsLimit(d.polo)) / getSemOsLimit(d.polo) * 100);
-        return `Entre OS: ${mEO} min sem nova OS â€” Lib. Anterior (${d.from ?? 'â€”'})${d.desp_anterior ? ' Â· Desp. Anterior (' + d.desp_anterior + ')' : ''} atÃ© Despachada (${d.to ?? 'â€”'})${d.interval_discounted ? ' â€” intervalo descontado' : ''} â€” ${pctEO}% acima do limite (${getSemOsLimit(d.polo)} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
+        return `Entre OS: ${mEO} min sem nova OS — Lib. Anterior (${d.from ?? '—'})${d.desp_anterior ? ' · Desp. Anterior (' + d.desp_anterior + ')' : ''} até Despachada (${d.to ?? '—'})${d.interval_discounted ? ' — intervalo descontado' : ''} — ${pctEO}% acima do limite (${getSemOsLimit(d.polo)} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
       }
       case 'retorno_excedente': {
-        const fromLabel = d.from_label ?? 'Ãºltima Liberada';
+        const fromLabel = d.from_label ?? 'última Liberada';
         const excessMin: number | undefined = (d as any).excess_min;
         const globalAvgMin: number | undefined = (d as any).global_avg_min;
         if (d.retorno_base_discounted != null) {
           if (excessMin != null) {
             const globalPart = globalAvgMin != null ? ` (${nfBr(globalAvgMin)} min)` : '';
-            return `Retorno Excedente: ${nfBr(excessMin)} min acima da mÃ©dia geral de Retorno a base${globalPart} â€” Retorno a base: ${nfBr(d.min)} min entre ${fromLabel} (${d.from ?? 'â€”'}) e Log Off (${d.to ?? 'â€”'}).`;
+            return `Retorno Excedente: ${nfBr(excessMin)} min acima da média geral de Retorno a base${globalPart} — Retorno a base: ${nfBr(d.min)} min entre ${fromLabel} (${d.from ?? '—'}) e Log Off (${d.to ?? '—'}).`;
           }
-          return `Retorno a base: ${nfBr(d.min)} min entre ${fromLabel} (${d.from ?? 'â€”'}) e Log Off (${d.to ?? 'â€”'}).`;
+          return `Retorno a base: ${nfBr(d.min)} min entre ${fromLabel} (${d.from ?? '—'}) e Log Off (${d.to ?? '—'}).`;
         }
         const excessText = excessMin != null
-          ? ` â€” ${nfBr(excessMin)} min acima da mÃ©dia geral de Retorno a base${globalAvgMin != null ? ' (' + nfBr(globalAvgMin) + ' min)' : ''}`
+          ? ` — ${nfBr(excessMin)} min acima da média geral de Retorno a base${globalAvgMin != null ? ' (' + nfBr(globalAvgMin) + ' min)' : ''}`
           : '';
-        return `Retorno Excedente: ${nfBr(d.min)} min entre ${fromLabel} (${d.from ?? 'â€”'}) e Log Off (${d.to ?? 'â€”'})${excessText}.`;
+        return `Retorno Excedente: ${nfBr(d.min)} min entre ${fromLabel} (${d.from ?? '—'}) e Log Off (${d.to ?? '—'})${excessText}.`;
       }
       case 'intervalo_deslocamento': {
         const mID = Math.round(d.min);
         const pctID = Math.round((mID - getSemOsLimit(d.polo)) / getSemOsLimit(d.polo) * 100);
         const fromLabel = d.from_label ?? 'Lib. Anterior';
-        return `Desl. Intervalo: ${mID} min entre ${fromLabel} (${d.from ?? 'â€”'}) e InÃ­cio Intervalo (${d.to ?? 'â€”'}) â€” ${pctID}% acima do limite (${getSemOsLimit(d.polo)} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
+        return `Desl. Intervalo: ${mID} min entre ${fromLabel} (${d.from ?? '—'}) e Início Intervalo (${d.to ?? '—'}) — ${pctID}% acima do limite (${getSemOsLimit(d.polo)} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
       }
       default:
-        return `${d.type}: ${d.min} min (${d.from ?? 'â€”'} â†’ ${d.to ?? 'â€”'})`;
+        return `${d.type}: ${d.min} min (${d.from ?? '—'} → ${d.to ?? '—'})`;
     }
   }
 

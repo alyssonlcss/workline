@@ -1,4 +1,4 @@
-﻿import type { CsvRow } from '../csv-utils.js';
+import type { CsvRow } from '../csv-utils.js';
 import type { RetornoBaseTeamAnalysis, RetornoBaseDayEvidence, KpiInsight, GlobalAveragesMap } from '../types.js';
 import { createAccessor, parseNumber, normalizeToken, round2, parseDateTimeBr, minutesBetween } from '../csv-utils.js';
 import { enrichRetornoEvidence } from './domain-enrichers.js';
@@ -22,9 +22,9 @@ export function analyzeRetornoBase(deslocRows: CsvRow[], kpis: KpiInsight[], glo
 
     const deslocAcc = createAccessor(deslocRows[0]);
     const teamCol          = deslocAcc.resolve(['Equipe']);
-    const dateCol          = deslocAcc.resolve(['Data ReferÃªncia', 'Data Referencia']);
+    const dateCol          = deslocAcc.resolve(['Data Referência', 'Data Referencia']);
     const retornoBaseCol   = deslocAcc.resolve(['Retorno a base', 'Retorno a Base', 'Retorno Base']);
-    const horaUltimaCol    = deslocAcc.resolve(['Hora Ultima Ordem', 'Hora Ãšltima Ordem']);
+    const horaUltimaCol    = deslocAcc.resolve(['Hora Ultima Ordem', 'Hora Última Ordem']);
     const logOffCorCol     = deslocAcc.resolve(['Log Off Corrigido', 'LogOff Corrigido']);
     const fimIntervaloCol  = deslocAcc.resolve(['Fim Intervalo', 'Fim do Intervalo']);
 

@@ -23,7 +23,7 @@ export function analyzeTmeImp(deslocRows: CsvRow[], kpis: KpiInsight[], globalAv
 
     const deslocAcc = createAccessor(deslocRows[0]);
     const teamCol      = deslocAcc.resolve(['Equipe']);
-    const dateCol      = deslocAcc.resolve(['Data ReferÃªncia', 'Data Referencia']);
+    const dateCol      = deslocAcc.resolve(['Data Referência', 'Data Referencia']);
     const nrOrdemCol   = deslocAcc.resolve(['Nr_Ordem', 'Nr Ordem', 'Numero Ordem']);
     const classeCol    = deslocAcc.resolve(['CLASSE', 'Classe']);
     const causaCol     = deslocAcc.resolve(['CAUSA', 'Causa']);
@@ -160,7 +160,7 @@ export function analyzeTmeImp(deslocRows: CsvRow[], kpis: KpiInsight[], globalAv
         }
       }
 
-      // OrdenaÃ§Ã£o estritamente decrescente pelo tempo de reparo
+      // Ordenação estritamente decrescente pelo tempo de reparo
       allMergedTme.sort((a, b) => b.tr_ordem_min - a.tr_ordem_min);
 
       const finalFlagged: TmeImpOrderEvidence[] = [];
@@ -194,4 +194,4 @@ export function analyzeTmeImp(deslocRows: CsvRow[], kpis: KpiInsight[], globalAv
     return result.sort((a, b) => b.tmeImpValue - a.tmeImpValue);
   }
 
-  // â”€â”€â”€ 1Âº Login Analyzer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── 1º Login Analyzer ────────────────────────────────────────────────────

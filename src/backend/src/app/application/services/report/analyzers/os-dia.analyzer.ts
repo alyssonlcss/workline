@@ -1,5 +1,5 @@
 ﻿// Copyright (c) 2026 Alysson Pinheiro. Todos os direitos reservados.
-// Software proprietÃ¡rio e confidencial. Uso nÃ£o autorizado Ã© proibido.
+// Software proprietário e confidencial. Uso não autorizado é proibido.
 import type { CsvRow } from '../csv-utils.js';
 import type { OsDiaTeamAnalysis, OsDiaOrderEvidence, UtilizacaoOrderEvidence, KpiInsight, GlobalAveragesMap } from '../types.js';
 import { createAccessor, parseNumber, normalizeToken, parseDateTimeBr, minutesBetween, applyIntervalDiscount, round2, safeSum } from '../csv-utils.js';
@@ -20,7 +20,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
     const getSemOsThreshold = (polo?: string) => getLimit('LIMIT_SEM_OS_MIN', polo, 10);
     const getPrimeiroDeslocThreshold = (polo?: string) => getLimit('LIMIT_PRIMEIRO_DESLOC_MIN', polo, 25);
     const getTriagemThreshold = (polo?: string) => getLimit('LIMIT_TRIAGEM_MIN', polo, 10);
-    const TOLERANCE_MIN = 5; // invisible grace margin â€” keeps displayed limits unchanged
+    const TOLERANCE_MIN = 5; // invisible grace margin — keeps displayed limits unchanged
 
     // 1. Determine under-performing teams from KPI insight
     // Fall back to empty if no KPI insight is available, because OS Dia insight is always computed.
@@ -41,14 +41,14 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
     // 2. Resolve deslocamento columns
     const deslocAcc = createAccessor(deslocRows[0]);
     const teamCol = deslocAcc.resolve(['Equipe']);
-    const dateCol = deslocAcc.resolve(['Data ReferÃªncia', 'Data Referencia']);
+    const dateCol = deslocAcc.resolve(['Data Referência', 'Data Referencia']);
     const caminhoCol = deslocAcc.resolve(['A_Caminho', 'A Caminho']);
     const despachadaCol = deslocAcc.resolve(['Despachada']);
     const liberadaCol = deslocAcc.resolve(['Liberada']);
-    const firstDeslocCol = deslocAcc.resolve(['1Âº Desloc', '1o Desloc']);
-    const firstDespachoCol = deslocAcc.resolve(['1Âº Despacho', '1o Despacho']);
+    const firstDeslocCol = deslocAcc.resolve(['1º Desloc', '1o Desloc']);
+    const firstDespachoCol = deslocAcc.resolve(['1º Despacho', '1o Despacho']);
     const intervaloCol = deslocAcc.resolve(['Intervalo']);
-    const inicioIntervaloCol = deslocAcc.resolve(['Inicio Intervalo', 'InÃ­cio Intervalo']);
+    const inicioIntervaloCol = deslocAcc.resolve(['Inicio Intervalo', 'Início Intervalo']);
     const fimIntervaloCol = deslocAcc.resolve(['Fim Intervalo']);
     const nrOrdemCol = deslocAcc.resolve(['Nr_Ordem', 'Nr Ordem', 'Numero Ordem']);
     const classeCol = deslocAcc.resolve(['CLASSE', 'Classe']);
@@ -58,13 +58,13 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
     const tlOrdemCol     = deslocAcc.resolve(['TL Ordem', 'TL_Ordem']);
     const hdTotalCol     = deslocAcc.resolve(['HD Total', 'HD_Total']);
     const tempoPadraoCol      = deslocAcc.resolve(['tempo_padrao', 'Tempo Padrao', 'Tempo_Padrao', 'TempoPadrao']);
-    const inicioCalendarioCol  = deslocAcc.resolve(['Inicio Calendario', 'InÃ­cio CalendÃ¡rio', 'Inicio CalendÃ¡rio', 'InÃ­cio Calendario']);
+    const inicioCalendarioCol  = deslocAcc.resolve(['Inicio Calendario', 'Início Calendário', 'Inicio Calendário', 'Início Calendario']);
     const logInCorrigidoCol    = deslocAcc.resolve(['Log In Corrigido', 'LogIn Corrigido', 'Login Corrigido']);
     const logOffCorrigidoCol2  = deslocAcc.resolve(['Log Off Corrigido', 'LogOff Corrigido']);
     const retornoBaseCol       = deslocAcc.resolve(['Retorno a base', 'Retorno a Base', 'Retorno Base']);
     const horasExtrasCol       = deslocAcc.resolve(['Horas Extras', 'Horas extras']);
-    // Timestamp of the first dispatch of the day (team-day aggregate) â€” different from the duration column firstDespachoCol
-    const horaPrimDespachoTsCol = deslocAcc.resolve(['Hora 1Âº Despacho', 'Hora 1o Despacho']);
+    // Timestamp of the first dispatch of the day (team-day aggregate) — different from the duration column firstDespachoCol
+    const horaPrimDespachoTsCol = deslocAcc.resolve(['Hora 1º Despacho', 'Hora 1o Despacho']);
 
     if (!teamCol || !dateCol || !caminhoCol || !despachadaCol || !liberadaCol) {
       return [];
@@ -98,7 +98,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
     }
     const globalAvgTrMin = globalTrCount > 0 ? round2(globalTrSum / globalTrCount) : 0;
 
-    // Global avg of 1Âº Despacho (inicio_jornada) across all rows
+    // Global avg of 1º Despacho (inicio_jornada) across all rows
     let globalIJSum = 0, globalIJCount = 0;
     if (firstDespachoCol) {
       for (const row of deslocRows) {
@@ -144,7 +144,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
       ? round2(globalEntreOrdensValues.reduce((s, v) => s + v, 0) / globalEntreOrdensValues.length)
       : 0;
 
-    // Global avg triagem (hora_despacho_anterior â†’ despachada) across all rows with prior dispatch conflict
+    // Global avg triagem (hora_despacho_anterior → despachada) across all rows with prior dispatch conflict
     const globalTriagemValues: number[] = [];
     if (horaPrimDespachoTsCol && despachadaCol) {
       const allGroupedTriagem = new Map<string, CsvRow[]>();
@@ -227,7 +227,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
       let isInterACaminho = false;
       let isInterOrdem    = false;
 
-      // First order: TempPrep = Despachada â†’ A Caminho; Ocioso = InÃ­cio Cal. â†’ A Caminho
+      // First order: TempPrep = Despachada → A Caminho; Ocioso = Início Cal. → A Caminho
       const aCaminhoFirst   = caminhoCol    ? parseDateTimeBr(String(firstRow[caminhoCol]    ?? '')) : null;
       const despachadaFirst = despachadaCol ? parseDateTimeBr(String(firstRow[despachadaCol] ?? '')) : null;
       tempPrepValues.push(aCaminhoFirst && despachadaFirst ? minutesBetween(aCaminhoFirst, despachadaFirst) : Number.NaN);
@@ -307,7 +307,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
       const retornoBaseAvg = kpis.find((k) => normalizeToken(k.kpi) === normalizeToken('Retorno Base'))?.average ?? 0;
       let semOsFimJornadaMin = Number.NaN;       // excess above retorno base (shown in flag text)
       let semOsFimDirectGapMin = Number.NaN;     // total segment duration (shown in report)
-      let semOsFimDeslIntervalMin = Number.NaN;  // Liberada â†’ InÃ­cio Intervalo (end-of-day interval)
+      let semOsFimDeslIntervalMin = Number.NaN;  // Liberada → Início Intervalo (end-of-day interval)
       let semOsFimFrom: string | undefined;
       let semOsFimFromLabel: string | undefined;
       let semOsFimRetornoBaseRowVal = 0;          // row-level retorno base (display only)
@@ -334,10 +334,10 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
           semOsFimFrom = hasIntervalInFimWindow && fimIntervaloCol
             ? String(lastRow[fimIntervaloCol] ?? '').trim() || undefined
             : String(lastRow[liberadaCol] ?? '').trim() || undefined;
-          semOsFimFromLabel = hasIntervalInFimWindow ? 'Fim Intervalo' : 'Ãºltima Liberada';
+          semOsFimFromLabel = hasIntervalInFimWindow ? 'Fim Intervalo' : 'última Liberada';
           const directGapMin = minutesBetween(logOff, segmentStart);
           semOsFimDirectGapMin = directGapMin;
-          // Desl. Intervalo for end-of-day interval: Liberada â†’ InÃ­cio Intervalo is sem_os time
+          // Desl. Intervalo for end-of-day interval: Liberada → Início Intervalo is sem_os time
           if (hasIntervalInFimWindow && lastIntStart) {
             semOsFimDeslIntervalMin = round2(minutesBetween(lastIntStart, lastLiberada));
             if (semOsFimDeslIntervalMin >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
@@ -349,22 +349,22 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
           const retornoBaseRowVal = (retornoBaseRow !== null && Number.isFinite(retornoBaseRow) && retornoBaseRow > 0)
             ? retornoBaseRow : 0;
           if (retornoBaseRowVal > 0) {
-            // Row has Retorno a base â†’ segment relabeled "Retorno a base" in UI
+            // Row has Retorno a base → segment relabeled "Retorno a base" in UI
             semOsFimRetornoBaseRowVal = round2(retornoBaseRowVal);
             semOsFimRetornoBaseUsedRow = true;
-            // Flag if total gap exceeds global avg by â‰¥15 min (Antes Log Off â€” separate flag, not ociosidade)
+            // Flag if total gap exceeds global avg by â‰¥15 min (Antes Log Off — separate flag, not ociosidade)
             if (retornoBaseAvg > 0 && (directGapMin - retornoBaseAvg) >= 15) {
               semOsFimJornadaMin = round2(directGapMin - retornoBaseAvg);
               /* Removed */
             }
           } else if (retornoBaseAvg > 0) {
-            // Row empty: flag if â‰¥15 min above global avg (Antes Log Off â€” separate flag, not ociosidade)
+            // Row empty: flag if â‰¥15 min above global avg (Antes Log Off — separate flag, not ociosidade)
             if ((directGapMin - retornoBaseAvg) >= 15) {
               semOsFimJornadaMin = round2(directGapMin - retornoBaseAvg);
               /* Removed */
             }
           } else {
-            // No retorno base data: fall back to getSemOsThreshold() (Antes Log Off â€” separate flag)
+            // No retorno base data: fall back to getSemOsThreshold() (Antes Log Off — separate flag)
             if (directGapMin >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
               semOsFimJornadaMin = round2(directGapMin);
               /* Removed */
@@ -373,7 +373,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
         }
       }
 
-      // Accumulate HD Total (per-jornada value â€” same for all OS in the group)
+      // Accumulate HD Total (per-jornada value — same for all OS in the group)
       if (hdTotalCol) {
         let hdVal: number | null = null;
         for (const row of ordered) {
@@ -421,7 +421,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
       // Accumulate total order count for this team
       teamTotalOrders.set(team, (teamTotalOrders.get(team) ?? 0) + ordered.length);
 
-      // Accumulate Horas Extras (per-jornada value â€” same for all OS in the group)
+      // Accumulate Horas Extras (per-jornada value — same for all OS in the group)
       if (horasExtrasCol) {
         const heVal = parseNumber(String(firstRow[horasExtrasCol] ?? ''));
         if (heVal !== null && Number.isFinite(heVal) && heVal > 0) {
@@ -564,7 +564,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
         if (triagemMin !== undefined && triagemMin >= getTriagemThreshold(polo) + TOLERANCE_MIN) {
           flags.push('triagem_alto');
         }
-        // 1Âº Desloc.: InÃ­cio Cal. â†’ A Caminho, only for 1Âª OS, threshold from env
+        // 1º Desloc.: Início Cal. → A Caminho, only for 1ª OS, threshold from env
         const ocisoForFlag = ocisoValues[i];
         if (i === 0 && ocisoForFlag !== undefined && ocisoForFlag >= getPrimeiroDeslocThreshold(polo)) {
           flags.push('primeiro_desloc_alto');
@@ -635,8 +635,8 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
             const prevLibStr  = prevRow && liberadaCol  ? String(prevRow[liberadaCol]  ?? '').trim() || undefined : undefined;
             const prevLibDate  = prevLibStr  ? parseDateTimeBr(prevLibStr)  : null;
             const despachadaDate = despachadaCol ? parseDateTimeBr(String(row[despachadaCol] ?? '')) : null;
-            // When the interval overlaps the dispatch window (interceptsDispatch case), InÃ­cio Intervalo
-            // is the first event after Lib. Anterior â€” calculateSemOsValue already returns
+            // When the interval overlaps the dispatch window (interceptsDispatch case), Início Intervalo
+            // is the first event after Lib. Anterior — calculateSemOsValue already returns
             // minutesBetween(inicioIntervalo, prevLiberada), so semOsMin is the exact pre-interval time.
             //
             // When the interval fits fully within the entre-ordens window (insideTolerance case),
@@ -649,7 +649,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
               despachadaDate &&
               inicioIntervaloDate.getTime() < despachadaDate.getTime()
             ) {
-              // interceptsDispatch: despachada falls inside the interval â†’ semOsMin is already the
+              // interceptsDispatch: despachada falls inside the interval → semOsMin is already the
               // exact pre-interval travel time (minutesBetween(inicioIntervalo, prevLiberada)).
               const isInterceptsDispatch = Boolean(
                 fimIntervaloDate && despachadaDate.getTime() < fimIntervaloDate.getTime(),
@@ -666,8 +666,8 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
                 }
               } else {
                 // insideTolerance: the interval fits entirely between prevLiberada and despachada.
-                // Split into: pre-interval travel (prevLiberada â†’ inicioIntervalo) and
-                //             post-interval wait  (fimIntervalo â†’ despachada).
+                // Split into: pre-interval travel (prevLiberada → inicioIntervalo) and
+                //             post-interval wait  (fimIntervalo → despachada).
                 const deslocIntervalMin = round2(minutesBetween(inicioIntervaloDate, prevLiberadaDate!));
                 if (deslocIntervalMin >= getSemOsThreshold(polo) + TOLERANCE_MIN) {
                   semOsDetails.push({
@@ -754,9 +754,9 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
         }
 
         // Detect prior-dispatch conflict for the first OS of the day (i === 0).
-        // If Hora 1Âº Despacho (team-day aggregate timestamp) differs from this OS's Despachada,
+        // If Hora 1º Despacho (team-day aggregate timestamp) differs from this OS's Despachada,
         // another OS was dispatched first. Find that OS's Nr_Ordem to show the warning flag.
-        // NOTE: detection already done above (before flags) â€” skip duplicate block.
+        // NOTE: detection already done above (before flags) — skip duplicate block.
 
         evidences.push({
           source:           'Scanner 4.4 - CE M300',
@@ -822,7 +822,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
           };
           const fimInicioIntervalo = semOsFimHasIntervalInWindow && inicioIntervaloCol ? String(lastRow[inicioIntervaloCol] ?? '').trim() : '';
           const fimFimIntervalo    = semOsFimHasIntervalInWindow && fimIntervaloCol    ? String(lastRow[fimIntervaloCol]    ?? '').trim() : '';
-          // Desl. Intervalo detail for end-of-day interval (Liberada â†’ InÃ­cio Intervalo)
+          // Desl. Intervalo detail for end-of-day interval (Liberada → Início Intervalo)
           const fimDeslDetail: NonNullable<OsDiaOrderEvidence['sem_os_details']>[number] | null = fimDeslAbove
             ? {
                 type: 'intervalo_deslocamento',
@@ -865,7 +865,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
               existingEvidence.fim_intervalo    = fimFimIntervalo;
             }
           } else if (semOsAbove || retornoExcedenteThreshold || ((tempPrepValues[ordered.length - 1] ?? 0) + (retornoDetail.min ?? 0) + (fimDeslDetail?.min ?? 0)) > 0) {
-            // Last order had no flags â€” create evidence entry with full info
+            // Last order had no flags — create evidence entry with full info
             const i = ordered.length - 1;
             const row = lastRow;
             const trOrdemMin = trOrdemCol ? (parseNumber(String(row[trOrdemCol] ?? '')) ?? 0) : 0;
@@ -965,7 +965,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
         }
       }
 
-      // OrdenaÃ§Ã£o estritamente decrescente pelo tempo total ocioso
+      // Ordenação estritamente decrescente pelo tempo total ocioso
       allMerged.sort((a, b) => {
         const fjA = a.flags?.includes('retorno_excedente') ? (a.retorno_excedente_min ?? 0) : 0;
         const fjB = b.flags?.includes('retorno_excedente') ? (b.retorno_excedente_min ?? 0) : 0;
@@ -1092,6 +1092,6 @@ export function countDistinctDates(rows: CsvRow[], dateCol: string): number {
 
 
 
-  // â”€â”€â”€ Business logic text helpers â€” single source of truth for alert texts â”€â”€
+  // ─── Business logic text helpers — single source of truth for alert texts ──
 
   /** Formats a number for Portuguese locale display (used in pre-computed alert texts). */

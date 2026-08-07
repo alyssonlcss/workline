@@ -10,7 +10,7 @@ export function analyzePrimeiroDesloc(deslocRows: CsvRow[], kpis: KpiInsight[], 
 
     const DESLOC_META = 25;
 
-    const deslocKpi = kpis.find((k) => normalizeToken(k.kpi) === normalizeToken('1Âº Desloc.'));
+    const deslocKpi = kpis.find((k) => normalizeToken(k.kpi) === normalizeToken('1º Desloc.'));
     if (!deslocKpi) return [];
 
     const teamsToAnalyze = new Map<string, { value: number }>();
@@ -23,11 +23,11 @@ export function analyzePrimeiroDesloc(deslocRows: CsvRow[], kpis: KpiInsight[], 
 
     const deslocAcc = createAccessor(deslocRows[0]);
     const teamCol             = deslocAcc.resolve(['Equipe']);
-    const dateCol             = deslocAcc.resolve(['Data ReferÃªncia', 'Data Referencia']);
-    const primeiroDeslocCol   = deslocAcc.resolve(['1Âº Desloc', '1o Desloc']);
-    const horaPrimDeslocCol   = deslocAcc.resolve(['Hora 1Âº Deslocamento', 'Hora 1o Deslocamento']);
-    const horaPrimDespachoCol = deslocAcc.resolve(['Hora 1Âº Despacho', 'Hora 1o Despacho']);
-    const inicioCalCol        = deslocAcc.resolve(['Inicio Calendario', 'InÃ­cio CalendÃ¡rio', 'Inicio CalendÃ¡rio', 'InÃ­cio Calendario']);
+    const dateCol             = deslocAcc.resolve(['Data Referência', 'Data Referencia']);
+    const primeiroDeslocCol   = deslocAcc.resolve(['1º Desloc', '1o Desloc']);
+    const horaPrimDeslocCol   = deslocAcc.resolve(['Hora 1º Deslocamento', 'Hora 1o Deslocamento']);
+    const horaPrimDespachoCol = deslocAcc.resolve(['Hora 1º Despacho', 'Hora 1o Despacho']);
+    const inicioCalCol        = deslocAcc.resolve(['Inicio Calendario', 'Início Calendário', 'Inicio Calendário', 'Início Calendario']);
     const logInCorrigidoCol   = deslocAcc.resolve(['Log In Corrigido', 'LogIn Corrigido', 'Login Corrigido']);
     const nrOrdemCol          = deslocAcc.resolve(['Nr_Ordem', 'Nr Ordem', 'Numero Ordem']);
     // Per-row columns for prior-dispatch conflict detection
@@ -89,15 +89,15 @@ export function analyzePrimeiroDesloc(deslocRows: CsvRow[], kpis: KpiInsight[], 
         const hora1oDespachoRaw = horaPrimDespachoCol ? String(dateRows[0][horaPrimDespachoCol] ?? '').trim() : '';
         const hora1oDeslocRaw   = horaPrimDeslocCol   ? String(dateRows[0][horaPrimDeslocCol]   ?? '').trim() : '';
 
-        // Primary row: the row whose A_Caminho matches Hora 1Âº Deslocamento
-        // (= the "1Âª OS com A Caminho" â€” the OS the team actually moved to first)
+        // Primary row: the row whose A_Caminho matches Hora 1º Deslocamento
+        // (= the "1ª OS com A Caminho" — the OS the team actually moved to first)
         let primaryRow: CsvRow | undefined;
         if (aCaminhoRowCol && hora1oDeslocRaw) {
           primaryRow = dateRows.find((r) => String(r[aCaminhoRowCol] ?? '').trim() === hora1oDeslocRaw);
         }
         if (!primaryRow) primaryRow = dateRows[0]; // fallback
 
-        // Conflict detection: if Hora 1Âº Despacho != this OS's Despachada,
+        // Conflict detection: if Hora 1º Despacho != this OS's Despachada,
         // another OS was dispatched first without the team going 'A Caminho' for it.
         let nrOrdemAnterior: string | undefined;
         let triagemMin: number | undefined;
@@ -203,7 +203,7 @@ export function analyzePrimeiroDesloc(deslocRows: CsvRow[], kpis: KpiInsight[], 
         }
 
         // despacho_tardio: first dispatch > DESPACHO_TARDIO_MIN after inicio_calendario
-        // Only flagged as supplemental â€” requires a primary desloc flag to be present
+        // Only flagged as supplemental — requires a primary desloc flag to be present
         if (despachoAposInicioMin > DESPACHO_TARDIO_MIN && flags.length > 0) {
           flags.push('despacho_tardio');
           countDespachoTardio++;
@@ -213,7 +213,7 @@ export function analyzePrimeiroDesloc(deslocRows: CsvRow[], kpis: KpiInsight[], 
           countLoginAtrasado++;
         }
 
-        // Desp. PrioritÃ¡rio: prior OS was dispatched before team's first A Caminho (triagem window)
+        // Desp. Prioritário: prior OS was dispatched before team's first A Caminho (triagem window)
         if (triagemMin !== undefined && triagemMin >= TRIAGEM_THRESHOLD + TRIAGEM_TOLERANCE) {
           flags.push('triagem_alto');
         }
@@ -264,4 +264,4 @@ export function analyzePrimeiroDesloc(deslocRows: CsvRow[], kpis: KpiInsight[], 
     return result.sort((a, b) => b.primeiroDeslocValue - a.primeiroDeslocValue);
   }
 
-  // â”€â”€â”€ Retorno Base Analyzer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Retorno Base Analyzer ────────────────────────────────────────────────

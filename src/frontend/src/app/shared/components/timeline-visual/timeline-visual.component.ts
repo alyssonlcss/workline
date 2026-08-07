@@ -19,9 +19,9 @@ import { TimelineSegment, buildTimelineSegments, tlFlexGrow } from '../../utils/
           [class.segment-idle--high]="!seg.isInterval && isIdleHighSegment(seg)"
           [class.segment-repair-alarm]="!seg.isInterval && (isRepairAlarmSegment(seg) || isLoginAlarmSegment(seg))"
           [style.flex-grow]="getFlexGrow(seg.durationMin)"
-          [title]="seg.startTime + ' â†’ ' + seg.endTime">
+          [title]="seg.startTime + ' → ' + seg.endTime">
           
-          <!-- ConteÃºdo da barra (label - minutos) -->
+          <!-- Conteúdo da barra (label - minutos) -->
           <div class="segment-bar-content">
 
             <span class="seg-two-line">
@@ -181,7 +181,7 @@ import { TimelineSegment, buildTimelineSegments, tlFlexGrow } from '../../utils/
       50% { opacity: 0.5; }
     }
 
-    /* Marcadores de horÃ¡rio */
+    /* Marcadores de horário */
     .time-marker {
       position: absolute;
       top: 100%;
@@ -218,7 +218,7 @@ export class TimelineVisualComponent implements OnInit {
     this.buildTimeline();
   }
 
-  // Escala logarÃ­tmica: comprime intervalos longos e aumenta segmentos curtos
+  // Escala logarítmica: comprime intervalos longos e aumenta segmentos curtos
   getFlexGrow(durationMin: number): number {
     return tlFlexGrow(durationMin);
   }
