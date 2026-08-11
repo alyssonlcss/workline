@@ -557,6 +557,21 @@ type SavedFilterState = {
                     </button>
                   </div>
                 </div>
+
+                <div class="export-option-row">
+                  <div class="export-option-info">
+                    <span class="export-option-icon">🛑</span>
+                    <div class="export-option-body">
+                      <span class="export-option-title">Equipes com excesso de OS Improdutivas</span>
+                      <span class="export-option-sub">Envia um alerta sobre equipes com mais de 10% de improdutivas.</span>
+                    </div>
+                  </div>
+                  <div class="export-option-actions">
+                    <button class="export-action-btn export-action-btn--share" (click)="sendWarningMessage('excessive_imp')">
+                      Enviar
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
             <!-- ======= MODO OPERACIONAL ======= -->
@@ -5739,7 +5754,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       activeDates = [...report.availableDates];
     }
 
-    const daysCount = activeDates.length > 0 ? activeDates.length : 1;
+    let daysCount = activeDates.length > 0 ? activeDates.length : 1;
     let periodStr = '';
 
     if (activeDates.length > 0) {
@@ -5747,81 +5762,190 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       const maxDate = activeDates[activeDates.length - 1];
       const minDdMm = minDate.slice(0, 5);
       const maxDdMm = maxDate.slice(0, 5);
-      periodStr = minDdMm === maxDdMm ? minDdMm : `${minDdMm} a ${maxDdMm}`;
+      periodStr = minDdMm === maxDdMm ? minDdMm : `${minDdMm} - ${maxDdMm}`;
+    } else if (report.dataDateRange) {
+      const minDate = report.dataDateRange.min;
+      const maxDate = report.dataDateRange.max;
+      const minDdMm = minDate.slice(0, 5);
+      const maxDdMm = maxDate.slice(0, 5);
+      periodStr = minDdMm === maxDdMm ? minDdMm : `${minDdMm} - ${maxDdMm}`;
+      
+      const pA = minDate.split('/'); const pB = maxDate.split('/');
+      if (pA.length === 3 && pB.length === 3) {
+        const dA = new Date(parseInt(pA[2]), parseInt(pA[1]) - 1, parseInt(pA[0]));
+        const dB = new Date(parseInt(pB[2]), parseInt(pB[1]) - 1, parseInt(pB[0]));
+        daysCount = Math.max(1, Math.round((dB.getTime() - dA.getTime()) / (1000 * 3600 * 24)) + 1);
+      }
     } else {
       periodStr = this.periodRangeLabel() || '';
     }
+
+    if (periodStr === '(All)' || periodStr === 'All' || periodStr === 'Todos' || periodStr === '(Todos)') {
+      periodStr = 'Período Completo';
+    }
+
+    const daysText = daysCount === 1 ? '1 dia' : `${daysCount} dias`;
 
     let teamTypeSubtitle = '';
     if (typeFilter === 'propria') teamTypeSubtitle = ' (EQUIPES PRÓPRIAS)';
     else if (typeFilter === 'parceira') teamTypeSubtitle = ' (EQUIPES PARCEIRAS)';
 
-    let msg = `📊 *RAIO X DE GARGALOS OPERACIONAIS RECORRENTES${teamTypeSubtitle}*\n🗓️ *Período: ${daysCount} dias (${periodStr})*\n${DIVIDER}\n\n`;
+    let msg = '';
 
-    // Main section grouped by Base
-    const sortedBaseNames = Object.keys(baseMap).filter(b => b !== 'Outros').sort();
-    sortedBaseNames.forEach((baseName) => {
-      const teams = baseMap[baseName];
-      if (!teams || teams.length === 0) return;
+    if (type === 'desvios') {
+      msg = `📊 *RAIO X DE GARGALOS OPERACIONAIS RECORRENTES${teamTypeSubtitle}*\n🗓️ *Período: ${daysText} | ${periodStr}*\n${DIVIDER}\n\n`;
 
-      teams.sort((a, b) => b.badness - a.badness);
-      const worst2 = teams.slice(0, 2);
-
-      msg += `📍 *BASE: ${baseName.toUpperCase()}*\n\n`;
-      for (const t of worst2) {
-        msg += `🚐 *${t.team}*\n${t.problem}\n\n`;
-      }
-      msg += `${DIVIDER}\n\n`;
-    });
-
-    // Add CCI section for Sem OS > 15min grouped by Base
-    if (Object.keys(baseEntreOsMap).length > 0) {
-      msg += `${CCI_DIVIDER}\n📍 *CENTRO DE CONTROLE INTEGRADO*\n${CCI_DIVIDER}\n\n`;
-      const sortedCciBases = Object.keys(baseEntreOsMap).filter(b => b !== 'Outros').sort();
-      sortedCciBases.forEach((baseName) => {
-        const teams = baseEntreOsMap[baseName];
+      // Main section grouped by Base
+      const sortedBaseNames = Object.keys(baseMap).filter(b => b !== 'Outros').sort();
+      sortedBaseNames.forEach((baseName) => {
+        const teams = baseMap[baseName];
         if (!teams || teams.length === 0) return;
 
-        const recurrentTeams = teams.filter((t) => {
-          if (typeFilter !== 'todas') {
-            const teamType = getTeamType(t.team);
-            if (teamType !== typeFilter) return false;
+        teams.sort((a, b) => b.badness - a.badness);
+        const worst2 = teams.slice(0, 2);
+
+        msg += `📍 *BASE: ${baseName.toUpperCase()}*\n\n`;
+        for (const t of worst2) {
+          msg += `🚐 *${t.team}*\n${t.problem}\n\n`;
+        }
+        msg += `${DIVIDER}\n\n`;
+      });
+
+      // Add CCI section for Sem OS > 15min grouped by Base
+      if (Object.keys(baseEntreOsMap).length > 0) {
+        msg += `${CCI_DIVIDER}\n📍 *CENTRO DE CONTROLE INTEGRADO*\n${CCI_DIVIDER}\n\n`;
+        const sortedCciBases = Object.keys(baseEntreOsMap).filter(b => b !== 'Outros').sort();
+        sortedCciBases.forEach((baseName) => {
+          const teams = baseEntreOsMap[baseName];
+          if (!teams || teams.length === 0) return;
+
+          const recurrentTeams = teams.filter((t) => {
+            if (typeFilter !== 'todas') {
+              const tType = getTeamType(t.team);
+              if (tType !== typeFilter) return false;
+            }
+            const totalOrders = t.totalOrders || 1;
+            const diasTrab = t.diasTrab || 1;
+            const cond1 = (t.count / totalOrders) >= 0.20;
+            const cond2 = (t.distinctDaysCount / diasTrab) >= 0.25;
+            return cond1 || cond2;
+          });
+
+          if (recurrentTeams.length === 0) return;
+
+          recurrentTeams.sort((a, b) => b.sumOver15Min - a.sumOver15Min || b.count - a.count);
+          const top3Teams = recurrentTeams.slice(0, 3);
+
+          msg += `🏢 *Base: ${baseName}*\n`;
+          for (const t of top3Teams) {
+            const timesStr = `${t.count}x prolongada em ${t.totalOrders} OS | Ocorreu em ${t.distinctDaysCount} de ${t.diasTrab} dias`;
+            const aboveAvg = t.globalAvg > 0 ? t.avgMin - t.globalAvg : 0;
+            const aboveAvgStr = aboveAvg > 0 ? ` (+${aboveAvg}m base)` : '';
+            msg += `${L3}🔄 *Sem OS:* ${t.team} | ${timesStr} | ⏱️ Média: ${t.avgMin}m${aboveAvgStr}\n`;
           }
-          const totalOrders = t.totalOrders || 1;
-          const diasTrab = t.diasTrab || 1;
-          const cond1 = (t.count / totalOrders) >= 0.20;
-          const cond2 = (t.distinctDaysCount / diasTrab) >= 0.25;
-          return cond1 || cond2;
+          msg += `\n`;
+        });
+      }
+
+      // Add concise legend at the end
+      msg += `${DIVIDER}\n💡 *Legenda dos Desvios:*\n`;
+      msg += `  🏁 *Partida:* Saída para OS (A Caminho)/ prep. tempo elevado\n`;
+      msg += `  📱 *1º Login:* Atraso no 1º login do dia\n`;
+      msg += `  🚐 *1º Desloc.:* Atraso na partida do 1º deslocamento\n`;
+      msg += `  ⏸️ *Desl. Intervalo:* Parada em deslocamento prolongada\n`;
+      msg += `  🔄 *Sem OS:* Ociosidade entre ordens prolongada\n`;
+      msg += `  🏠 *Retorno a Base:* Tempo elevado de retorno\n`;
+      msg += `  ⏱️ *TME IMP:* Tempo de reparo em improdutivas acima do padrão\n`;
+      msg += `  📅 *Calendário Errado:* Atividade realizada com o calendário no dia errado\n`;
+
+      msg = msg.trimEnd();
+
+    } else if (type === 'excessive_imp') {
+      msg = `🛑 *ALERTA DE EXCESSO DE OS IMPRODUTIVAS${teamTypeSubtitle}*\n🗓️ *Período: ${daysText} | ${periodStr}*\n🎯 *Meta: ≤ 10%*\n${DIVIDER}\n\n`;
+
+      const impPoloMap: Record<string, any[]> = {};
+      for (const w of report.excessiveImpWarnings || []) {
+        if (typeFilter !== 'todas' && w.teamType !== typeFilter) continue;
+        if (!impPoloMap[w.polo]) impPoloMap[w.polo] = [];
+        impPoloMap[w.polo].push(w);
+      }
+
+      // Sort polos by their overall percentage
+      const sortedPolos = Object.keys(impPoloMap).sort((a, b) => {
+        if (a === 'Outros') return 1;
+        if (b === 'Outros') return -1;
+        if (a === 'undefined') return 1;
+        if (b === 'undefined') return -1;
+        const pctA = impPoloMap[a][0].poloPctImp || 0;
+        const pctB = impPoloMap[b][0].poloPctImp || 0;
+        return pctB - pctA;
+      });
+
+      sortedPolos.forEach((poloName) => {
+        const poloTeams = impPoloMap[poloName];
+        if (!poloTeams || poloTeams.length === 0) return;
+
+        const poloPctImp = poloTeams[0].poloPctImp || 0;
+        const poloPctFmt = (poloPctImp * 100).toFixed(1).replace('.', ',');
+        let poloEmoji = '🟢';
+        if (poloPctImp > 0.20) poloEmoji = '🔴';
+        else if (poloPctImp > 0.15) poloEmoji = '🟠';
+        else if (poloPctImp > 0.10) poloEmoji = '🟡';
+
+        msg += `🏢 *POLO: ${poloName.toUpperCase()}* | ${poloEmoji} *${poloPctFmt}%*\n\n`;
+
+        // Group by base inside polo
+        const impBaseMap: Record<string, any[]> = {};
+        for (const w of poloTeams) {
+          if (!impBaseMap[w.base]) impBaseMap[w.base] = [];
+          impBaseMap[w.base].push(w);
+        }
+
+        const sortedBases = Object.keys(impBaseMap).sort((a, b) => {
+          if (a === 'Outros') return 1;
+          if (b === 'Outros') return -1;
+          if (a === 'undefined') return 1;
+          if (b === 'undefined') return -1;
+          const pctA = impBaseMap[a][0].basePctImp || 0;
+          const pctB = impBaseMap[b][0].basePctImp || 0;
+          return pctB - pctA;
         });
 
-        if (recurrentTeams.length === 0) return;
+        sortedBases.forEach((baseName) => {
+          const baseTeams = impBaseMap[baseName];
+          baseTeams.sort((a, b) => (b.pctImp || 0) - (a.pctImp || 0));
+          const top3 = baseTeams.slice(0, 3);
 
-        recurrentTeams.sort((a, b) => b.sumOver15Min - a.sumOver15Min || b.count - a.count);
-        const top3Teams = recurrentTeams.slice(0, 3);
+          const basePctImp = top3[0].basePctImp || 0;
+          const basePctFmt = (basePctImp * 100).toFixed(1).replace('.', ',');
+          let baseEmoji = '🟢';
+          if (basePctImp > 0.20) baseEmoji = '🔴';
+          else if (basePctImp > 0.15) baseEmoji = '🟠';
+          else if (basePctImp > 0.10) baseEmoji = '🟡';
 
-        msg += `🏢 *Base: ${baseName}*\n`;
-        for (const t of top3Teams) {
-          const timesStr = `${t.count}x prolongada em ${t.totalOrders} OS | Ocorreu em ${t.distinctDaysCount} de ${t.diasTrab} dias`;
-          const aboveAvg = t.globalAvg > 0 ? t.avgMin - t.globalAvg : 0;
-          const aboveAvgStr = aboveAvg > 0 ? ` (+${aboveAvg}m base)` : '';
-          msg += `${L3}🔄 *Sem OS:* ${t.team} | ${timesStr} | ⏱️ Média: ${t.avgMin}m${aboveAvgStr}\n`;
-        }
-        msg += `\n`;
+          msg += `📍 *BASE: ${baseName.toUpperCase()}* | ${baseEmoji} *${basePctFmt}%*\n\n`;
+          for (const t of top3) {
+            const pctFmt = (t.pctImp * 100).toFixed(1).replace('.', ',');
+            let teamEmoji = '🟢';
+            if (t.pctImp > 0.20) teamEmoji = '🔴';
+            else if (t.pctImp > 0.15) teamEmoji = '🟠';
+            else if (t.pctImp > 0.10) teamEmoji = '🟡';
+            
+            msg += `🚐 *${t.team}* | ${teamEmoji}\n`;
+            msg += `${L3}Total de OS: ${t.totalOrders} | Improdutivas: ${t.impOrders} (*${pctFmt}%*)\n`;
+            msg += `${L3}⏱️ TME Geral IMP: ${t.avgTmeImp} min\n`;
+            msg += `${L3}*Principais Causas:*\n`;
+            for (const cause of t.topCauses) {
+              msg += `      ↳ ${cause.causa}: ${cause.count}x (⏱️ TME: ${cause.avgTmeImp} min)\n`;
+            }
+            msg += `\n`;
+          }
+        });
+        msg += `${DIVIDER}\n\n`;
       });
+
+      msg = msg.trimEnd();
     }
-
-    // Add concise legend at the end
-    msg += `${DIVIDER}\n💡 *Legenda dos Desvios:*\n`;
-    msg += `  🏁 *Partida:* Saída para OS (A Caminho)/ prep. tempo elevado\n`;
-    msg += `  📱 *1º Login:* Atraso no 1º login do dia\n`;
-    msg += `  🚐 *1º Desloc.:* Atraso na partida do 1º deslocamento\n`;
-    msg += `  ⏸️ *Desl. Intervalo:* Parada em deslocamento prolongada\n`;
-    msg += `  🔄 *Sem OS:* Ociosidade entre ordens prolongada\n`;
-    msg += `  🏠 *Retorno a Base:* Tempo elevado de retorno\n`;
-    msg += `  ⏱️ *TME IMP:* Tempo de reparo em improdutivas acima do padrão\n`;
-    msg += `  📅 *Calendário Errado:* Atividade realizada com o calendário no dia errado\n`;
-
-    msg = msg.trimEnd();
 
     this.closeWarningModal();
     if (navigator.share) {

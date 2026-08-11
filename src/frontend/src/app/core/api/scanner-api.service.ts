@@ -551,6 +551,25 @@ export interface TeamRecurrentWarning {
   };
 }
 
+export interface ExcessiveImpWarning {
+  team: string;
+  polo: string;
+  base: string;
+  teamType: string;
+  totalOrders: number;
+  impOrders: number;
+  pctImp: number;
+  basePctImp: number;
+  poloPctImp: number;
+  avgTmeImp: number;
+  topCauses: Array<{
+    causa: string;
+    count: number;
+    avgTmeImp: number;
+  }>;
+}
+
+
 export interface GeneratedReport {
   generatedAt: string;
   filtersApplied: {
@@ -584,6 +603,8 @@ export interface GeneratedReport {
     retornoBaseAnalysis: RetornoBaseTeamAnalysis[];
     despachoAnalysis?: DespachoRangeInsight[];
   };
+  excessiveImpWarnings?: ExcessiveImpWarning[];
+
   outputFiles: {
     jsonPath: string;
     markdownPath: string;

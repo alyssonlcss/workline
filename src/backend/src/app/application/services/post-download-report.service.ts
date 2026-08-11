@@ -34,6 +34,7 @@ import { analyzePrimeiroDesloc } from './report/analyzers/primeiro-desloc.analyz
 import { analyzeRetornoBase } from './report/analyzers/retorno-base.analyzer.js';
 import { analyzeDespacho } from './report/analyzers/despacho.analyzer.js';
 import { buildRecurrentWarnings } from './report/analyzers/recurrent-warnings.analyzer.js';
+import { analyzeExcessiveImp } from './report/analyzers/excessive-imp.analyzer.js';
 
 type CsvRow = Record<string, string>;
 type TeamType = 
@@ -76,7 +77,7 @@ export class PostDownloadReportService {
     const availableDatesSet = new Set<string>();
     if (deslocamentos.length > 0) {
       const accessor = createAccessor(deslocamentos[0]);
-      const dateCol = accessor.resolve(['Data Referência', 'Data Referencia']);
+      const dateCol = accessor.resolve(['Data Referência', 'Data Referencia', 'Data', 'Data Conclusao']);
       if (dateCol) {
         for (const row of deslocamentos) {
           const rawDate = (row[dateCol] ?? '').trim();
@@ -289,6 +290,7 @@ export class PostDownloadReportService {
         primeiroDeslocAnalysis,
         primeiroLoginAnalysis
       ),
+      excessiveImpWarnings: analyzeExcessiveImp(filtered.deslocamentos, filtered.resolvedTeams),
       specialAnalysis: {
         tempPrepAndSemOs: teamMetrics,
         crossedInsights,
@@ -412,10 +414,10 @@ export class PostDownloadReportService {
   private applyTeamFilters(
     datasets: { deslocamentos: CsvRow[]; desvios: CsvRow[] },
     reportFilters?: ReportFilterInput,
-  ): { deslocamentos: CsvRow[]; desvios: CsvRow[]; teamFilteredDeslocamentos: CsvRow[]; resolvedTeams: Map<string, { base: string; teamType: 'propria' | 'parceira' }> } {
+  ): { deslocamentos: CsvRow[]; desvios: CsvRow[]; teamFilteredDeslocamentos: CsvRow[]; resolvedTeams: Map<string, { base: string; teamType: 'propria' | 'parceira'; polo: string }> } {
     const includeExtra = reportFilters?.includeExtraTags ?? true;
     const teamResolver = this.buildTeamResolver(reportFilters, includeExtra);
-    const resolvedTeams = new Map<string, { base: string; teamType: 'propria' | 'parceira' }>();
+    const resolvedTeams = new Map<string, { base: string; teamType: 'propria' | 'parceira'; polo: string }>();
     const allowedDates = reportFilters?.dates?.length ? new Set(reportFilters.dates) : null;
 
     const filterRows = (rows: CsvRow[], ignoreDates = false): CsvRow[] => {
@@ -435,9 +437,9 @@ export class PostDownloadReportService {
         const teamRaw = String(row[teamColumn] ?? '');
         const teamUpper = teamRaw.toUpperCase().trim();
         const resolution = teamResolver(teamUpper);
-        if (resolution.isMatch && resolution.base && resolution.teamType) {
+        if (resolution.isMatch && resolution.base && resolution.teamType && resolution.polo) {
           if (!resolvedTeams.has(teamUpper)) {
-            resolvedTeams.set(teamUpper, { base: resolution.base, teamType: resolution.teamType });
+            resolvedTeams.set(teamUpper, { base: resolution.base, teamType: resolution.teamType, polo: resolution.polo });
           }
         }
         return resolution.isMatch;
@@ -452,7 +454,7 @@ export class PostDownloadReportService {
     };
   }
 
-  private buildTeamResolver(reportFilters: ReportFilterInput | undefined, includeExtraTags: boolean): (teamName: string) => { isMatch: boolean; base: string | null; teamType: 'propria' | 'parceira' | null } {
+  private buildTeamResolver(reportFilters: ReportFilterInput | undefined, includeExtraTags: boolean): (teamName: string) => { isMatch: boolean; base: string | null; teamType: 'propria' | 'parceira' | null; polo: string | null } {
     const selectedTeams = new Set((reportFilters?.teams ?? []).map((t) => t.toUpperCase().trim()));
     const config = (this.environment.report as any).basesConfig;
 
@@ -471,16 +473,17 @@ export class PostDownloadReportService {
     const useExtraTagsFallback = !hasBaseFilter && !hasTypeFilter;
 
     return (teamName: string) => {
-      if (teamName.length === 0) return { isMatch: false, base: null, teamType: null };
+      if (teamName.length === 0) return { isMatch: false, base: null, teamType: null, polo: null };
 
       for (const polo of config.polos) {
         if (polo.ignoreTeamTags?.some((tag: string) => teamName.includes(tag.toUpperCase()))) {
-          return { isMatch: false, base: null, teamType: null };
+          return { isMatch: false, base: null, teamType: null, polo: null };
         }
       }
 
       let matchedBase: string | null = null;
       let matchedType: 'propria' | 'parceira' | null = null;
+      let matchedPolo: string | null = null;
 
       // Find the base and type regardless of filters (to build the map)
       for (const polo of config.polos) {
@@ -489,11 +492,13 @@ export class PostDownloadReportService {
             if (base.propria?.some((p: string) => teamName.startsWith(p.toUpperCase()))) {
               matchedBase = base.name;
               matchedType = 'propria';
+              matchedPolo = polo.name;
               break;
             }
             if (base.parceira?.some((p: string) => teamName.startsWith(p.toUpperCase()))) {
               matchedBase = base.name;
               matchedType = 'parceira';
+              matchedPolo = polo.name;
               break;
             }
           }
@@ -501,6 +506,7 @@ export class PostDownloadReportService {
           for (const base of polo.bases) {
             if (base.prefixes?.some((p: string) => teamName.startsWith(p.toUpperCase()))) {
               matchedBase = base.name;
+              matchedPolo = polo.name;
               if (polo.typeIdentifiers?.propria.some((inf: string) => teamName.includes(inf.toUpperCase()))) {
                 matchedType = 'propria';
               } else if (polo.typeIdentifiers?.parceira.some((inf: string) => teamName.includes(inf.toUpperCase()))) {
@@ -515,20 +521,20 @@ export class PostDownloadReportService {
 
       // If a specific team list was provided, match only by team list, but return the base/type we found
       if (selectedTeams.size > 0) {
-        return { isMatch: selectedTeams.has(teamName), base: matchedBase, teamType: matchedType };
+        return { isMatch: selectedTeams.has(teamName), base: matchedBase, teamType: matchedType, polo: matchedPolo };
       }
 
       if (matchedBase && matchedType) {
-        if (hasBaseFilter && !selectedBases.has(normalizeToken(matchedBase))) return { isMatch: false, base: matchedBase, teamType: matchedType };
-        if (hasTypeFilter && !selectedTypes.has(matchedType)) return { isMatch: false, base: matchedBase, teamType: matchedType };
-        return { isMatch: true, base: matchedBase, teamType: matchedType };
+        if (hasBaseFilter && !selectedBases.has(normalizeToken(matchedBase))) return { isMatch: false, base: matchedBase, teamType: matchedType, polo: matchedPolo };
+        if (hasTypeFilter && !selectedTypes.has(matchedType)) return { isMatch: false, base: matchedBase, teamType: matchedType, polo: matchedPolo };
+        return { isMatch: true, base: matchedBase, teamType: matchedType, polo: matchedPolo };
       }
 
       if (useExtraTagsFallback && extraTags.some((tag) => teamName.includes(tag))) {
-        return { isMatch: true, base: null, teamType: null };
+        return { isMatch: true, base: null, teamType: null, polo: null };
       }
 
-      return { isMatch: false, base: matchedBase, teamType: matchedType };
+      return { isMatch: false, base: matchedBase, teamType: matchedType, polo: matchedPolo };
     };
   }
 
@@ -536,7 +542,7 @@ export class PostDownloadReportService {
   private computeDataDateRange(rows: CsvRow[]): { min: string; max: string } | null {
     if (rows.length === 0) return null;
     const accessor = createAccessor(rows[0]);
-    const dateCol = accessor.resolve(['Data Referência', 'Data Referencia']);
+    const dateCol = accessor.resolve(['Data Referência', 'Data Referencia', 'Data', 'Data Conclusao']);
     if (!dateCol) return null;
 
     let isAmerican = false;
