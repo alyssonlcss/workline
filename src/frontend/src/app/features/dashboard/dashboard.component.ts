@@ -5701,7 +5701,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const showOS = ['Partida', 'Desl. Intervalo', '2º Desp.', 'TME IMP'].includes(d.name);
           let timesStr = showOS 
             ? `${d.count}x em ${rw.totalOrders} OS (${rw.diasTrab} dias)`
-            : `${d.count}x em ${rw.diasTrab} dias`;
+            : (d.name === 'Retorno a Base' && d.limitMin !== undefined)
+              ? `${d.count}x em ${rw.diasTrab} dias acima de ${d.limitMin}min`
+              : `${d.count}x em ${rw.diasTrab} dias`;
           
           if (['Partida', 'Desl. Intervalo'].includes(d.name)) {
             timesStr += ' (Tempo Elevado)';

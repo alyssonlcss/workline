@@ -3,11 +3,10 @@ import type { RetornoBaseTeamAnalysis, RetornoBaseDayEvidence, KpiInsight, Globa
 import { createAccessor, parseNumber, normalizeToken, round2, parseDateTimeBr, minutesBetween } from '../csv-utils.js';
 import { enrichRetornoEvidence } from './domain-enrichers.js';
 import { countDistinctDates } from './os-dia.analyzer.js';
+import { getLimit } from '../../../../infrastructure/config/env.js';
 
 export function analyzeRetornoBase(deslocRows: CsvRow[], kpis: KpiInsight[], globalAverages?: GlobalAveragesMap): RetornoBaseTeamAnalysis[] {
     if (deslocRows.length === 0) return [];
-
-    const RETORNO_META = 40;
 
     const retornoKpi = kpis.find((k) => normalizeToken(k.kpi) === normalizeToken('Retorno Base'));
     if (!retornoKpi) return [];
@@ -57,6 +56,9 @@ export function analyzeRetornoBase(deslocRows: CsvRow[], kpis: KpiInsight[], glo
       }
       if (teamRows.length === 0) continue;
 
+      const polo = globalAverages?.teamAverages[team.toUpperCase()]?.polo;
+      const limitMin = getLimit('LIMIT_RETORNO_EXCEDENTE_MIN', polo, 60);
+
       // Deduplicate by date
       const seenDates = new Set<string>();
       const jornadaRows: CsvRow[] = [];
@@ -96,7 +98,8 @@ export function analyzeRetornoBase(deslocRows: CsvRow[], kpis: KpiInsight[], glo
       const teamAvgRetorno = teamRetornoValues.length > 0
         ? teamRetornoValues.reduce((s, x) => s + x, 0) / teamRetornoValues.length : 0;
 
-      const diasAcimaMetaCount = teamRetornoValues.filter((v) => v > RETORNO_META).length;
+      const valuesAboveLimit = teamRetornoValues.filter((v) => v > limitMin);
+      const diasAcimaMetaCount = valuesAboveLimit.length;
 
       const flaggedDays: RetornoBaseDayEvidence[] = [];
       let countRetornoAlto = 0;
@@ -108,8 +111,8 @@ export function analyzeRetornoBase(deslocRows: CsvRow[], kpis: KpiInsight[], glo
 
         const flags: RetornoBaseDayEvidence['flags'] = [];
         
-        if (effectiveRetorno > RETORNO_META * 1.5) { flags.push('retorno_muito_alto'); countRetornoMuitoAlto++; }
-        else if (effectiveRetorno > RETORNO_META) { flags.push('retorno_alto'); countRetornoAlto++; }
+        if (effectiveRetorno > limitMin * 1.5) { flags.push('retorno_muito_alto'); countRetornoMuitoAlto++; }
+        else if (effectiveRetorno > limitMin) { flags.push('retorno_alto'); countRetornoAlto++; }
 
         if (divergenceDetected) {
           flags.push('retorno_divergente');
@@ -131,18 +134,19 @@ export function analyzeRetornoBase(deslocRows: CsvRow[], kpis: KpiInsight[], glo
 
       flaggedDays.sort((a, b) => b.retorno_base_min - a.retorno_base_min);
 
-      const enrichedFlagged = enrichRetornoEvidence(flaggedDays.slice(0, 10), RETORNO_META, team, globalAverages);
+      const enrichedFlagged = enrichRetornoEvidence(flaggedDays.slice(0, 10), limitMin, team, globalAverages);
       const extraFlagged = flaggedDays.length > 10
-        ? enrichRetornoEvidence(flaggedDays.slice(10), RETORNO_META, team, globalAverages)
+        ? enrichRetornoEvidence(flaggedDays.slice(10), limitMin, team, globalAverages)
         : [];
 
       result.push({
         team,
         retornoBaseValue: retornoValue,
-        metaTarget: RETORNO_META,
-        gap: round2(retornoValue - RETORNO_META),
+        metaTarget: limitMin,
+        gap: round2(retornoValue - limitMin),
         avgRetornoMin: round2(teamAvgRetorno),
         globalAvgRetornoMin: round2(globalAvgRetorno),
+        limitMin: limitMin,
         totalDays: jornadaRows.length,
         diasAcimaMetaCount,
         flaggedDays: enrichedFlagged,

@@ -541,6 +541,7 @@ export interface TeamRecurrentWarning {
     avgMin: number;
     count: number;
     globalAvg: number;
+    limitMin?: number;
   }>;
   entreOs?: {
     count: number;

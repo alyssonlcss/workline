@@ -23,7 +23,7 @@ export function buildRecurrentWarnings(
   const getCciSemOsLimit = (polo?: string) => getLimit('LIMIT_CCI_SEM_OS_MIN', polo, 15);
 
   for (const sc of teamScorecard) {
-    const teamDesvios: { name: string; priority: number; avgMin: number; count: number; globalAvg: number }[] = [];
+    const teamDesvios: { name: string; priority: number; avgMin: number; count: number; globalAvg: number; limitMin?: number }[] = [];
     const util = utilizacaoAnalysis.find((u) => u.team === sc.team);
     const diasTrab = util?.totalJornadas || retornoBaseAnalysis.find(a => a.team === sc.team)?.totalDays || primeiroDeslocAnalysis.find(a => a.team === sc.team)?.totalDays || 1;
     const totalOrders = util?.totalOrders || tmeImpAnalysis.find(a => a.team === sc.team)?.totalOrders || 0;
@@ -84,7 +84,7 @@ export function buildRecurrentWarnings(
     if (sc.kpiStatus.retornoBase === 'below' && sc.kpis.retornoBase !== undefined) {
       const ana = retornoBaseAnalysis.find(a => a.team === sc.team);
       if (ana && ana.flaggedDays && ana.flaggedDays.length > 0) {
-        teamDesvios.push({ name: 'Retorno a Base', priority: 4, avgMin: Math.round(sc.kpis.retornoBase), count: ana.flaggedDays.length, globalAvg: Math.round(ana.globalAvgRetornoMin || 0) });
+        teamDesvios.push({ name: 'Retorno a Base', priority: 4, avgMin: Math.round(ana.avgRetornoMin || 0), count: ana.flaggedDays.length, globalAvg: Math.round(ana.globalAvgRetornoMin || 0), limitMin: ana.limitMin });
       }
     }
     if (sc.kpiStatus.tmeImp === 'below' && sc.kpis.tmeImp !== undefined) {

@@ -592,6 +592,7 @@ export interface RetornoBaseTeamAnalysis {
   gap: number;
   avgRetornoMin: number;
   globalAvgRetornoMin: number;
+  limitMin?: number;
   totalDays: number;
   diasAcimaMetaCount: number;
   flaggedDays: RetornoBaseDayEvidence[];
@@ -662,6 +663,7 @@ export interface TeamRecurrentWarning {
     avgMin: number;
     count: number;
     globalAvg: number;
+    limitMin?: number;
   }>;
   entreOs?: {
     count: number;
