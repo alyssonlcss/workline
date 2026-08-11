@@ -5797,7 +5797,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
       // Main section grouped by Base
       const sortedBaseNames = Object.keys(baseMap).filter(b => b !== 'Outros').sort();
-      sortedBaseNames.forEach((baseName) => {
+      const hasCci = Object.keys(baseEntreOsMap).length > 0;
+      sortedBaseNames.forEach((baseName, index) => {
         const teams = baseMap[baseName];
         if (!teams || teams.length === 0) return;
 
@@ -5808,7 +5809,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         for (const t of worst2) {
           msg += `🚐 *${t.team}*\n${t.problem}\n\n`;
         }
-        msg += `${DIVIDER}\n\n`;
+        msg += `📝 *RETORNO DA SUPERVISÃO | Resumo das Tratativas:*\n\n\n\n`;
+        msg += `Data: ___/___/____\n`;
+        msg += `Autor: ______________________\n\n`;
+        if (index < sortedBaseNames.length - 1 || hasCci) {
+          msg += `${DIVIDER}\n\n`;
+        }
       });
 
       // Add CCI section for Sem OS > 15min grouped by Base
@@ -5843,7 +5849,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             const aboveAvgStr = aboveAvg > 0 ? ` (+${aboveAvg}m base)` : '';
             msg += `${L3}🔄 *Sem OS:* ${t.team} | ${timesStr} | ⏱️ Média: ${t.avgMin}m${aboveAvgStr}\n`;
           }
-          msg += `\n`;
+          msg += `\n📝 *RETORNO DA SUPERVISÃO | Resumo das Tratativas:*\n\n\n\n`;
+          msg += `Data: ___/___/____\n`;
+          msg += `Autor: ______________________\n\n`;
         });
       }
 
@@ -5881,7 +5889,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         return pctB - pctA;
       });
 
-      sortedPolos.forEach((poloName) => {
+      sortedPolos.forEach((poloName, poloIndex) => {
         const poloTeams = impPoloMap[poloName];
         if (!poloTeams || poloTeams.length === 0) return;
 
@@ -5940,8 +5948,13 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             }
             msg += `\n`;
           }
+          msg += `📝 *RETORNO DA SUPERVISÃO | Resumo das Tratativas:*\n\n\n\n`;
+          msg += `Data: ___/___/____\n`;
+          msg += `Autor: ______________________\n\n`;
         });
-        msg += `${DIVIDER}\n\n`;
+        if (poloIndex < sortedPolos.length - 1) {
+          msg += `${DIVIDER}\n\n`;
+        }
       });
 
       msg = msg.trimEnd();
