@@ -5977,6 +5977,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             }
             msg += `\n`;
           }
+          
           msg += `📝 *RETORNO DA SUPERVISÃO | Resumo das Tratativas:*\n\n\n\n`;
           msg += `Data: ___/___/____\n`;
           msg += `Autor: ______________________\n\n`;
