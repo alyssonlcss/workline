@@ -5610,8 +5610,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.warningModalOpen.set(false);
   }
 
-  protected sendWarningMessage(type: string): void {
-    const report = this.reportData();
+  protected async sendWarningMessage(type: string): Promise<void> {
+    let report = this.reportData();
     const config = this.basesConfig;
     if (!report || !config) {
       alert('Relatório ou configuração de bases não carregados.');
@@ -5659,6 +5659,33 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       }
       return 'outros';
     };
+
+    try {
+      const filters = this.buildReportFiltersPayload();
+      const currentTeamTypes = filters.teamTypes || [];
+      const isGlobalContrastar = currentTeamTypes.includes('propria') && currentTeamTypes.includes('parceira');
+      
+      // Se o filtro do modal for específico e o relatório atual não incluir ESSE tipo específico, precisamos buscar.
+      // (Se o relatório global estiver em 'todas' ou 'contrastar', ele já tem os dados, basta filtrar localmente).
+      const needsFetch = typeFilter !== 'todas' && !isGlobalContrastar && !currentTeamTypes.includes(typeFilter as any);
+      
+      if (needsFetch) {
+        this.shareModeLoading.set('current');
+        const result = await import('rxjs').then(m => m.firstValueFrom(
+          this.api.generateReport({
+            jobId: this.jobId(),
+            reportFilters: { ...filters, teamTypes: [typeFilter as 'propria' | 'parceira'] }
+          })
+        ));
+        report = result.generatedReport;
+      }
+    } catch (e) {
+      alert('Falha ao obter dados independentes para o aviso.');
+      this.shareModeLoading.set(null);
+      return;
+    } finally {
+      this.shareModeLoading.set(null);
+    }
 
     const baseMap: Record<string, { team: string; badness: number; problem: string }[]> = {};
     const baseEntreOsMap: Record<string, Array<{
