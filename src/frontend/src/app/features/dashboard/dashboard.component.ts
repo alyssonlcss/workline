@@ -7999,7 +7999,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       {
         key: 'atuacaoHd',
         title: 'Atuação',
-        value: this.resolveValues(previous.get('atuacaoHd'), this.withAllOption(ATUACAO_HD_OPTIONS), []),
+        value: this.resolveValues(previous.get('atuacaoHd'), this.withAllOption(ATUACAO_HD_OPTIONS), [ALL_OPTION]),
         options: this.withAllOption(ATUACAO_HD_OPTIONS),
         sourceTitle: FILTER_SOURCE_MAP.atuacaoHd.sourceTitle,
         sourceKind: FILTER_SOURCE_MAP.atuacaoHd.sourceKind,
@@ -8008,7 +8008,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       {
         key: 'base',
         title: 'Base',
-        value: this.resolveValues(previous.get('base'), this.withAllOption(BASE_OPTIONS), []),
+        value: this.resolveValues(previous.get('base'), this.withAllOption(BASE_OPTIONS), [ALL_OPTION]),
         options: this.withAllOption(BASE_OPTIONS),
         sourceTitle: FILTER_SOURCE_MAP.base.sourceTitle,
         sourceKind: FILTER_SOURCE_MAP.base.sourceKind,
