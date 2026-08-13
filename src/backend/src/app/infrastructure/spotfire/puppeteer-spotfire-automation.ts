@@ -4075,6 +4075,8 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
     }
 
     if (!await this.isAnalysisReady(page)) {
+      const pageText = await page.evaluate(() => document.body.innerText.substring(0, 500));
+      this.info(`Timeout esperando análise carregar. URL: ${page.url()}. Conteúdo da tela: ${pageText}`);
       throw new Error(`could not load Spotfire analysis from URL: ${this.environment.spotfire.analysisUrl}`);
     }
   }
@@ -4135,10 +4137,13 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
 
     if (req) this.emitProgress(req, `Autenticando no Spotfire (${username})...`);
 
+    this.info(`Iniciando preenchimento de credenciais. URL atual: ${page.url()}`);
     await page.locator("input[type='text']").fill(username);
+    this.info('Username preenchido com sucesso.');
     await page.locator("input[type='password']").fill(password);
+    this.info('Password preenchido com sucesso.');
 
-    const LOGIN_TIMEOUT_MS = 30000;
+    const LOGIN_TIMEOUT_MS = 60000;
     const userFriendlyErrorMessage = 'Credenciais inválidas ou o sistema do Spotfire está instável. Por favor, verifique usuário e senha ou tente novamente em alguns instantes.';
 
     let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
@@ -4146,9 +4151,11 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
     try {
       await Promise.race([
         (async () => {
+          this.info(`Iniciando submit do login. URL atual: ${page.url()}`);
           await this.submitLogin(page);
+          this.info(`Submit concluído. Validando pós-submit... URL atual: ${page.url()}`);
           if (await this.isLoginPage(page)) {
-            this.log('still on login page after submit, checking analysis URL');
+            this.info(`Ainda na página de login após submit (URL: ${page.url()}), redirecionando para URL de analysis`);
             await page.goto(this.environment.spotfire.analysisUrl, {
               waitUntil: 'domcontentloaded',
               timeout: 10000,
@@ -4168,7 +4175,7 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
       this.lastAuthenticatedUser = undefined;
       this.lastAuthenticatedPassword = undefined;
       const msg = err instanceof Error ? err.message : String(err);
-      this.logStep('login', 'FAIL', `Login failed or timed out (30s): ${msg}`);
+      this.logStep('login', 'FAIL', `Login failed or timed out (60s). URL atual: ${page.url()}. Erro: ${msg}`);
       throw new Error(userFriendlyErrorMessage);
     } finally {
       if (timeoutTimer) {
@@ -4179,6 +4186,7 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
     this.lastAuthenticatedUser = username;
     this.lastAuthenticatedPassword = password;
     this.info('Login concluído ✓');
+    if (req) this.emitProgress(req, 'Login efetuado. Aguardando carregamento do painel...');
     this.log('login submit completed successfully', {
       currentUrl: page.url(),
       user: username,

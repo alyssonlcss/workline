@@ -5195,7 +5195,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private startLoginCountdown(): void {
     if (this.countdownTimer) return;
-    this.loginCountdown.set(30);
+    this.loginCountdown.set(60);
     this.countdownTimer = setInterval(() => {
       this.zone.run(() => {
         const current = this.loginCountdown();
@@ -5444,8 +5444,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             };
           } else if (polo.matchType === 'infix_type_with_base_prefix') {
             prefixMap[base.name] = {
-              own: (base.prefixes?.[0] || '') + (polo.typeIdentifiers?.propria[0] || ''),
-              partner: (base.prefixes?.[0] || '') + (polo.typeIdentifiers?.parceira[0] || '')
+              own: (base.prefixes?.[0] || '') + ' Próprias',
+              partner: (base.prefixes?.[0] || '') + ' Parceiras'
             };
           }
         }
@@ -5624,40 +5624,13 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const typeFilter = this.warningTeamTypeFilter();
 
     const getBaseForTeam = (team: string) => {
-      for (const polo of config.polos) {
-        if (polo.matchType === 'direct_prefix') {
-          for (const base of polo.bases) {
-            if (base.propria && team.startsWith(base.propria[0])) return base.name;
-            if (base.parceira && team.startsWith(base.parceira[0])) return base.name;
-          }
-        } else if (polo.matchType === 'infix_type_with_base_prefix') {
-          for (const base of polo.bases) {
-            const p_propria = (base.prefixes?.[0] || '') + (polo.typeIdentifiers?.propria[0] || '');
-            const p_parceira = (base.prefixes?.[0] || '') + (polo.typeIdentifiers?.parceira[0] || '');
-            if (team.startsWith(p_propria) || team.startsWith(p_parceira)) return base.name;
-          }
-        }
-      }
-      return 'Outros';
+      const parsed = this.parseTeamBase(team);
+      return parsed ? parsed.base : 'Outros';
     };
 
     const getTeamType = (team: string): 'propria' | 'parceira' | 'outros' => {
-      for (const polo of config.polos) {
-        if (polo.matchType === 'direct_prefix') {
-          for (const base of polo.bases) {
-            if (base.propria && base.propria.some((p: string) => team.startsWith(p))) return 'propria';
-            if (base.parceira && base.parceira.some((p: string) => team.startsWith(p))) return 'parceira';
-          }
-        } else if (polo.matchType === 'infix_type_with_base_prefix') {
-          for (const base of polo.bases) {
-            if (base.prefixes && base.prefixes.some((p: string) => team.startsWith(p))) {
-              if (polo.typeIdentifiers?.propria?.some((inf: string) => team.includes(inf))) return 'propria';
-              if (polo.typeIdentifiers?.parceira?.some((inf: string) => team.includes(inf))) return 'parceira';
-            }
-          }
-        }
-      }
-      return 'outros';
+      const parsed = this.parseTeamBase(team);
+      return parsed && parsed.teamType ? parsed.teamType : 'outros';
     };
 
     try {
@@ -8137,40 +8110,22 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const teamMetadata = new Map<string, { base: string, type: string }>();
 
     for (const team of this.availableTeams) {
-      const upper = team.toUpperCase();
-      let matchedBase: string | null = null;
-      let matchedType: string | null = null;
-      for (const polo of config.polos) {
-        if (polo.matchType === 'direct_prefix') {
-          for (const base of polo.bases) {
-            if (base.propria?.some((p: string) => upper.startsWith(p.toUpperCase()))) {
-              matchedBase = base.name; matchedType = 'Própria'; break;
-            }
-            if (base.parceira?.some((p: string) => upper.startsWith(p.toUpperCase()))) {
-              matchedBase = base.name; matchedType = 'Parceira'; break;
-            }
-          }
-        } else if (polo.matchType === 'infix_type_with_base_prefix') {
-          for (const base of polo.bases) {
-            if (base.prefixes?.some((p: string) => upper.startsWith(p.toUpperCase()))) {
-              matchedBase = base.name;
-              if (polo.typeIdentifiers?.propria.some((inf: string) => upper.includes(inf.toUpperCase()))) matchedType = 'Própria';
-              else if (polo.typeIdentifiers?.parceira.some((inf: string) => upper.includes(inf.toUpperCase()))) matchedType = 'Parceira';
-              break;
-            }
-          }
-        }
-        if (matchedBase) break;
-      }
-      if (matchedBase && matchedType) {
-        teamMetadata.set(team, { base: matchedBase, type: matchedType });
+      const parsed = this.parseTeamBase(team);
+      if (parsed && parsed.teamType) {
+        teamMetadata.set(team, {
+          base: parsed.base,
+          type: parsed.teamType === 'propria' ? 'Própria' : 'Parceira'
+        });
       }
     }
 
     // Filter equipe options based on selected bases and tipos
     const filteredTeams = this.availableTeams.filter((team) => {
       const meta = teamMetadata.get(team);
-      if (!meta) return true; // Keep unknown teams if no filters applied? Actually, let's keep them if no filters.
+      if (!meta) {
+        if (effectiveBases.length > 0 || effectiveTipos.length > 0) return false;
+        return true;
+      }
       if (effectiveBases.length > 0 && !effectiveBases.includes(meta.base)) return false;
       if (effectiveTipos.length > 0 && !effectiveTipos.includes(meta.type)) return false;
       return true;
@@ -8264,34 +8219,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const proprias = new Set<string>();
     const parceiras = new Set<string>();
     for (const team of this.availableTeams) {
-      const upper = team.toUpperCase();
-      let matchedBase: string | null = null;
-      let matchedType: string | null = null;
-      for (const polo of config.polos) {
-        if (polo.matchType === 'direct_prefix') {
-          for (const base of polo.bases) {
-            if (base.propria?.some((p: string) => upper.startsWith(p.toUpperCase()))) {
-              matchedBase = base.name; matchedType = 'Própria'; break;
-            }
-            if (base.parceira?.some((p: string) => upper.startsWith(p.toUpperCase()))) {
-              matchedBase = base.name; matchedType = 'Parceira'; break;
-            }
-          }
-        } else if (polo.matchType === 'infix_type_with_base_prefix') {
-          for (const base of polo.bases) {
-            if (base.prefixes?.some((p: string) => upper.startsWith(p.toUpperCase()))) {
-              matchedBase = base.name;
-              if (polo.typeIdentifiers?.propria.some((inf: string) => upper.includes(inf.toUpperCase()))) matchedType = 'Própria';
-              else if (polo.typeIdentifiers?.parceira.some((inf: string) => upper.includes(inf.toUpperCase()))) matchedType = 'Parceira';
-              break;
-            }
-          }
-        }
-        if (matchedBase) break;
-      }
-      if (matchedBase) {
-        if (matchedType === 'Própria') proprias.add(matchedBase);
-        else if (matchedType === 'Parceira') parceiras.add(matchedBase);
+      const parsed = this.parseTeamBase(team);
+      if (parsed) {
+        if (parsed.teamType === 'propria') proprias.add(parsed.base);
+        else if (parsed.teamType === 'parceira') parceiras.add(parsed.base);
       }
     }
     this.availablePropriasBases = Array.from(proprias);
