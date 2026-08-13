@@ -4075,7 +4075,7 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
     }
 
     if (!await this.isAnalysisReady(page)) {
-      const pageText = await page.evaluate(() => document.body.innerText.substring(0, 500));
+      const pageText = await page.evaluate(() => document.body ? document.body.innerText.substring(0, 500) : '<body> element not found');
       this.info(`Timeout esperando análise carregar. URL: ${page.url()}. Conteúdo da tela: ${pageText}`);
       throw new Error(`could not load Spotfire analysis from URL: ${this.environment.spotfire.analysisUrl}`);
     }
@@ -4219,7 +4219,6 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
         element.click(),
       ]);
 
-      await page.waitForNetworkIdle({ idleTime: 1000, timeout: 15000 }).catch(function () { return undefined; });
       return;
     }
 
@@ -4233,14 +4232,12 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
         passwordInput.press('Enter'),
       ]);
 
-      await page.waitForNetworkIdle({ idleTime: 1000, timeout: 15000 }).catch(function () { return undefined; });
       return;
     }
 
     this.log('submitting login by pressing Enter on page');
     await page.keyboard.press('Enter');
     await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 15000 }).catch(function () { return undefined; });
-    await page.waitForNetworkIdle({ idleTime: 1000, timeout: 15000 }).catch(function () { return undefined; });
   }
 
   private async isLoginPage(page: Page): Promise<boolean> {
@@ -6118,6 +6115,11 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
         '.sf-element-filter',
         '.FilterPanelScroll',
         '[title="Reset Visible Filters"]',
+        '.sfc-app-work-area',
+        '.sfc-page-area',
+        '.sfc-toolbar-container',
+        '.sfc-author-mode-toolbar',
+        '.sfc-view-mode-toolbar'
       ];
 
       return selectors.some(function (selector) {
@@ -6130,7 +6132,7 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
     }
 
     await page.waitForSelector(
-      '.sf-element-page-tab, .sfx_page-tab_204, .sf-element-visual-title, .sf-element-filter, .FilterPanelScroll, [title="Reset Visible Filters"]',
+      '.sf-element-page-tab, .sfx_page-tab_204, .sf-element-visual-title, .sf-element-filter, .FilterPanelScroll, [title="Reset Visible Filters"], .sfc-app-work-area, .sfc-page-area, .sfc-toolbar-container, .sfc-author-mode-toolbar, .sfc-view-mode-toolbar',
       { timeout: 30000 },
     ).catch(function () { return undefined; });
 
@@ -6142,6 +6144,11 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
         '.sf-element-filter',
         '.FilterPanelScroll',
         '[title="Reset Visible Filters"]',
+        '.sfc-app-work-area',
+        '.sfc-page-area',
+        '.sfc-toolbar-container',
+        '.sfc-author-mode-toolbar',
+        '.sfc-view-mode-toolbar'
       ];
 
       return selectors.some(function (selector) {
