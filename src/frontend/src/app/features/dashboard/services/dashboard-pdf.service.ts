@@ -555,7 +555,7 @@ export class DashboardPdfService {
     // Cover
     const cover: any[] = [
       { text: 'WorkLine', fontSize: 32, bold: true, color: DARK, characterSpacing: 1, margin: [0, 0, 0, 4] },
-      { text: `Relatório Analítico de Campo | ${title}`, fontSize: 16, bold: true, color: GRAY, margin: [0, 0, 0, 6] },
+      { text: `Relatório Operacional de Campo | ${title}`, fontSize: 16, bold: true, color: GRAY, margin: [0, 0, 0, 6] },
       subtitle ? { text: subtitle, fontSize: 12, color: GRAY, margin: [0, 0, 0, 6] } : null,
       { text: `Gerado em ${today}`, fontSize: 9, color: MUTED, margin: [0, 0, 0, 2] },
       dateRangeLabel ? { text: `Período de referência: ${dateRangeLabel}`, fontSize: 9, color: MUTED, margin: [0, 0, 0, 4] } : null,

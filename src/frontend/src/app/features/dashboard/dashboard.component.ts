@@ -342,7 +342,7 @@ type SavedFilterState = {
             <div class="rpt-hero anim-el">
               <div class="rpt-hero-left">
                 <h1 class="rpt-hero-title">WorkLine</h1>
-                <span class="rpt-hero-meta" style="font-size: 1.1em; color: var(--text-dark); font-weight: 500; margin-bottom: 4px;">Relatório Analítico</span>
+                <span class="rpt-hero-meta" style="font-size: 1.1em; color: var(--text-dark); font-weight: 500; margin-bottom: 4px;">Relatório {{ reportTypeLabel() }}</span>
                 <span class="rpt-hero-meta">Gerado em {{ report.generatedAt | date:'dd/MM/yyyy HH:mm' }}</span>
                 <span *ngIf="periodRangeLabel()" class="rpt-hero-meta">Período de referência: {{ periodRangeLabel() }}</span>
                 <span class="rpt-hero-author">Autor: Alysson Pinheiro &mdash; Analista de Dados</span>
@@ -7862,7 +7862,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.zone.run(() => {
             this.stopLoginCountdown();
             this.activeDownloadAbort = undefined;
-            this.progressMessage.set('Gerando relatório analítico...');
+            this.progressMessage.set(`Gerando relatório ${this.reportTypeLabel().toLowerCase()}...`);
             this.jobId.set(result.jobId);
           });
 
@@ -7930,7 +7930,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.loading()) return;
 
     this.loading.set(true);
-    this.progressMessage.set('Regenerando relatório analítico...');
+    this.progressMessage.set(`Regenerando relatório ${this.reportTypeLabel().toLowerCase()}...`);
     this.errorMessage.set('');
 
     this.reportRefreshSubscription?.unsubscribe();

@@ -7,7 +7,7 @@ export function buildMarkdownReport(report: GeneratedReport): string {
 
     const fmt = (v: number) => Number.isFinite(v) ? String(v) : '—';
 
-    lines.push('# Relatório Analítico Scanner');
+    lines.push('# Relatório Scanner');
     lines.push('');
     lines.push(`**Gerado em:** ${new Date(report.generatedAt).toLocaleString('pt-BR')}`);
     if (report.filtersApplied.bases.length > 0) {
