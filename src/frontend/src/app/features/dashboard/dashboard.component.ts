@@ -7864,6 +7864,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             this.activeDownloadAbort = undefined;
             this.progressMessage.set(`Gerando relatório ${this.reportTypeLabel().toLowerCase()}...`);
             this.jobId.set(result.jobId);
+            
+            // Resetar os filtros do relatório para (Todos) ao finalizar nova extração.
+            // Impede que filtros salvos de um polo anterior ocultem os dados recém-extraídos.
+            const baseAnaliticoFilters = this.buildReportFilterStates('analitico');
+            const baseOperacionalFilters = this.buildReportFilterStates('operacional');
+            this.analiticoFilters.set(baseAnaliticoFilters);
+            this.operacionalFilters.set(baseOperacionalFilters);
+            this.saveToStorage();
           });
 
           this.api.generateReport({
