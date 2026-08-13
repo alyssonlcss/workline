@@ -3,6 +3,23 @@
 Todos os recursos notáveis, correções e melhorias neste projeto serão documentados neste arquivo.
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [2.2.0] - 2026-08-13
+
+Esta release consolida um novo módulo focado no diagnóstico de improdutividades operacionais e implementa melhorias de Qualidade de Vida (QoL) na gestão de filtros do Dashboard.
+
+### Adicionado
+- **Analisador de Excesso de Improdutivas:** Novo módulo de inteligência que detecta equipes com taxa de Ordens de Serviço (OS) improdutivas acima de 10%. O sistema rastreia o volume total, calcula o TME (Tempo Médio) das improdutividades e elenca as 3 principais causas raízes de cada ofensor.
+- **Termômetro de Improdutividade:** O resumo web agora classifica a gravidade do excesso de improdutivas usando indicadores visuais: Alerta Leve (🟡 > 10%), Moderado (🟠 > 15%) e Crítico (🔴 > 20%).
+- **Área de Tratativas:** O relatório analítico passou a incluir um bloco de "Retorno da Supervisão | Resumo das Tratativas", pronto para preenchimento manual ou digital do supervisor sobre os ofensores listados.
+
+### Alterado
+- **Feedback Dinâmico de Extração:** A mensagem de *loading* do sistema de extração agora reflete dinamicamente o tipo exato do relatório sendo processado (Analítico vs Operacional).
+- **Usabilidade de Filtros (QoL):** A opção global "(Todos)" agora é injetada nativamente como o valor *default* (padrão) inicial nos menus dropdown de *Atuação* e *Base*.
+
+### Corrigido
+- **Reset de Filtros Pós-Extração (Falso Vazio):** Resolvido um problema onde filtros persistidos no cache (de um polo anterior) acabavam escondendo e "zerando" visualmente os dados de uma extração recém-finalizada. Agora, ao finalizar qualquer *job*, os filtros de todos os painéis são completamente resetados.
+- **Refatoração do Parser de Equipes:** O motor que varre e identifica a qualificação das equipes (`parseTeamBase`) foi simplificado e corrigido, resolvendo inconsistências esporádicas no agrupamento de equipes *Próprias* versus *Parceiras*.
+
 ## [2.1.0] - 2026-08-07
 
 Esta release é uma atualização contínua focada em refinamentos lógicos e correções visuais na exportação de PDFs e geração da cronologia, elevando a precisão do diagnóstico de anomalias operacionais.
