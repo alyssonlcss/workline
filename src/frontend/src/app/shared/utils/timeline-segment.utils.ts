@@ -84,8 +84,14 @@ export function buildTimelineSegments(ev: any, hidePartida: boolean, trimToACami
   addPt('a_caminho', aCaminho, 'A Caminho');
   addPt('no_local', ev.no_local, 'No Local');
   addPt('liberada', ev.liberada, 'Liberada');
-  addPt('inicio_intervalo', ev.inicio_intervalo, 'Início Intervalo');
-  addPt('fim_intervalo', ev.fim_intervalo, 'Fim Intervalo');
+  
+  const intStartTs = ev.inicio_intervalo ? parseDt(ev.inicio_intervalo) : 0;
+  const intEndTs = ev.fim_intervalo ? parseDt(ev.fim_intervalo) : 0;
+  if (!prevLibTs || intEndTs > prevLibTs || (intEndTs === 0 && intStartTs > prevLibTs)) {
+    addPt('inicio_intervalo', ev.inicio_intervalo, 'Início Intervalo');
+    addPt('fim_intervalo', ev.fim_intervalo, 'Fim Intervalo');
+  }
+
   const fimJornada = ev.retorno_excedente_details || ev.sem_os_details?.find((s: any) => s.type === 'fim_jornada');
   const logOffVal = ev.log_off_corrigido || ev.log_off || fimJornada?.to;
   if (logOffVal) addPt('log_off', logOffVal, 'Log Off');
