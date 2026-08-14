@@ -3,6 +3,11 @@
 Todos os recursos notáveis, correções e melhorias neste projeto serão documentados neste arquivo.
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [2.2.1] - 2026-08-14
+
+### Corrigido
+- **Duplicação de Intervalo e Falso Alerta (Cronologia Incorreta):** Resolvido um problema onde intervalos registrados durante o atendimento de uma Ordem de Serviço (OS) estavam sendo replicados indevidamente na timeline das OSs subsequentes. O algoritmo agora valida corretamente o término do intervalo em relação à Liberação da OS anterior, garantindo que o tempo de intervalo e a ociosidade não sejam inflados. A correção mantém a paridade total entre o Dashboard Web e os relatórios em PDF.
+
 ## [2.2.0] - 2026-08-13
 
 Esta release consolida um novo módulo focado no diagnóstico de improdutividades operacionais e implementa melhorias de Qualidade de Vida (QoL) na gestão de filtros do Dashboard.

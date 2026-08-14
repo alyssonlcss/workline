@@ -14,7 +14,7 @@ if not defined WT_SESSION (
 :MENU
 cls
 echo ===================================================
-echo          WorkLine - Menu Setup
+echo          WorkLine v2.2.1 - Menu Setup
 echo ===================================================
 echo.
 echo  1 - Executar (Iniciar Backend e Frontend)
