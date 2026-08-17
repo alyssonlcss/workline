@@ -143,8 +143,9 @@ export class DashboardPdfService {
       s.isInterval ? '#1e3a8a' : (isRepairAlarm(s) || isDeslocAlarm(s) || isRetornoBaseAlarm(s) || (isIdleLabel(s) && s.label !== 'Deslocamento p/OS' && (s.flags?.length ?? 0) > 0)) ? '#7f1d1d' : (isIdleLabel(s) && s.label !== 'Deslocamento p/OS') ? '#78350f' : '#14532d';
 
     // 1. Larguras proporcionais puras (mesma lógica do flex-grow da web).
-    const CHAR_W = 3.6;   // pt/char estimado para Roboto bold 5.5pt
-    const TOTAL_W = 500;
+    const CHAR_W = 3.8;   // pt/char estimado para Roboto bold 5.5pt (aumentado para evitar quebras)
+    const TOTAL_W = 500;  // Largura ideal da timeline
+    const MAX_PAGE_W = 535; // Largura máxima absoluta da página A4 (595 - 60 de margens)
     const grows = segs.map(s => tlFlexGrow(s.durationMin));
     const totalGrow = grows.reduce((a, b) => a + b, 0);
     const rawWidths = grows.map(g => (g / totalGrow) * TOTAL_W);
@@ -160,14 +161,25 @@ export class DashboardPdfService {
     // 3. Aplica mínimos (boost segmentos estreitos demais).
     let widths = segs.map((_, i) => Math.max(minWidths[i], Math.round(rawWidths[i])));
 
-    // 4. Se os boosts causaram estouro, reduz proporcionalmente os segmentos com folga.
-    const totalW = widths.reduce((a, b) => a + b, 0);
+    // 4. Se os boosts causaram estouro, reduz de forma inteligente para não quebrar o texto.
+    let totalW = widths.reduce((a, b) => a + b, 0);
     if (totalW > TOTAL_W) {
       const excess = totalW - TOTAL_W;
       const slack = widths.map((w, i) => Math.max(0, w - minWidths[i]));
       const totalSlack = slack.reduce((a, b) => a + b, 0);
+      
       if (totalSlack > 0) {
-        widths = widths.map((w, i) => Math.round(w - (slack[i] / totalSlack) * excess));
+        // Reduz usando apenas o slack disponível (nunca espreme abaixo do minWidth nesta etapa)
+        const safeReduction = Math.min(1, excess / totalSlack);
+        widths = widths.map((w, i) => Math.round(w - slack[i] * safeReduction));
+      }
+      
+      // Se mesmo consumindo todo o slack a tabela ultrapassar o limite físico da página,
+      // somos forçados a comprimir abaixo do minWidth para não cortar o PDF.
+      totalW = widths.reduce((a, b) => a + b, 0);
+      if (totalW > MAX_PAGE_W) {
+        const hardExcess = totalW - MAX_PAGE_W;
+        widths = widths.map(w => Math.max(20, Math.round(w - (w / totalW) * hardExcess)));
       }
     }
 
