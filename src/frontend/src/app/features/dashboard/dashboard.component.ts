@@ -5872,6 +5872,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     } else if (type === 'excessive_imp') {
       msg = `🛑 *ALERTA DE EXCESSO DE OS IMPRODUTIVAS${teamTypeSubtitle}*\n🗓️ *Período: ${daysText} | ${periodStr}*\n🎯 *Meta: ≤ 10%*\n${DIVIDER}\n\n`;
+      msg += `📢 *AÇÃO OBRIGATÓRIA AOS SUPERVISORES DE BASE*\n`;
+      msg += `Ao menos um supervisor responsável por cada base deve preencher o campo "📝 RETORNO DA SUPERVISÃO" abaixo.\n\n`;
+      msg += `O retorno deve conter obrigatoriamente:\n`;
+      msg += `1. Tratativa individual: Feedback repassado à equipe.\n`;
+      msg += `2. Apuração em campo: Qual a causa real do problema? (⚠️ Atenção: Para causas como "Defeito Interno Cliente", "Estava Normal" ou "Casa Fechada", recomenda-se ação preventiva/leitura para não gerar improdutividade).\n`;
+      msg += `3. Plano de ação imediato: Solução adotada para atingir a meta (≤ 10%).\n\n`;
+      msg += `Após preencher os campos (tratativa, data e autor), reenvie esta mensagem atualizada no grupo.\n\n`;
+      msg += `${DIVIDER}\n\n`;
 
       const impPoloMap: Record<string, any[]> = {};
       for (const w of report.excessiveImpWarnings || []) {
