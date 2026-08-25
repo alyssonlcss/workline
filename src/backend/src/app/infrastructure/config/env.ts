@@ -43,7 +43,7 @@ export function resolveDefaultDataDir(): string {
 }
 
 const environmentSchema = z.object({
-  PORT: z.coerce.number().default(3000),
+  PORT: z.coerce.number().default(3001),
   SPOTFIRE_ANALYSIS_URL: z.string().min(1).optional(),
   SPOTFIRE_REPORT_URL: z.string().min(1).optional(),
   SPOTFIRE_USERNAME: z.string().optional().default(''),
