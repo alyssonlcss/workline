@@ -7400,7 +7400,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const excessFJ = (d as any).excess_min;
           
           if (excessFJ != null && excessFJ > 0) {
-             return `Retorno Excedente: ${this.nf(excessFJ)} min acima do limite permitido de 70 min de retorno à base — Retorno a base totalizou ${this.nf(d.min)} min entre ${fromLabelFJ} (${d.from ?? '?'}) e Log Off (${d.to ?? '?'}).`;
+             return `Retorno Excedente: ${this.nf(excessFJ)} min acima do limite permitido de 40 min de retorno à base — Retorno a base totalizou ${this.nf(d.min)} min entre ${fromLabelFJ} (${d.from ?? '?'}) e Log Off (${d.to ?? '?'}).`;
           }
           return `Retorno a base: ${this.nf(d.min)} min entre ${fromLabelFJ} (${d.from ?? '?'}) e Log Off (${d.to ?? '?'}).`;
         }
