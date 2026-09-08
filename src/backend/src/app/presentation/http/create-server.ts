@@ -487,6 +487,7 @@ export async function createServer() {
 
   const enrichSingleSchema = z.object({
     incidence: z.string().trim().min(1),
+    team: z.string().trim().optional()
   });
 
   server.post('/api/incidence/enrich', async (request, reply) => {
@@ -505,7 +506,7 @@ export async function createServer() {
     }
 
     const payload = enrichSingleSchema.parse(request.body);
-    const result = await incidenceService.enrichSingle(payload.incidence);
+    const result = await incidenceService.enrichSingle(payload.incidence, payload.team);
     return reply.send(result);
   });
 

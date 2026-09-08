@@ -863,14 +863,7 @@ export class ScannerApiService {
 
   // ── External Incidence Integration (isolated from M300/Spotfire) ──
 
-  public enrichIncidences(incidences: { incidence: string; team: string }[]): Observable<{ results: EnrichedIncidence[] }> {
-    return this.http.post<{ results: EnrichedIncidence[] }>(
-      `${environment.apiBaseUrl}/incidence/enrich`,
-      { incidences },
-    );
-  }
-
-  public enrichSingleIncidence(incidence: string): Observable<EnrichedIncidence> {
-    return this.http.post<EnrichedIncidence>(`${this.baseUrl}/incidence/enrich-single`, { incidence });
+  public enrichSingleIncidence(payload: { incidence: string, team?: string }): Observable<EnrichedIncidence> {
+    return this.http.post<EnrichedIncidence>(`${this.baseUrl}/incidence/enrich-single`, payload);
   }
 }

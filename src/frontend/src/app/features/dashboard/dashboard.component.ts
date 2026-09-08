@@ -5510,6 +5510,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   };
 
   public ngOnInit(): void {
+    try {
+      const cached = localStorage.getItem('scanner_incidence_cache');
+      if (cached) {
+        this.enrichedIncidenceData.set(new Map(JSON.parse(cached)));
+      }
+    } catch (err) {
+      console.warn('Failed to load incidence cache', err);
+    }
     this.api.getBasesConfig().subscribe(config => {
       this.basesConfig = config;
       const options: string[] = [];
@@ -7971,6 +7979,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.progressLog.set([]);
     this.errorMessage.set('');
 
+    localStorage.removeItem('scanner_incidence_cache');
+    this.enrichedIncidenceData.set(new Map());
+
     const selectedFilters = this.buildSelectedFilters();
     const abortController = new AbortController();
     this.activeDownloadAbort = abortController;
@@ -8412,19 +8423,28 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     try {
       const { firstValueFrom } = await import('rxjs');
-      const response = await firstValueFrom(this.api.enrichIncidences(incidencesToFetch));
       const dataMap = new Map(this.enrichedIncidenceData());
       
-      for (const enriched of response.results) {
-         const strOs = String(enriched.incidenceNumber);
-         for (const req of incidencesToFetch) {
-            if (req.incidence === strOs) {
-               dataMap.set(`${req.team}|${strOs}`, enriched);
-            }
-         }
+      for (const req of incidencesToFetch) {
+        try {
+          const enriched = await firstValueFrom(this.api.enrichSingleIncidence({ incidence: req.incidence, team: req.team }));
+          console.log(`[Dashboard] Received enriched incidence ${req.incidence}:`, enriched);
+          const strOs = String(enriched.incidenceNumber);
+          dataMap.set(`${req.team}|${strOs}`, enriched);
+          // Pequeno atraso para evitar bloqueio da API externa por excesso de requisições concorrentes
+          await new Promise(r => setTimeout(r, 150));
+        } catch (err) {
+          console.warn(`[Dashboard] Failed to fetch incidence ${req.incidence}:`, err);
+        }
       }
       
       this.enrichedIncidenceData.set(dataMap);
+      
+      try {
+        localStorage.setItem('scanner_incidence_cache', JSON.stringify(Array.from(dataMap.entries())));
+      } catch (e) {
+        console.warn('Failed to save incidence cache', e);
+      }
     } catch (err) {
       console.warn('[Dashboard] Failed to fetch incidence batch:', err);
     }

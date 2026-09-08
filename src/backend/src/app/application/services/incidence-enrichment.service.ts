@@ -72,17 +72,29 @@ export class IncidenceEnrichmentService {
         },
       );
 
-      // The API may wrap results in `items` or `data` or return an array directly
+      // The API may wrap results in `items`, `itens` or `data` or return an array directly
       const items: ExternalIncidencePayload[] =
         Array.isArray(response) ? response :
-        (response as any).items ?? (response as any).data ?? [];
+        (response as any).items ?? (response as any).itens ?? (response as any).data ?? [];
 
-      const payload = items.find(
-        (item) => String(item.incidencia) === String(incidenceNumber),
-      ) ?? items[0];
+      const payload = items.find((item: any) => {
+        const id = item.incidencia || item.numero;
+        return String(id) === String(incidenceNumber);
+      }) ?? items[0];
+
+      if (payload && !payload.incidencia && (payload as any).numero) {
+        payload.incidencia = (payload as any).numero;
+      }
+
+      if (items.length === 0) {
+        console.warn(`[GetIncidenciaOpenview] WARNING: items is empty! Response keys: ${Object.keys(response || {}).join(', ')}`);
+        try { console.warn(JSON.stringify(response).slice(0, 300)); } catch(e){}
+      } else if (!payload) {
+        console.warn(`[GetIncidenciaOpenview] WARNING: payload is undefined but items.length is ${items.length}! First item:`, JSON.stringify(items[0]));
+      }
 
       const total = (response as any).total ?? items.length;
-      console.log(`\x1b[32m[GetIncidenciaOpenview]\x1b[0m fetching data for incidence: ${incidenceNumber} | EQ: ${team || 'N/A'} | Status 200 | Total: ${total}`);
+      console.log(`\x1b[32m[GetIncidenciaOpenview]\x1b[0m fetching data for incidence: ${incidenceNumber} | EQ: ${team || 'N/A'} | Status 200 | Items: ${items.length} | Total: ${total}`);
 
       if (!payload) {
         return this.buildNotFound(incidenceNumber);
