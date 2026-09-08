@@ -25,6 +25,11 @@ import { FileGarbageCollector } from '../../infrastructure/storage/file-garbage-
 import { PuppeteerSpotfireAutomation } from '../../infrastructure/spotfire/puppeteer-spotfire-automation.js';
 import { registerAuthRoutes } from './auth.controller.js';
 
+// ── External Incidence Integration (isolated from M300/Spotfire) ──
+import { ExternalAuthProvider } from '../../infrastructure/incidence/external-auth.provider.js';
+import { ExternalHttpClient } from '../../infrastructure/incidence/external-http-client.js';
+import { IncidenceEnrichmentService } from '../../application/services/incidence-enrichment.service.js';
+
 const filterSchema = z.object({
   title: z.string().trim().min(1),
   kind: z.enum(['list', 'range', 'text', 'toggle-group', 'unknown']),
@@ -441,6 +446,67 @@ export async function createServer() {
       availableTables: job.availableTables,
       exportFilePath: job.exportFilePath,
     });
+  });
+
+  // ════════════════════════════════════════════════════════════════
+  // ── External Incidence Enrichment (isolated from M300/Spotfire) ──
+  // ════════════════════════════════════════════════════════════════
+
+  const incidenceEnabled = !!(environment.externalIncidence.webUrl && environment.externalIncidence.apiUrl);
+  let incidenceService: IncidenceEnrichmentService | null = null;
+
+  if (incidenceEnabled) {
+    const authProvider = ExternalAuthProvider.getInstance(
+      environment.externalIncidence.webUrl,
+      environment.spotfire.browserPath,
+    );
+    const httpClient = new ExternalHttpClient(
+      environment.externalIncidence.apiUrl,
+      authProvider,
+    );
+    incidenceService = new IncidenceEnrichmentService(
+      httpClient,
+      environment.externalIncidence.mapsUrlTemplate,
+    );
+    
+    server.log.info('[ExternalIncidence] Integration enabled. Warming up authentication...');
+    // Trigger authentication immediately on startup in the background
+    authProvider.getToken().catch(err => {
+      server.log.error(`[ExternalIncidence] Initial authentication failed: ${err.message}`);
+    });
+  } else {
+    server.log.info('[ExternalIncidence] Integration disabled — EXTERNAL_INCIDENCE_WEB_URL or EXTERNAL_INCIDENCE_API_URL not set.');
+  }
+
+  const enrichBatchSchema = z.object({
+    incidences: z.array(z.object({
+      incidence: z.string().trim().min(1),
+      team: z.string().trim().optional()
+    })).min(1).max(100),
+  });
+
+  const enrichSingleSchema = z.object({
+    incidence: z.string().trim().min(1),
+  });
+
+  server.post('/api/incidence/enrich', async (request, reply) => {
+    if (!incidenceService) {
+      return reply.code(503).send({ message: 'External incidence integration is not configured.' });
+    }
+
+    const payload = enrichBatchSchema.parse(request.body);
+    const results = await incidenceService.enrichBatch(payload.incidences);
+    return reply.send({ results });
+  });
+
+  server.post('/api/incidence/enrich-single', async (request, reply) => {
+    if (!incidenceService) {
+      return reply.code(503).send({ message: 'External incidence integration is not configured.' });
+    }
+
+    const payload = enrichSingleSchema.parse(request.body);
+    const result = await incidenceService.enrichSingle(payload.incidence);
+    return reply.send(result);
   });
 
   return server;

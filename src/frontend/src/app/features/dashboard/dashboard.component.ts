@@ -701,6 +701,14 @@ type SavedFilterState = {
                     <div class="rpt-osdia-card" *ngFor="let analysis of filterOsDiaEvidence(report.specialAnalysis.osDiaAnalysis)">
                       <div class="rpt-osdia-card-head">
                         <span class="rpt-osdia-team">{{ analysis.team }}</span>
+                          <ng-container *ngFor="let tag of getIncidenceTags(analysis.team)">
+                            <span class="rpt-osdia-badge" [class.rpt-osdia-badge--blue]="tag.color === 'blue'" [class.rpt-osdia-badge--orange]="tag.color === 'orange'">
+                              {{ tag.label }}
+                            </span>
+                          </ng-container>
+                        <span class="incidence-tags-row" *ngIf="getIncidenceTags(analysis.team).length > 0">
+                          <span *ngFor="let tag of getIncidenceTags(analysis.team)" class="incidence-tag" [ngClass]="'incidence-tag--' + tag.color">{{ tag.label }}</span>
+                        </span>
                         <span class="rpt-osdia-badge rpt-osdia-badge--gap">Gap {{ analysis.gap | number:'1.1-1' }} OS/dia</span>
                         <button class="export-png-btn" (click)="exportTeamCardToPng($event, analysis.team)" title="Copiar imagem">
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -725,6 +733,10 @@ type SavedFilterState = {
                         </span>
                         <span class="rpt-osdia-chip">Total OS: <strong>{{ analysis.totalOrders }} em {{ analysis.totalJornadas }} dias</strong></span>
                         <span class="rpt-osdia-chip">Ocioso: <strong>{{ calcIdleMin(analysis) | number:'1.0-0' }} min — {{ analysis.idleDays }} dias</strong></span>
+                      </div>
+                      <div *ngFor="let flag of getIncidenceFlags(analysis.team)" class="incidence-flag" [ngClass]="'incidence-flag--' + flag.color">
+                        <span class="incidence-flag-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>
+                        <span [innerHTML]="sanitizeHtml(flag.html)"></span>
                       </div>
                       <!-- Card único de warnings: ociosidade + ordens flagadas -->
                       <ng-container *ngIf="analysis.idleAnalysis || analysis.flaggedOrders.length > 0; else noOsDiaEvidence">
@@ -815,6 +827,14 @@ type SavedFilterState = {
                     <div class="rpt-osdia-card" *ngFor="let analysis of sortedEficienciaAnalysis(kpi.evidenceAnalysis)">
                       <div class="rpt-osdia-card-head">
                         <span class="rpt-osdia-team">{{ analysis.team }}</span>
+                          <ng-container *ngFor="let tag of getIncidenceTags(analysis.team)">
+                            <span class="rpt-osdia-badge" [class.rpt-osdia-badge--blue]="tag.color === 'blue'" [class.rpt-osdia-badge--orange]="tag.color === 'orange'">
+                              {{ tag.label }}
+                            </span>
+                          </ng-container>
+                        <span class="incidence-tags-row" *ngIf="getIncidenceTags(analysis.team).length > 0">
+                          <span *ngFor="let tag of getIncidenceTags(analysis.team)" class="incidence-tag" [ngClass]="'incidence-tag--' + tag.color">{{ tag.label }}</span>
+                        </span>
                         <span class="rpt-osdia-badge"
                               [class.rpt-osdia-badge--gap]="analysis.analysisType === 'underperformer'"
                               [class.rpt-osdia-badge--good]="analysis.analysisType === 'top_performer'">
@@ -834,6 +854,10 @@ type SavedFilterState = {
                         <span class="rpt-osdia-chip" *ngIf="analysis.summary.countDeslocamentoCurto > 0">
                           TL Curto: <strong>{{ analysis.summary.countDeslocamentoCurto }}</strong>
                         </span>
+                      </div>
+                      <div *ngFor="let flag of getIncidenceFlags(analysis.team)" class="incidence-flag" [ngClass]="'incidence-flag--' + flag.color">
+                        <span class="incidence-flag-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>
+                        <span [innerHTML]="sanitizeHtml(flag.html)"></span>
                       </div>
                       <!-- Card único de warnings -->
                       <ng-container *ngIf="analysis.flaggedOrders.length > 0 || (analysis.tempoPadraoVazioOrders && analysis.tempoPadraoVazioOrders.length > 0); else noEficienciaEvidence">
@@ -949,6 +973,9 @@ type SavedFilterState = {
                       <div class="rpt-osdia-card" *ngFor="let analysis of filterOsDiaEvidence(report.specialAnalysis.utilizacaoAnalysis)">
                         <div class="rpt-osdia-card-head">
                           <span class="rpt-osdia-team">{{ analysis.team }}<ng-container *ngIf="isTeamInBottomKpi(analysis.team, 'Utilização')"> *</ng-container></span>
+                        <span class="incidence-tags-row" *ngIf="getIncidenceTags(analysis.team).length > 0">
+                          <span *ngFor="let tag of getIncidenceTags(analysis.team)" class="incidence-tag" [ngClass]="'incidence-tag--' + tag.color">{{ tag.label }}</span>
+                        </span>
                           <span class="rpt-osdia-badge rpt-osdia-badge--gap">Gap {{ analysis.gap | number:'1.1-1' }}%</span>
                           <button class="export-png-btn" (click)="exportTeamCardToPng($event, analysis.team)" title="Copiar imagem">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
@@ -959,6 +986,10 @@ type SavedFilterState = {
                             {{ chip.label }} <strong [innerHTML]="chip.value"></strong>
                           </span>
                         </div>
+                      <div *ngFor="let flag of getIncidenceFlags(analysis.team)" class="incidence-flag" [ngClass]="'incidence-flag--' + flag.color">
+                        <span class="incidence-flag-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>
+                        <span [innerHTML]="sanitizeHtml(flag.html)"></span>
+                      </div>
                         <!-- Card único de warnings: ociosidade + ordens flagadas -->
                         <ng-container *ngIf="analysis.idleAnalysis || (analysis.flaggedOrders && analysis.flaggedOrders.length > 0); else noUtilizacaoEvidence">
                           <div class="osdia-idle-notice">
@@ -1050,6 +1081,14 @@ type SavedFilterState = {
                     <div class="rpt-osdia-card" *ngFor="let analysis of filterTmeImpEvidence(kpi.tmeImpAnalysis)">
                       <div class="rpt-osdia-card-head">
                         <span class="rpt-osdia-team">{{ analysis.team }}</span>
+                          <ng-container *ngFor="let tag of getIncidenceTags(analysis.team)">
+                            <span class="rpt-osdia-badge" [class.rpt-osdia-badge--blue]="tag.color === 'blue'" [class.rpt-osdia-badge--orange]="tag.color === 'orange'">
+                              {{ tag.label }}
+                            </span>
+                          </ng-container>
+                        <span class="incidence-tags-row" *ngIf="getIncidenceTags(analysis.team).length > 0">
+                          <span *ngFor="let tag of getIncidenceTags(analysis.team)" class="incidence-tag" [ngClass]="'incidence-tag--' + tag.color">{{ tag.label }}</span>
+                        </span>
                         <span class="rpt-osdia-badge rpt-osdia-badge--gap">
                           {{ analysis.gap > 0 ? '+' : '' }}{{ analysis.gap | number:'1.1-1' }} min s/meta
                         </span>
@@ -1063,6 +1102,10 @@ type SavedFilterState = {
                         <span class="rpt-osdia-chip" *ngFor="let chip of getChips('TME Improdutivo', analysis)">
                           {{ chip.label }} <strong [innerHTML]="chip.value"></strong>
                         </span>
+                      </div>
+                      <div *ngFor="let flag of getIncidenceFlags(analysis.team)" class="incidence-flag" [ngClass]="'incidence-flag--' + flag.color">
+                        <span class="incidence-flag-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>
+                        <span [innerHTML]="sanitizeHtml(flag.html)"></span>
                       </div>
                       <div class="osdia-ev-list" *ngIf="analysis.flaggedOrders.length > 0; else noTmeImpEvidence">
                         <ng-template #tmeImpEvTpl let-ev>
@@ -1165,6 +1208,14 @@ type SavedFilterState = {
                     <div class="rpt-osdia-card" *ngFor="let analysis of filterLoginEvidence(kpi.primeiroLoginAnalysis)">
                       <div class="rpt-osdia-card-head">
                         <span class="rpt-osdia-team">{{ analysis.team }}</span>
+                          <ng-container *ngFor="let tag of getIncidenceTags(analysis.team)">
+                            <span class="rpt-osdia-badge" [class.rpt-osdia-badge--blue]="tag.color === 'blue'" [class.rpt-osdia-badge--orange]="tag.color === 'orange'">
+                              {{ tag.label }}
+                            </span>
+                          </ng-container>
+                        <span class="incidence-tags-row" *ngIf="getIncidenceTags(analysis.team).length > 0">
+                          <span *ngFor="let tag of getIncidenceTags(analysis.team)" class="incidence-tag" [ngClass]="'incidence-tag--' + tag.color">{{ tag.label }}</span>
+                        </span>
                         <span class="rpt-osdia-badge rpt-osdia-badge--gap">
                           {{ analysis.gap > 0 ? '+' : '' }}{{ analysis.gap | number:'1.1-1' }} min s/meta
                         </span>
@@ -1178,6 +1229,10 @@ type SavedFilterState = {
                         <span class="rpt-osdia-chip" *ngFor="let chip of getChips('1º Login', analysis)">
                           {{ chip.label }} <strong [innerHTML]="chip.value"></strong>
                         </span>
+                      </div>
+                      <div *ngFor="let flag of getIncidenceFlags(analysis.team)" class="incidence-flag" [ngClass]="'incidence-flag--' + flag.color">
+                        <span class="incidence-flag-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>
+                        <span [innerHTML]="sanitizeHtml(flag.html)"></span>
                       </div>
                       <div class="osdia-ev-list" *ngIf="analysis.flaggedDays.length > 0; else noLoginEvidence">
                         <ng-template #loginEvTpl let-ev>
@@ -1245,6 +1300,14 @@ type SavedFilterState = {
                     <div class="rpt-osdia-card" *ngFor="let analysis of filterDeslocEvidence(kpi.primeiroDeslocAnalysis)">
                       <div class="rpt-osdia-card-head">
                         <span class="rpt-osdia-team">{{ analysis.team }}</span>
+                          <ng-container *ngFor="let tag of getIncidenceTags(analysis.team)">
+                            <span class="rpt-osdia-badge" [class.rpt-osdia-badge--blue]="tag.color === 'blue'" [class.rpt-osdia-badge--orange]="tag.color === 'orange'">
+                              {{ tag.label }}
+                            </span>
+                          </ng-container>
+                        <span class="incidence-tags-row" *ngIf="getIncidenceTags(analysis.team).length > 0">
+                          <span *ngFor="let tag of getIncidenceTags(analysis.team)" class="incidence-tag" [ngClass]="'incidence-tag--' + tag.color">{{ tag.label }}</span>
+                        </span>
                         <span class="rpt-osdia-badge rpt-osdia-badge--gap">
                           {{ analysis.gap > 0 ? '+' : '' }}{{ analysis.gap | number:'1.1-1' }} min s/meta
                         </span>
@@ -1258,6 +1321,10 @@ type SavedFilterState = {
                         <span class="rpt-osdia-chip" *ngFor="let chip of getChips('1º Desloc.', analysis)">
                           {{ chip.label }} <strong [innerHTML]="chip.value"></strong>
                         </span>
+                      </div>
+                      <div *ngFor="let flag of getIncidenceFlags(analysis.team)" class="incidence-flag" [ngClass]="'incidence-flag--' + flag.color">
+                        <span class="incidence-flag-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>
+                        <span [innerHTML]="sanitizeHtml(flag.html)"></span>
                       </div>
                       <div class="osdia-ev-list" *ngIf="analysis.flaggedDays.length > 0; else noDeslocEvidence">
                         <ng-template #deslocEvTpl let-ev>
@@ -1316,6 +1383,14 @@ type SavedFilterState = {
                     <div class="rpt-osdia-card" *ngFor="let analysis of filterRetornoEvidence(kpi.retornoBaseAnalysis)">
                       <div class="rpt-osdia-card-head">
                         <span class="rpt-osdia-team">{{ analysis.team }}</span>
+                          <ng-container *ngFor="let tag of getIncidenceTags(analysis.team)">
+                            <span class="rpt-osdia-badge" [class.rpt-osdia-badge--blue]="tag.color === 'blue'" [class.rpt-osdia-badge--orange]="tag.color === 'orange'">
+                              {{ tag.label }}
+                            </span>
+                          </ng-container>
+                        <span class="incidence-tags-row" *ngIf="getIncidenceTags(analysis.team).length > 0">
+                          <span *ngFor="let tag of getIncidenceTags(analysis.team)" class="incidence-tag" [ngClass]="'incidence-tag--' + tag.color">{{ tag.label }}</span>
+                        </span>
                         <span class="rpt-osdia-badge rpt-osdia-badge--gap">
                           {{ analysis.gap > 0 ? '+' : '' }}{{ analysis.gap | number:'1.1-1' }} min s/meta
                         </span>
@@ -1329,6 +1404,10 @@ type SavedFilterState = {
                         <span class="rpt-osdia-chip" *ngFor="let chip of getChips('Retorno Base', analysis)">
                           {{ chip.label }} <strong [innerHTML]="chip.value"></strong>
                         </span>
+                      </div>
+                      <div *ngFor="let flag of getIncidenceFlags(analysis.team)" class="incidence-flag" [ngClass]="'incidence-flag--' + flag.color">
+                        <span class="incidence-flag-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>
+                        <span [innerHTML]="sanitizeHtml(flag.html)"></span>
                       </div>
                       <div class="osdia-ev-list" *ngIf="analysis.flaggedDays.length > 0; else noRetornoEvidence">
                         <ng-template #retornoEvTpl let-ev>
@@ -5278,6 +5357,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   protected availableDates: string[] = [];
   protected readonly reportBarHidden = signal(true);
   protected readonly reportData = signal<GeneratedReport | null>(null);
+  protected readonly enrichedIncidenceData = signal<Map<string, import('../../core/api/scanner-api.service').EnrichedIncidence>>(new Map());
   protected readonly reportTitle = signal(DEFAULT_REPORT_TITLE);
   protected readonly reportType = signal<ReportTypeValue>('operacional');
   protected readonly selectFilters = signal<SelectFilterState[]>([]);
@@ -6798,6 +6878,59 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   protected toggleDateExpanded(kpiKey: string, team: string, dateRef: string): void {
     const key = `${kpiKey}|${team}|${dateRef}`;
     this.expandedEvidenceDates.update((cur) => ({ ...cur, [key]: !cur[key] }));
+
+    if (this.expandedEvidenceDates()[key]) {
+      this.lazyLoadHiddenIncidences(kpiKey, team, dateRef);
+    }
+  }
+
+  private lazyLoadHiddenIncidences(kpiKey: string, team: string, dateRef: string): void {
+    const report = this.reportData();
+    if (!report) return;
+
+    let arr: any[] | undefined = undefined;
+    if (kpiKey === 'OS Dia') arr = report.specialAnalysis?.osDiaAnalysis;
+    else if (kpiKey === 'Eficiência') arr = report.specialAnalysis?.utilizacaoAnalysis;
+    else if (kpiKey === 'Utilização') arr = report.specialAnalysis?.utilizacaoAnalysis;
+    else if (kpiKey === 'TME IMP') arr = report.specialAnalysis?.tmeImpAnalysis;
+    else if (kpiKey === '1º Login') arr = report.specialAnalysis?.primeiroLoginAnalysis;
+    else if (kpiKey === '1º Desloc.') arr = report.specialAnalysis?.primeiroDeslocAnalysis;
+    else if (kpiKey === 'Retorno Base') arr = report.specialAnalysis?.retornoBaseAnalysis;
+    
+    const analysisTypes = [
+      'osDiaAnalysis', 'utilizacaoAnalysis', 'tmeImpAnalysis', 
+      'primeiroLoginAnalysis', 'primeiroDeslocAnalysis', 'retornoBaseAnalysis'
+    ] as const;
+
+    const ordersToFetch = new Map<string, { team: string, incidence: string }>();
+
+    for (const type of analysisTypes) {
+      const typeArr = report.specialAnalysis?.[type] as any[];
+      if (typeArr) {
+        const ev = typeArr.find(a => a.team === team);
+        if (ev) {
+           const topOrders = (ev.flaggedOrders || ev.orders || ev.tempoPadraoVazioOrders || ev.missingOrders || []) as any[];
+           const extraOrders = (ev.extraFlaggedOrders || []) as any[];
+           const groups = this.allDateGroupsForKpi(topOrders, extraOrders);
+           const grp = groups.find(g => g.dateRef === dateRef);
+           if (grp) {
+              for (const order of grp.hiddenItems) {
+                 if (order.nr_ordem) {
+                   const strOs = String(order.nr_ordem);
+                   const mapKey = `${ev.team}|${strOs}`;
+                   if (!this.enrichedIncidenceData().has(mapKey) && !ordersToFetch.has(mapKey)) {
+                     ordersToFetch.set(mapKey, { team: ev.team, incidence: strOs });
+                   }
+                 }
+              }
+           }
+        }
+      }
+    }
+
+    if (ordersToFetch.size > 0) {
+      this.fetchIncidenceBatch(Array.from(ordersToFetch.values()));
+    }
   }
 
   protected async exportTeamCardToPng(event: Event, teamName: string): Promise<void> {
@@ -8274,9 +8407,70 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }, 300);
   }
 
+    protected async fetchIncidenceBatch(incidencesToFetch: { team: string; incidence: string }[]): Promise<void> {
+    if (incidencesToFetch.length === 0) return;
+
+    try {
+      const { firstValueFrom } = await import('rxjs');
+      const response = await firstValueFrom(this.api.enrichIncidences(incidencesToFetch));
+      const dataMap = new Map(this.enrichedIncidenceData());
+      
+      for (const enriched of response.results) {
+         const strOs = String(enriched.incidenceNumber);
+         for (const req of incidencesToFetch) {
+            if (req.incidence === strOs) {
+               dataMap.set(`${req.team}|${strOs}`, enriched);
+            }
+         }
+      }
+      
+      this.enrichedIncidenceData.set(dataMap);
+    } catch (err) {
+      console.warn('[Dashboard] Failed to fetch incidence batch:', err);
+    }
+  }
+
+  private triggerIncidenceBatchFetch(report: GeneratedReport): void {
+    const ordersToFetch = new Map<string, { team: string, incidence: string }>();
+    
+    const analysisTypes = [
+      'osDiaAnalysis', 'utilizacaoAnalysis', 'tmeImpAnalysis', 
+      'primeiroLoginAnalysis', 'primeiroDeslocAnalysis', 'retornoBaseAnalysis'
+    ] as const;
+
+    for (const type of analysisTypes) {
+      const arr = report.specialAnalysis?.[type] as any[];
+      if (arr) {
+        for (const ev of arr) {
+          if (ev.team) {
+            const topOrders = (ev.flaggedOrders || ev.orders || ev.tempoPadraoVazioOrders || ev.missingOrders || []) as any[];
+            const extraOrders = (ev.extraFlaggedOrders || []) as any[];
+            const groups = this.allDateGroupsForKpi(topOrders, extraOrders);
+            for (const grp of groups) {
+               for (const order of grp.visibleItems) {
+                 if (order.nr_ordem) {
+                   const strOs = String(order.nr_ordem);
+                   const mapKey = `${ev.team}|${strOs}`;
+                   if (!ordersToFetch.has(mapKey)) {
+                     ordersToFetch.set(mapKey, { team: ev.team, incidence: strOs });
+                   }
+                 }
+               }
+            }
+          }
+        }
+      }
+    }
+    
+    if (ordersToFetch.size > 0) {
+      this.fetchIncidenceBatch(Array.from(ordersToFetch.values()));
+    }
+  }
+
   private updateReportDataAndDates(report: GeneratedReport) {
     this.availableDates = report.availableDates || [];
     this.reportData.set(report);
+    this.triggerIncidenceBatchFetch(report);
 
     // Clear any interactive UI state to avoid remnants from the previous report
     this.expandedEvidenceTeams.set({});
@@ -8477,5 +8671,41 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     } catch { /* corrupt data – ignore */ }
     return null;
   }
-}
 
+  protected getIncidenceForOrder(teamName: string, nrOrdem: string | number | undefined): import('../../core/api/scanner-api.service').EnrichedIncidence | undefined {
+    if (!nrOrdem) return undefined;
+    const strOs = String(nrOrdem);
+    return this.enrichedIncidenceData().get(`${teamName}|${strOs}`);
+  }
+
+  protected getIncidenceTags(teamName: string): any[] {
+    const data = this.enrichedIncidenceData();
+    const tagsMap = new Map<string, any>();
+    for (const [key, incidence] of data.entries()) {
+      if (key.startsWith(`${teamName}|`)) {
+        for (const tag of incidence.tags) {
+          tagsMap.set(tag.label, tag);
+        }
+      }
+    }
+    return Array.from(tagsMap.values());
+  }
+
+  protected getIncidenceFlags(teamName: string): any[] {
+    const data = this.enrichedIncidenceData();
+    const flags = [];
+    for (const [key, incidence] of data.entries()) {
+      if (key.startsWith(`${teamName}|`)) {
+        flags.push(...incidence.flags);
+      }
+    }
+    return flags;
+  }
+
+  protected sanitizeHtml(html: string): import('@angular/platform-browser').SafeHtml {
+    // If you don't have DomSanitizer injected, we can just return it as any or string, 
+    // but typically Angular requires SafeHtml. If DomSanitizer isn't available, returning raw string works for [innerHTML] if it's trusted.
+    return html as any; 
+  }
+
+}

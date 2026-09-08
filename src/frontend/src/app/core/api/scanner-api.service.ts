@@ -570,6 +570,51 @@ export interface ExcessiveImpWarning {
   }>;
 }
 
+// ── External Incidence Integration (isolated from M300/Spotfire) ──
+
+export interface ExternalIncidencePayload {
+  incidencia: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  nivelTensao?: string | null;
+  cumpreRegrasOuro?: boolean | string | null;
+  observacao?: string | null;
+  status?: string | null;
+  causa?: string | null;
+  alimentador?: string | null;
+  dataAbertura?: string | null;
+  dataPrevisao?: string | null;
+  qtdClientesAfetados?: number | null;
+  municipio?: string | null;
+  bairro?: string | null;
+}
+
+export interface IncidenceTag {
+  type: 'nivel_tensao' | 'regras_ouro';
+  label: string;
+  color: 'blue' | 'orange';
+}
+
+export interface IncidenceFlag {
+  type: 'localizacao' | 'observacao_m300';
+  html: string;
+  plainText: string;
+  href?: string;
+  color: 'blue';
+}
+
+export interface EnrichedIncidence {
+  incidenceNumber: string;
+  raw: ExternalIncidencePayload;
+  locationLabel: string | null;
+  estimatedReturnMin: number | null;
+  nearestBaseName: string | null;
+  mapsUrl: string | null;
+  tags: IncidenceTag[];
+  flags: IncidenceFlag[];
+  status: 'enriched' | 'not_found' | 'error';
+  errorMessage?: string;
+}
 
 export interface GeneratedReport {
   generatedAt: string;
@@ -814,5 +859,18 @@ export class ScannerApiService {
 
   public getBasesConfig(): Observable<BasesConfig> {
     return this.http.get<BasesConfig>(`${this.baseUrl}/scanner/config/bases`);
+  }
+
+  // ── External Incidence Integration (isolated from M300/Spotfire) ──
+
+  public enrichIncidences(incidences: { incidence: string; team: string }[]): Observable<{ results: EnrichedIncidence[] }> {
+    return this.http.post<{ results: EnrichedIncidence[] }>(
+      `${environment.apiBaseUrl}/incidence/enrich`,
+      { incidences },
+    );
+  }
+
+  public enrichSingleIncidence(incidence: string): Observable<EnrichedIncidence> {
+    return this.http.post<EnrichedIncidence>(`${this.baseUrl}/incidence/enrich-single`, { incidence });
   }
 }

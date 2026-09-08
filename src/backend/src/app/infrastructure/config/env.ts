@@ -60,6 +60,11 @@ const environmentSchema = z.object({
   SPOTFIRE_DOWNLOAD_TABLES: z.string().default('Tab_Completa-Deslocamentos,Desvios-Relatório_Geral:Desvios'),
   SPOTFIRE_DEBUG: booleanFromEnvironment.default(false),
   REPORT_OUTPUT_FILE_NAME: z.string().default('workline-report.json'),
+
+  // External Incidence Integration (isolated from Spotfire/M300)
+  EXTERNAL_INCIDENCE_WEB_URL: z.string().optional().default(''),
+  EXTERNAL_INCIDENCE_API_URL: z.string().optional().default(''),
+  MAPS_URL_TEMPLATE: z.string().optional().default('https://www.google.com/maps/place/'),
 });
 
 function parseCsvList(raw: string): string[] {
@@ -151,6 +156,11 @@ export const environment = {
     outputFileName: parsedEnvironment.REPORT_OUTPUT_FILE_NAME,
     basesConfig,
     extraTeamTags: basesConfig.extraTeamTags || [],
+  },
+  externalIncidence: {
+    webUrl: parsedEnvironment.EXTERNAL_INCIDENCE_WEB_URL,
+    apiUrl: parsedEnvironment.EXTERNAL_INCIDENCE_API_URL,
+    mapsUrlTemplate: parsedEnvironment.MAPS_URL_TEMPLATE,
   },
 } as const;
 
