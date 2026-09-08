@@ -734,10 +734,7 @@ type SavedFilterState = {
                         <span class="rpt-osdia-chip">Total OS: <strong>{{ analysis.totalOrders }} em {{ analysis.totalJornadas }} dias</strong></span>
                         <span class="rpt-osdia-chip">Ocioso: <strong>{{ calcIdleMin(analysis) | number:'1.0-0' }} min — {{ analysis.idleDays }} dias</strong></span>
                       </div>
-                      <div *ngFor="let flag of getIncidenceFlags(analysis.team)" class="incidence-flag" [ngClass]="'incidence-flag--' + flag.color">
-                        <span class="incidence-flag-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>
-                        <span [innerHTML]="sanitizeHtml(flag.html)"></span>
-                      </div>
+
                       <!-- Card único de warnings: ociosidade + ordens flagadas -->
                       <ng-container *ngIf="analysis.idleAnalysis || analysis.flaggedOrders.length > 0; else noOsDiaEvidence">
                         <div class="osdia-idle-notice">
@@ -759,7 +756,10 @@ type SavedFilterState = {
                           <div class="osdia-ev-list" *ngIf="analysis.flaggedOrders.length > 0">
                             <ng-template #osDiaEvTpl let-ev>
                               <div class="osdia-ev-header">
-                                <span class="osdia-ev-ordem">OS {{ ev.nr_ordem }}</span>
+    <span class="osdia-ev-ordem">OS {{ ev.nr_ordem }}</span>
+                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+      <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngFor="let t of inc.tags">{{ t.label }}</span>
+    </ng-container>
                                 <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngIf="!ev.prev_liberada">1ª OS</span>
                                 <span class="rpt-osdia-flag" *ngFor="let f of ev.flags">{{ osDiaFlagLabel(f) }}</span>
                                 <span class="rpt-osdia-flag" *ngIf="entreOsAfterIntervalo(ev)">Entre OS≥10min</span>
@@ -779,7 +779,13 @@ type SavedFilterState = {
                                 <li *ngFor="let alert of getAlerts('OS Dia', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
                                   <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                                 </li>
-                              </ul>
+                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
+      <strong [style.color]="flag.color === 'blue' ? '#4a90d9' : 'inherit'" style="margin-right: 4px;">[Openview]</strong>
+      <span [innerHTML]="sanitizeHtml(flag.html)"></span>
+    </li>
+  </ng-container>
+</ul>
                             </ng-template>
                             <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.flaggedOrders || [], analysis.extraFlaggedOrders || []); trackBy: trackByDateRef">
                               <div class="ev-date-group-header">{{ grp.dateRef }}</div>
@@ -880,7 +886,10 @@ type SavedFilterState = {
                           <div class="osdia-ev-list" *ngIf="analysis.flaggedOrders.length > 0">
                             <ng-template #eficienciaEvTpl let-ev>
                               <div class="osdia-ev-header">
-                                <span class="osdia-ev-ordem">OS {{ ev.nr_ordem }}</span>
+    <span class="osdia-ev-ordem">OS {{ ev.nr_ordem }}</span>
+                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+      <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngFor="let t of inc.tags">{{ t.label }}</span>
+    </ng-container>
                                 <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngIf="!ev.prev_liberada">1ª OS</span>
                                 <span class="rpt-osdia-flag" *ngFor="let f of ev.flags">{{ eficienciaFlagLabel(f) }}</span>
                               </div>
@@ -907,7 +916,13 @@ type SavedFilterState = {
                                 <li *ngIf="ev.flags.includes('tempo_padrao_vazio')" class="osdia-ev-alert">
                                   <strong>Tempo Padrão ausente:</strong> <span [innerHTML]="highlightMin(eficienciaAlertBody('tempo_padrao_vazio', ev))"></span>
                                 </li>
-                              </ul>
+                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
+      <strong [style.color]="flag.color === 'blue' ? '#4a90d9' : 'inherit'" style="margin-right: 4px;">[Openview]</strong>
+      <span [innerHTML]="sanitizeHtml(flag.html)"></span>
+    </li>
+  </ng-container>
+</ul>
                             </ng-template>
                             <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.flaggedOrders, analysis.extraFlaggedOrders); trackBy: trackByDateRef">
                               <div class="ev-date-group-header">{{ grp.dateRef }}</div>
@@ -1011,7 +1026,10 @@ type SavedFilterState = {
                             <div class="osdia-ev-list" *ngIf="analysis.flaggedOrders && analysis.flaggedOrders.length > 0">
                               <ng-template #utilizacaoEvTpl let-ev>
                                 <div class="osdia-ev-header">
-                                  <span class="osdia-ev-ordem">OS {{ ev.nr_ordem }}</span>
+    <span class="osdia-ev-ordem">OS {{ ev.nr_ordem }}</span>
+                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+      <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngFor="let t of inc.tags">{{ t.label }}</span>
+    </ng-container>
                                   <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngIf="!ev.prev_liberada">1ª OS</span>
                                   <span class="rpt-osdia-flag" *ngFor="let f of ev.flags">{{ osDiaFlagLabel(f) }}</span>
                                   <span class="rpt-osdia-flag" *ngIf="entreOsAfterIntervalo(ev)">Entre OS≥10min</span>
@@ -1031,7 +1049,13 @@ type SavedFilterState = {
                                   <li *ngFor="let alert of getAlerts('Utilização', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
                                     <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                                   </li>
-                                </ul>
+                                  <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
+      <strong [style.color]="flag.color === 'blue' ? '#4a90d9' : 'inherit'" style="margin-right: 4px;">[Openview]</strong>
+      <span [innerHTML]="sanitizeHtml(flag.html)"></span>
+    </li>
+  </ng-container>
+</ul>
                               </ng-template>
                               <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.flaggedOrders, analysis.extraFlaggedOrders); trackBy: trackByDateRef">
                                 <div class="ev-date-group-header">{{ grp.dateRef }}</div>
@@ -1110,7 +1134,10 @@ type SavedFilterState = {
                       <div class="osdia-ev-list" *ngIf="analysis.flaggedOrders.length > 0; else noTmeImpEvidence">
                         <ng-template #tmeImpEvTpl let-ev>
                           <div class="osdia-ev-header">
-                            <span class="osdia-ev-ordem">OS {{ ev.nr_ordem }}</span>
+    <span class="osdia-ev-ordem">OS {{ ev.nr_ordem }}</span>
+                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+      <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngFor="let t of inc.tags">{{ t.label }}</span>
+    </ng-container>
                             <span class="rpt-osdia-flag" *ngFor="let f of ev.flags">{{ tmeImpFlagLabel(f) }}</span>
                           </div>
                           <p class="osdia-ev-causa" *ngIf="ev.classe || ev.causa">
@@ -1156,7 +1183,13 @@ type SavedFilterState = {
                             <li *ngFor="let alert of getAlerts('TME Improdutivo', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
                               <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                             </li>
-                          </ul>
+                            <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
+      <strong [style.color]="flag.color === 'blue' ? '#4a90d9' : 'inherit'" style="margin-right: 4px;">[Openview]</strong>
+      <span [innerHTML]="sanitizeHtml(flag.html)"></span>
+    </li>
+  </ng-container>
+</ul>
                         </ng-template>
                         <ng-container *ngFor="let grp of allDateGroupsForKpi(analysis.flaggedOrders, analysis.extraFlaggedOrders); trackBy: trackByDateRef">
                           <div class="ev-date-group-header">{{ grp.dateRef }}</div>
@@ -1237,7 +1270,10 @@ type SavedFilterState = {
                       <div class="osdia-ev-list" *ngIf="analysis.flaggedDays.length > 0; else noLoginEvidence">
                         <ng-template #loginEvTpl let-ev>
                           <div class="osdia-ev-header">
-                            <span class="osdia-ev-ordem">{{ ev.date_ref || '—' }}</span>
+    <span class="osdia-ev-ordem">{{ ev.date_ref || '—' }}</span>
+                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+      <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngFor="let t of inc.tags">{{ t.label }}</span>
+    </ng-container>
                             <span class="rpt-osdia-flag" *ngFor="let f of ev.flags">{{ loginFlagLabel(f) }}</span>
                           </div>
                           <div class="kpi-ev-timeline">
@@ -1255,7 +1291,13 @@ type SavedFilterState = {
                             <li *ngFor="let alert of getAlerts('1º Login', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
                               <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                             </li>
-                          </ul>
+                            <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
+      <strong [style.color]="flag.color === 'blue' ? '#4a90d9' : 'inherit'" style="margin-right: 4px;">[Openview]</strong>
+      <span [innerHTML]="sanitizeHtml(flag.html)"></span>
+    </li>
+  </ng-container>
+</ul>
                         </ng-template>
                         <div class="osdia-ev-item" 
                              [class.osdia-ev-item--yellow]="getEvidenceColorHelper(ev) === 'yellow'" 
@@ -1329,7 +1371,10 @@ type SavedFilterState = {
                       <div class="osdia-ev-list" *ngIf="analysis.flaggedDays.length > 0; else noDeslocEvidence">
                         <ng-template #deslocEvTpl let-ev>
                           <div class="osdia-ev-header">
-                            <span class="osdia-ev-ordem">{{ ev.date_ref || '—' }}{{ ev.nr_ordem ? ' · OS ' + ev.nr_ordem : '' }}</span>
+    <span class="osdia-ev-ordem">{{ ev.date_ref || '—' }}{{ ev.nr_ordem ? ' · OS ' + ev.nr_ordem : '' }}</span>
+                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+      <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngFor="let t of inc.tags">{{ t.label }}</span>
+    </ng-container>
                             <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngIf="ev.is_primeira_os_jornada" title="Primeira OS da jornada">1ª OS</span>
                             <span class="rpt-osdia-flag" *ngFor="let f of ev.flags">{{ deslocFlagLabel(f) }}</span>
                           </div>
@@ -1338,7 +1383,13 @@ type SavedFilterState = {
                             <li *ngFor="let alert of getAlerts('1º Desloc.', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
                               <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                             </li>
-                          </ul>
+                            <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
+      <strong [style.color]="flag.color === 'blue' ? '#4a90d9' : 'inherit'" style="margin-right: 4px;">[Openview]</strong>
+      <span [innerHTML]="sanitizeHtml(flag.html)"></span>
+    </li>
+  </ng-container>
+</ul>
                         </ng-template>
                         <div class="osdia-ev-item" 
                              [class.osdia-ev-item--yellow]="getEvidenceColorHelper(ev) === 'yellow'" 
@@ -1412,7 +1463,10 @@ type SavedFilterState = {
                       <div class="osdia-ev-list" *ngIf="analysis.flaggedDays.length > 0; else noRetornoEvidence">
                         <ng-template #retornoEvTpl let-ev>
                           <div class="osdia-ev-header">
-                            <span class="osdia-ev-ordem">{{ ev.date_ref || '—' }}</span>
+    <span class="osdia-ev-ordem">{{ ev.date_ref || '—' }}</span>
+                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+      <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngFor="let t of inc.tags">{{ t.label }}</span>
+    </ng-container>
                             <span class="rpt-osdia-flag" *ngFor="let f of ev.flags">{{ retornoFlagLabel(f) }}</span>
                           </div>
                           <div class="kpi-ev-timeline">
@@ -1430,7 +1484,13 @@ type SavedFilterState = {
                             <li *ngFor="let alert of getAlerts('Retorno Base', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
                               <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                             </li>
-                          </ul>
+                            <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
+      <strong [style.color]="flag.color === 'blue' ? '#4a90d9' : 'inherit'" style="margin-right: 4px;">[Openview]</strong>
+      <span [innerHTML]="sanitizeHtml(flag.html)"></span>
+    </li>
+  </ng-container>
+</ul>
                         </ng-template>
                         <div class="osdia-ev-item" 
                              [class.osdia-ev-item--yellow]="getEvidenceColorHelper(ev) === 'yellow'" 

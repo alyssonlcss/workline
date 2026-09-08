@@ -118,12 +118,12 @@ export class IncidenceEnrichmentService {
     incidenceNumber: string,
     payload: ExternalIncidencePayload,
   ): EnrichedIncidence {
-    const lat = payload.latitude;
-    const lon = payload.longitude;
+    const lat = payload.latitude != null ? Number(payload.latitude) : null;
+    const lon = payload.longitude != null ? Number(payload.longitude) : null;
     const hasCoords = lat != null && lon != null && !isNaN(lat) && !isNaN(lon);
 
     // ── Location & Maps URL ──
-    const mapsUrl = hasCoords ? `${this.mapsUrlTemplate}${lat},${lon}` : null;
+    const mapsUrl = hasCoords ? `${this.mapsUrlTemplate}/${lat},${lon}` : null;
 
     // Location label: prefer municipio/bairro from payload, fallback to coordinates
     let locationLabel: string | null = null;
