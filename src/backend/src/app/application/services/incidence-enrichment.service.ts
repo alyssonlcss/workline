@@ -202,11 +202,11 @@ export class IncidenceEnrichmentService {
         : '';
         
       const locPrefixText = locationFieldUsed ? `Localização (${locationFieldUsed}):` : `Localização:`;
-      const locPrefixHtml = `<b><span style="color:#4a90d9;">${locPrefixText}</span></b>`;
+      const locPrefixHtml = `<b><span style="color:#1d4ed8;">${locPrefixText}</span></b>`;
       const plainTextInfo = `${locationLabel}${retornoText}`;
       
       const linkContent = mapsUrl
-        ? `<a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" style="color:#4a90d9;text-decoration:underline;">${plainTextInfo}</a>`
+        ? `<a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" style="color:#1d4ed8;text-decoration:underline;">${plainTextInfo}</a>`
         : plainTextInfo;
 
       flags.push({
@@ -221,7 +221,7 @@ export class IncidenceEnrichmentService {
     // Blue Flag: Observação com formatação
     if (payload.observacao && payload.observacao.trim().length > 0) {
       const obs = payload.observacao.trim();
-      const prefixHtml = `<b><span style="color:#4a90d9;">Reporte de execução:</span></b>`;
+      const prefixHtml = `<b><span style="color:#1d4ed8;">Reporte de execução:</span></b>`;
       const prefixPlain = `Reporte de execução:`;
 
       flags.push({

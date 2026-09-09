@@ -774,7 +774,7 @@ type SavedFilterState = {
                                   <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                                 </li>
                                 <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
-    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
+    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert" [class.osdia-ev-alert--info]="flag.color === 'blue'">
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
   </ng-container>
@@ -848,10 +848,6 @@ type SavedFilterState = {
                           TL Curto: <strong>{{ analysis.summary.countDeslocamentoCurto }}</strong>
                         </span>
                       </div>
-                      <div *ngFor="let flag of getIncidenceFlags(analysis.team)" class="incidence-flag" [ngClass]="'incidence-flag--' + flag.color">
-                        <span class="incidence-flag-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>
-                        <span [innerHTML]="sanitizeHtml(flag.html)"></span>
-                      </div>
                       <!-- Card único de warnings -->
                       <ng-container *ngIf="analysis.flaggedOrders.length > 0 || (analysis.tempoPadraoVazioOrders && analysis.tempoPadraoVazioOrders.length > 0); else noEficienciaEvidence">
                         <div class="osdia-idle-notice">
@@ -904,7 +900,7 @@ type SavedFilterState = {
                                   <strong>Tempo Padrão ausente:</strong> <span [innerHTML]="highlightMin(eficienciaAlertBody('tempo_padrao_vazio', ev))"></span>
                                 </li>
                                 <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
-    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
+    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert" [class.osdia-ev-alert--info]="flag.color === 'blue'">
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
   </ng-container>
@@ -985,10 +981,6 @@ type SavedFilterState = {
                             {{ chip.label }} <strong [innerHTML]="chip.value"></strong>
                           </span>
                         </div>
-                      <div *ngFor="let flag of getIncidenceFlags(analysis.team)" class="incidence-flag" [ngClass]="'incidence-flag--' + flag.color">
-                        <span class="incidence-flag-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>
-                        <span [innerHTML]="sanitizeHtml(flag.html)"></span>
-                      </div>
                         <!-- Card único de warnings: ociosidade + ordens flagadas -->
                         <ng-container *ngIf="analysis.idleAnalysis || (analysis.flaggedOrders && analysis.flaggedOrders.length > 0); else noUtilizacaoEvidence">
                           <div class="osdia-idle-notice">
@@ -1034,7 +1026,7 @@ type SavedFilterState = {
                                     <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                                   </li>
                                   <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
-    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
+    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert" [class.osdia-ev-alert--info]="flag.color === 'blue'">
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
   </ng-container>
@@ -1104,10 +1096,6 @@ type SavedFilterState = {
                           {{ chip.label }} <strong [innerHTML]="chip.value"></strong>
                         </span>
                       </div>
-                      <div *ngFor="let flag of getIncidenceFlags(analysis.team)" class="incidence-flag" [ngClass]="'incidence-flag--' + flag.color">
-                        <span class="incidence-flag-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>
-                        <span [innerHTML]="sanitizeHtml(flag.html)"></span>
-                      </div>
                       <div class="osdia-ev-list" *ngIf="analysis.flaggedOrders.length > 0; else noTmeImpEvidence">
                         <ng-template #tmeImpEvTpl let-ev>
                           <div class="osdia-ev-header">
@@ -1161,7 +1149,7 @@ type SavedFilterState = {
                               <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                             </li>
                             <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
-    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
+    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert" [class.osdia-ev-alert--info]="flag.color === 'blue'">
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
   </ng-container>
@@ -1233,10 +1221,6 @@ type SavedFilterState = {
                           {{ chip.label }} <strong [innerHTML]="chip.value"></strong>
                         </span>
                       </div>
-                      <div *ngFor="let flag of getIncidenceFlags(analysis.team)" class="incidence-flag" [ngClass]="'incidence-flag--' + flag.color">
-                        <span class="incidence-flag-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>
-                        <span [innerHTML]="sanitizeHtml(flag.html)"></span>
-                      </div>
                       <div class="osdia-ev-list" *ngIf="analysis.flaggedDays.length > 0; else noLoginEvidence">
                         <ng-template #loginEvTpl let-ev>
                           <div class="osdia-ev-header">
@@ -1262,7 +1246,7 @@ type SavedFilterState = {
                               <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                             </li>
                             <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
-    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
+    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert" [class.osdia-ev-alert--info]="flag.color === 'blue'">
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
   </ng-container>
@@ -1327,10 +1311,6 @@ type SavedFilterState = {
                           {{ chip.label }} <strong [innerHTML]="chip.value"></strong>
                         </span>
                       </div>
-                      <div *ngFor="let flag of getIncidenceFlags(analysis.team)" class="incidence-flag" [ngClass]="'incidence-flag--' + flag.color">
-                        <span class="incidence-flag-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>
-                        <span [innerHTML]="sanitizeHtml(flag.html)"></span>
-                      </div>
                       <div class="osdia-ev-list" *ngIf="analysis.flaggedDays.length > 0; else noDeslocEvidence">
                         <ng-template #deslocEvTpl let-ev>
                           <div class="osdia-ev-header">
@@ -1347,7 +1327,7 @@ type SavedFilterState = {
                               <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                             </li>
                             <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
-    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
+    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert" [class.osdia-ev-alert--info]="flag.color === 'blue'">
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
   </ng-container>
@@ -1412,10 +1392,6 @@ type SavedFilterState = {
                           {{ chip.label }} <strong [innerHTML]="chip.value"></strong>
                         </span>
                       </div>
-                      <div *ngFor="let flag of getIncidenceFlags(analysis.team)" class="incidence-flag" [ngClass]="'incidence-flag--' + flag.color">
-                        <span class="incidence-flag-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span>
-                        <span [innerHTML]="sanitizeHtml(flag.html)"></span>
-                      </div>
                       <div class="osdia-ev-list" *ngIf="analysis.flaggedDays.length > 0; else noRetornoEvidence">
                         <ng-template #retornoEvTpl let-ev>
                           <div class="osdia-ev-header">
@@ -1441,7 +1417,7 @@ type SavedFilterState = {
                               <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                             </li>
                             <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
-    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
+    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert" [class.osdia-ev-alert--info]="flag.color === 'blue'">
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
   </ng-container>
@@ -4121,6 +4097,29 @@ type SavedFilterState = {
       .osdia-ev-alert--warn::before {
         color: #d97706;
       }
+
+      .osdia-ev-alert--info::before {
+        content: '';
+        width: 12px;
+        height: 12px;
+        position: absolute;
+        left: 0;
+        top: 3px;
+        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%231d4ed8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>');
+        background-size: contain;
+        background-repeat: no-repeat;
+      }
+
+      ::ng-deep .osdia-ev-alert--info {
+        color: inherit;
+      }
+      ::ng-deep .osdia-ev-alert--info b,
+      ::ng-deep .osdia-ev-alert--info strong {
+        color: #1d4ed8 !important;
+      }
+
+
+
 
       .osdia-ev-alert.osdia-ev-alert--warn strong {
         color: #d97706;

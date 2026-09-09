@@ -1,0 +1,74 @@
+=== OS DIA ===
+<ng-template #osDiaEvTpl let-ev>
+                              <div class="osdia-ev-header">
+    <span class="osdia-ev-ordem">OS {{ ev.nr_ordem }}</span>
+                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+      <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngFor="let t of inc.tags">{{ t.label }}</span>
+    </ng-container>
+                                <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngIf="!ev.prev_liberada">1ª OS</span>
+                                <span class="rpt-osdia-flag" *ngFor="let f of ev.flags">{{ osDiaFlagLabel(f) }}</span>
+                                <span class="rpt-osdia-flag" *ngIf="entreOsAfterIntervalo(ev)">Entre OS≥10min</span>
+                                <span class="rpt-osdia-flag" *ngIf="getOciosoTotal(ev) != null">Ocioso: {{ getOciosoTotal(ev) | number:'1.0-0' }} min</span>
+                              </div>
+                              <p class="osdia-ev-causa" *ngIf="ev.classe || ev.causa || evDespAfterPrevLib(ev)">
+                                <span *ngIf="ev.classe"><strong>Classe:</strong> {{ ev.classe }}</span>
+                                <span class="osdia-ev-causa-sep" *ngIf="ev.classe && ev.causa"> · </span>
+                                <span *ngIf="ev.causa"><strong>Causa:</strong> {{ ev.causa }}</span>
+                                <ng-container *ngIf="evDespAfterPrevLib(ev) as despTime">
+                                  <span class="osdia-ev-causa-sep" *ngIf="ev.classe || ev.causa"> · </span>
+                                  <span><strong>Desp.:</strong> {{ despTime }}</span>
+                                </ng-container>
+                              </p>
+                              <app-timeline-visual [ev]="ev"></app-timeline-visual>
+                              <ul class="osdia-ev-alerts">
+                                <li *ngFor="let alert of getAlerts('OS Dia', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
+                                  <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
+                                </li>
+                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
+      <span [innerHTML]="sanitizeHtml(flag.html)"></span>
+    </li>
+  </ng-container>
+</ul>
+                            </ng-template>
+
+=== EFICIENCIA ===
+<ng-template #eficienciaEvTpl let-ev>
+                              <div class="osdia-ev-header">
+    <span class="osdia-ev-ordem">OS {{ ev.nr_ordem }}</span>
+                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+      <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngFor="let t of inc.tags">{{ t.label }}</span>
+    </ng-container>
+                                <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngIf="!ev.prev_liberada">1ª OS</span>
+                                <span class="rpt-osdia-flag" *ngFor="let f of ev.flags">{{ eficienciaFlagLabel(f) }}</span>
+                              </div>
+                              <p class="osdia-ev-causa" *ngIf="ev.classe || ev.causa || evDespAfterPrevLib(ev)">
+                                <span *ngIf="ev.classe"><strong>Classe:</strong> {{ ev.classe }}</span>
+                                <span class="osdia-ev-causa-sep" *ngIf="ev.classe && ev.causa"> · </span>
+                                <span *ngIf="ev.causa"><strong>Causa:</strong> {{ ev.causa }}</span>
+                                <ng-container *ngIf="evDespAfterPrevLib(ev) as despTime">
+                                  <span class="osdia-ev-causa-sep" *ngIf="ev.classe || ev.causa"> · </span>
+                                  <span><strong>Desp.:</strong> {{ despTime }}</span>
+                                </ng-container>
+                              </p>
+                              <app-timeline-visual [ev]="ev" [hidePartida]="true" [trimToACaminho]="true"></app-timeline-visual>
+                              <ul class="osdia-ev-alerts">
+                                <li *ngIf="ev.flags.includes('tr_muito_baixo')" class="osdia-ev-alert">
+                                  <strong>Tempo de Reparo muito baixo:</strong> <span [innerHTML]="highlightMin(eficienciaAlertBody('tr_muito_baixo', ev))"></span>
+                                </li>
+                                <li *ngIf="ev.flags.includes('deslocamento_curto')" class="osdia-ev-alert">
+                                  <strong>Deslocamento (TL) muito curto:</strong> <span [innerHTML]="highlightMin(eficienciaAlertBody('deslocamento_curto', ev))"></span>
+                                </li>
+                                <li *ngIf="ev.flags.includes('tr_excede_hd')" class="osdia-ev-alert">
+                                  <strong>Tempo de Reparo alto:</strong> <span [innerHTML]="highlightMin(eficienciaAlertBody('tr_excede_hd', ev))"></span>
+                                </li>
+                                <li *ngIf="ev.flags.includes('tempo_padrao_vazio')" class="osdia-ev-alert">
+                                  <strong>Tempo Padrão ausente:</strong> <span [innerHTML]="highlightMin(eficienciaAlertBody('tempo_padrao_vazio', ev))"></span>
+                                </li>
+                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+    <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
+      <span [innerHTML]="sanitizeHtml(flag.html)"></span>
+    </li>
+  </ng-container>
+</ul>
+                            </ng-template>
