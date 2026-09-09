@@ -99,6 +99,11 @@ export class IncidenceEnrichmentService {
       if (!payload) {
         return this.buildNotFound(incidenceNumber);
       }
+      
+      // LOG PAYLOAD KEYS FOR DEBUGGING
+      if (Math.random() < 0.1 || incidenceNumber.endsWith('9')) { // Log for some to avoid flooding
+        console.log(`[DEBUG] Openview payload keys for ${incidenceNumber}:`, Object.keys(payload).join(', '));
+      }
 
       return this.buildEnrichedIncidence(incidenceNumber, payload);
     } catch (error) {
@@ -125,13 +130,25 @@ export class IncidenceEnrichmentService {
     // ── Location & Maps URL ──
     const mapsUrl = hasCoords ? `${this.mapsUrlTemplate}/${lat},${lon}` : null;
 
-    // Location label: prefer municipio/bairro from payload, fallback to coordinates
+    // Location label logic
     let locationLabel: string | null = null;
-    if (payload.municipio || payload.bairro) {
+    let locationFieldUsed: string | null = null;
+    
+    if (hasCoords) {
       const parts = [payload.bairro, payload.municipio].filter(Boolean);
-      locationLabel = parts.join(', ');
-    } else if (hasCoords) {
-      locationLabel = `${lat!.toFixed(4)}, ${lon!.toFixed(4)}`;
+      if (parts.length > 0) {
+        locationLabel = parts.join(', ');
+      } else {
+        locationLabel = `${lat!.toFixed(4)}, ${lon!.toFixed(4)}`;
+      }
+    } else {
+      if (payload.municipio) {
+        locationLabel = payload.municipio;
+        locationFieldUsed = 'município';
+      } else if ((payload as any).conjunto) {
+        locationLabel = (payload as any).conjunto;
+        locationFieldUsed = 'conjunto';
+      }
     }
 
     // ── Nearest base & estimated return ──
@@ -181,45 +198,36 @@ export class IncidenceEnrichmentService {
     // Blue Flag: Localização + Retorno Estimado
     if (locationLabel) {
       const retornoText = estimatedReturnMin != null
-        ? ` | Retorno estimado: ${estimatedReturnMin} min`
+        ? ` | deslocamento estimado: ${estimatedReturnMin} min`
         : '';
-      const plainText = `Localização: ${locationLabel}${retornoText}`;
+        
+      const locPrefixText = locationFieldUsed ? `Localização (${locationFieldUsed}):` : `Localização:`;
+      const locPrefixHtml = `<b><span style="color:#4a90d9;">${locPrefixText}</span></b>`;
+      const plainTextInfo = `${locationLabel}${retornoText}`;
+      
       const linkContent = mapsUrl
-        ? `<a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" style="color:#4a90d9;text-decoration:underline;">${plainText}</a>`
-        : plainText;
+        ? `<a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" style="color:#4a90d9;text-decoration:underline;">${plainTextInfo}</a>`
+        : plainTextInfo;
 
       flags.push({
         type: 'localizacao',
-        html: linkContent,
-        plainText,
+        html: `${locPrefixHtml} ${linkContent}`,
+        plainText: `${locPrefixText} ${plainTextInfo}`,
         href: mapsUrl ?? undefined,
         color: 'blue',
       });
     }
 
-    // Blue Flag: Observação com formatação m300
+    // Blue Flag: Observação com formatação
     if (payload.observacao && payload.observacao.trim().length > 0) {
       const obs = payload.observacao.trim();
-      let html: string;
-      let plainText: string;
-
-      if (obs.toLowerCase().includes('m300:')) {
-        // Format: entire text in italic, "m300:" prefix in bold
-        html = obs.replace(
-          /(m300:)/i,
-          '<b>$1</b>',
-        );
-        html = `<i>${html}</i>`;
-        plainText = obs;
-      } else {
-        html = obs;
-        plainText = obs;
-      }
+      const prefixHtml = `<b><span style="color:#4a90d9;">Reporte de execução:</span></b>`;
+      const prefixPlain = `Reporte de execução:`;
 
       flags.push({
         type: 'observacao_m300',
-        html: `Retorno OS: ${html}`,
-        plainText: `Retorno OS: ${plainText}`,
+        html: `${prefixHtml} ${obs}`,
+        plainText: `${prefixPlain} ${obs}`,
         color: 'blue',
       });
     }

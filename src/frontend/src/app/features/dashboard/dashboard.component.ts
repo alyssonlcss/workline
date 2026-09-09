@@ -701,14 +701,8 @@ type SavedFilterState = {
                     <div class="rpt-osdia-card" *ngFor="let analysis of filterOsDiaEvidence(report.specialAnalysis.osDiaAnalysis)">
                       <div class="rpt-osdia-card-head">
                         <span class="rpt-osdia-team">{{ analysis.team }}</span>
-                          <ng-container *ngFor="let tag of getIncidenceTags(analysis.team)">
-                            <span class="rpt-osdia-badge" [class.rpt-osdia-badge--blue]="tag.color === 'blue'" [class.rpt-osdia-badge--orange]="tag.color === 'orange'">
-                              {{ tag.label }}
-                            </span>
-                          </ng-container>
-                        <span class="incidence-tags-row" *ngIf="getIncidenceTags(analysis.team).length > 0">
-                          <span *ngFor="let tag of getIncidenceTags(analysis.team)" class="incidence-tag" [ngClass]="'incidence-tag--' + tag.color">{{ tag.label }}</span>
-                        </span>
+                          
+                        
                         <span class="rpt-osdia-badge rpt-osdia-badge--gap">Gap {{ analysis.gap | number:'1.1-1' }} OS/dia</span>
                         <button class="export-png-btn" (click)="exportTeamCardToPng($event, analysis.team)" title="Copiar imagem">
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -781,7 +775,6 @@ type SavedFilterState = {
                                 </li>
                                 <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
     <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
-      <strong [style.color]="flag.color === 'blue' ? '#4a90d9' : 'inherit'" style="margin-right: 4px;">[Openview]</strong>
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
   </ng-container>
@@ -833,14 +826,8 @@ type SavedFilterState = {
                     <div class="rpt-osdia-card" *ngFor="let analysis of sortedEficienciaAnalysis(kpi.evidenceAnalysis)">
                       <div class="rpt-osdia-card-head">
                         <span class="rpt-osdia-team">{{ analysis.team }}</span>
-                          <ng-container *ngFor="let tag of getIncidenceTags(analysis.team)">
-                            <span class="rpt-osdia-badge" [class.rpt-osdia-badge--blue]="tag.color === 'blue'" [class.rpt-osdia-badge--orange]="tag.color === 'orange'">
-                              {{ tag.label }}
-                            </span>
-                          </ng-container>
-                        <span class="incidence-tags-row" *ngIf="getIncidenceTags(analysis.team).length > 0">
-                          <span *ngFor="let tag of getIncidenceTags(analysis.team)" class="incidence-tag" [ngClass]="'incidence-tag--' + tag.color">{{ tag.label }}</span>
-                        </span>
+                          
+                        
                         <span class="rpt-osdia-badge"
                               [class.rpt-osdia-badge--gap]="analysis.analysisType === 'underperformer'"
                               [class.rpt-osdia-badge--good]="analysis.analysisType === 'top_performer'">
@@ -918,7 +905,6 @@ type SavedFilterState = {
                                 </li>
                                 <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
     <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
-      <strong [style.color]="flag.color === 'blue' ? '#4a90d9' : 'inherit'" style="margin-right: 4px;">[Openview]</strong>
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
   </ng-container>
@@ -988,9 +974,7 @@ type SavedFilterState = {
                       <div class="rpt-osdia-card" *ngFor="let analysis of filterOsDiaEvidence(report.specialAnalysis.utilizacaoAnalysis)">
                         <div class="rpt-osdia-card-head">
                           <span class="rpt-osdia-team">{{ analysis.team }}<ng-container *ngIf="isTeamInBottomKpi(analysis.team, 'Utilização')"> *</ng-container></span>
-                        <span class="incidence-tags-row" *ngIf="getIncidenceTags(analysis.team).length > 0">
-                          <span *ngFor="let tag of getIncidenceTags(analysis.team)" class="incidence-tag" [ngClass]="'incidence-tag--' + tag.color">{{ tag.label }}</span>
-                        </span>
+                        
                           <span class="rpt-osdia-badge rpt-osdia-badge--gap">Gap {{ analysis.gap | number:'1.1-1' }}%</span>
                           <button class="export-png-btn" (click)="exportTeamCardToPng($event, analysis.team)" title="Copiar imagem">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
@@ -1051,7 +1035,6 @@ type SavedFilterState = {
                                   </li>
                                   <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
     <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
-      <strong [style.color]="flag.color === 'blue' ? '#4a90d9' : 'inherit'" style="margin-right: 4px;">[Openview]</strong>
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
   </ng-container>
@@ -1105,14 +1088,8 @@ type SavedFilterState = {
                     <div class="rpt-osdia-card" *ngFor="let analysis of filterTmeImpEvidence(kpi.tmeImpAnalysis)">
                       <div class="rpt-osdia-card-head">
                         <span class="rpt-osdia-team">{{ analysis.team }}</span>
-                          <ng-container *ngFor="let tag of getIncidenceTags(analysis.team)">
-                            <span class="rpt-osdia-badge" [class.rpt-osdia-badge--blue]="tag.color === 'blue'" [class.rpt-osdia-badge--orange]="tag.color === 'orange'">
-                              {{ tag.label }}
-                            </span>
-                          </ng-container>
-                        <span class="incidence-tags-row" *ngIf="getIncidenceTags(analysis.team).length > 0">
-                          <span *ngFor="let tag of getIncidenceTags(analysis.team)" class="incidence-tag" [ngClass]="'incidence-tag--' + tag.color">{{ tag.label }}</span>
-                        </span>
+                          
+                        
                         <span class="rpt-osdia-badge rpt-osdia-badge--gap">
                           {{ analysis.gap > 0 ? '+' : '' }}{{ analysis.gap | number:'1.1-1' }} min s/meta
                         </span>
@@ -1185,7 +1162,6 @@ type SavedFilterState = {
                             </li>
                             <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
     <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
-      <strong [style.color]="flag.color === 'blue' ? '#4a90d9' : 'inherit'" style="margin-right: 4px;">[Openview]</strong>
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
   </ng-container>
@@ -1241,14 +1217,8 @@ type SavedFilterState = {
                     <div class="rpt-osdia-card" *ngFor="let analysis of filterLoginEvidence(kpi.primeiroLoginAnalysis)">
                       <div class="rpt-osdia-card-head">
                         <span class="rpt-osdia-team">{{ analysis.team }}</span>
-                          <ng-container *ngFor="let tag of getIncidenceTags(analysis.team)">
-                            <span class="rpt-osdia-badge" [class.rpt-osdia-badge--blue]="tag.color === 'blue'" [class.rpt-osdia-badge--orange]="tag.color === 'orange'">
-                              {{ tag.label }}
-                            </span>
-                          </ng-container>
-                        <span class="incidence-tags-row" *ngIf="getIncidenceTags(analysis.team).length > 0">
-                          <span *ngFor="let tag of getIncidenceTags(analysis.team)" class="incidence-tag" [ngClass]="'incidence-tag--' + tag.color">{{ tag.label }}</span>
-                        </span>
+                          
+                        
                         <span class="rpt-osdia-badge rpt-osdia-badge--gap">
                           {{ analysis.gap > 0 ? '+' : '' }}{{ analysis.gap | number:'1.1-1' }} min s/meta
                         </span>
@@ -1293,7 +1263,6 @@ type SavedFilterState = {
                             </li>
                             <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
     <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
-      <strong [style.color]="flag.color === 'blue' ? '#4a90d9' : 'inherit'" style="margin-right: 4px;">[Openview]</strong>
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
   </ng-container>
@@ -1342,14 +1311,8 @@ type SavedFilterState = {
                     <div class="rpt-osdia-card" *ngFor="let analysis of filterDeslocEvidence(kpi.primeiroDeslocAnalysis)">
                       <div class="rpt-osdia-card-head">
                         <span class="rpt-osdia-team">{{ analysis.team }}</span>
-                          <ng-container *ngFor="let tag of getIncidenceTags(analysis.team)">
-                            <span class="rpt-osdia-badge" [class.rpt-osdia-badge--blue]="tag.color === 'blue'" [class.rpt-osdia-badge--orange]="tag.color === 'orange'">
-                              {{ tag.label }}
-                            </span>
-                          </ng-container>
-                        <span class="incidence-tags-row" *ngIf="getIncidenceTags(analysis.team).length > 0">
-                          <span *ngFor="let tag of getIncidenceTags(analysis.team)" class="incidence-tag" [ngClass]="'incidence-tag--' + tag.color">{{ tag.label }}</span>
-                        </span>
+                          
+                        
                         <span class="rpt-osdia-badge rpt-osdia-badge--gap">
                           {{ analysis.gap > 0 ? '+' : '' }}{{ analysis.gap | number:'1.1-1' }} min s/meta
                         </span>
@@ -1385,7 +1348,6 @@ type SavedFilterState = {
                             </li>
                             <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
     <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
-      <strong [style.color]="flag.color === 'blue' ? '#4a90d9' : 'inherit'" style="margin-right: 4px;">[Openview]</strong>
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
   </ng-container>
@@ -1434,14 +1396,8 @@ type SavedFilterState = {
                     <div class="rpt-osdia-card" *ngFor="let analysis of filterRetornoEvidence(kpi.retornoBaseAnalysis)">
                       <div class="rpt-osdia-card-head">
                         <span class="rpt-osdia-team">{{ analysis.team }}</span>
-                          <ng-container *ngFor="let tag of getIncidenceTags(analysis.team)">
-                            <span class="rpt-osdia-badge" [class.rpt-osdia-badge--blue]="tag.color === 'blue'" [class.rpt-osdia-badge--orange]="tag.color === 'orange'">
-                              {{ tag.label }}
-                            </span>
-                          </ng-container>
-                        <span class="incidence-tags-row" *ngIf="getIncidenceTags(analysis.team).length > 0">
-                          <span *ngFor="let tag of getIncidenceTags(analysis.team)" class="incidence-tag" [ngClass]="'incidence-tag--' + tag.color">{{ tag.label }}</span>
-                        </span>
+                          
+                        
                         <span class="rpt-osdia-badge rpt-osdia-badge--gap">
                           {{ analysis.gap > 0 ? '+' : '' }}{{ analysis.gap | number:'1.1-1' }} min s/meta
                         </span>
@@ -1486,7 +1442,6 @@ type SavedFilterState = {
                             </li>
                             <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
     <li *ngFor="let flag of inc.flags" class="osdia-ev-alert">
-      <strong [style.color]="flag.color === 'blue' ? '#4a90d9' : 'inherit'" style="margin-right: 4px;">[Openview]</strong>
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
   </ng-container>
