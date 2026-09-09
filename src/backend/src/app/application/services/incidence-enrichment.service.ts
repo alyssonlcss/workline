@@ -125,7 +125,7 @@ export class IncidenceEnrichmentService {
   ): EnrichedIncidence {
     const lat = payload.latitude != null ? Number(payload.latitude) : null;
     const lon = payload.longitude != null ? Number(payload.longitude) : null;
-    const hasCoords = lat != null && lon != null && !isNaN(lat) && !isNaN(lon);
+    const hasCoords = lat != null && lon != null && !isNaN(lat) && !isNaN(lon) && (lat !== 0 || lon !== 0);
 
     // ── Location & Maps URL ──
     const mapsUrl = hasCoords ? `${this.mapsUrlTemplate}/${lat},${lon}` : null;
