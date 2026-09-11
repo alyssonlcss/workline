@@ -8537,29 +8537,21 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           
           
           let usedField = '';
-          let locationLabel = '';
-          
-          const mun = (payload.municipio || '').trim();
-          let extraInfo = '';
-          
-          if (payload.bairro) {
-             extraInfo = payload.bairro.trim();
-             usedField = 'Bairro';
-          } else if (payload.conjunto) {
-             extraInfo = payload.conjunto.trim();
-             usedField = 'Conjunto';
-          } else if (payload.localidade) {
-             extraInfo = payload.localidade.trim();
-             usedField = 'Localidade';
-          }
-          
-          if (hasCoords) {
-             usedField = 'Nativa';
-          } else if (!usedField && mun) {
-             usedField = 'Município';
-          }
-          
-          let locPrefixText = usedField ? `Localização (${usedField}):` : 'Localização:';
+            let locationLabel = '';
+            
+            const mun = (payload.municipio || '').trim();
+            let extraInfo = '';
+            
+            if (hasCoords) {
+               usedField = 'Nativa';
+            } else if (mun) {
+               usedField = 'Município';
+            } else if (payload.conjunto) {
+               extraInfo = payload.conjunto.trim();
+               usedField = 'Conjunto';
+            }
+            
+            let locPrefixText = usedField ? `Localização (${usedField}):` : 'Localização:';
           
           if (!extraInfo) {
              locationLabel = mun || 'Localização não informada';
