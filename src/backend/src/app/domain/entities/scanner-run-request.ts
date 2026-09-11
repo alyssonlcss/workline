@@ -19,6 +19,7 @@ export interface ScannerRunRequest {
   tablesToExport?: TableExportConfig[];
   selectedFilters?: SpotfireFilter[];
   periodSelection?: ScannerPeriodSelection;
+  reportDates?: string[];
   skipFilterReset?: boolean;
   clientBrowserType?: 'edge' | 'chrome';
   customOutputDir?: string;

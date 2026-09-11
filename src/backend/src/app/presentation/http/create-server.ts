@@ -58,9 +58,10 @@ const dataDownloadSchema = z.object({
   reportTitle: z.string().trim().min(1).optional(),
   selectedFilters: z.array(filterSchema).optional(),
   periodSelection: z.object({
-    year: z.union([z.string().trim(), z.array(z.string().trim())]).optional(),
-    month: z.union([z.string().trim(), z.array(z.string().trim())]).optional(),
-  }).optional(),
+      year: z.union([z.string().trim(), z.array(z.string().trim())]).optional(),
+      month: z.union([z.string().trim(), z.array(z.string().trim())]).optional(),
+    }).optional(),
+    reportDates: z.array(z.string()).optional(),
   userCredentials: z.object({
     username: z.string().optional(),
     password: z.string().optional(),

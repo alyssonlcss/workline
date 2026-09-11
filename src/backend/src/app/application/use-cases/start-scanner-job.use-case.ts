@@ -69,55 +69,64 @@ export class StartScannerJobUseCase {
     
     const polo = baseToPolo[baseName] || baseName;
 
-    let months: string[] = [];
-    if (request.periodSelection?.month) {
-       months = Array.isArray(request.periodSelection.month) ? request.periodSelection.month : [request.periodSelection.month];
+        let dataInicio: string;
+    let dataFim: string;
+
+    if ((request as any).reportDates && (request as any).reportDates.length > 0) {
+      const sortedDates = [...(request as any).reportDates].sort();
+      dataInicio = `${sortedDates[0]} 00:00:00`;
+      dataFim = `${sortedDates[sortedDates.length - 1]} 23:59:59`;
     } else {
-       const monthFilter = request.selectedFilters?.find(f => f.title.toLowerCase().includes('mês') || f.title.toLowerCase().includes('mes'));
-       if (monthFilter) months = monthFilter.selectedValues;
+      let months: string[] = [];
+      if (request.periodSelection?.month) {
+         months = Array.isArray(request.periodSelection.month) ? request.periodSelection.month : [request.periodSelection.month];
+      } else {
+         const monthFilter = request.selectedFilters?.find(f => f.title.toLowerCase().includes('mês') || f.title.toLowerCase().includes('mes'));
+         if (monthFilter) months = monthFilter.selectedValues;
+      }
+
+      let years: string[] = [];
+      if (request.periodSelection?.year) {
+         years = Array.isArray(request.periodSelection.year) ? request.periodSelection.year : [request.periodSelection.year];
+      } else {
+         const yearFilter = request.selectedFilters?.find(f => f.title.toLowerCase().includes('ano'));
+         if (yearFilter) years = yearFilter.selectedValues;
+      }
+
+      if (months.length === 0) return;
+
+      const monthAbbrevToNum: Record<string, string> = {
+        jan: '01', fev: '02', mar: '03', abr: '04', mai: '05', jun: '06',
+        jul: '07', ago: '08', set: '09', out: '10', nov: '11', dez: '12',
+      };
+
+      months = months.filter(m => m.toLowerCase() !== 'all');
+      if (months.length === 0) return;
+
+      months.sort((a, b) => parseInt(monthAbbrevToNum[a.toLowerCase()] ?? '0') - parseInt(monthAbbrevToNum[b.toLowerCase()] ?? '0'));
+      
+      years = years.filter(y => y.toLowerCase() !== 'all');
+      if (years.length > 0) years.sort();
+
+      const firstMonthStr = months[0].toLowerCase();
+      const lastMonthStr = months[months.length - 1].toLowerCase();
+      
+      const firstMonthNum = monthAbbrevToNum[firstMonthStr] || '01';
+      const lastMonthNum = monthAbbrevToNum[lastMonthStr] || '12';
+
+      const firstYear = years.length > 0 ? years[0] : new Date().getFullYear().toString();
+      const lastYear = years.length > 0 ? years[years.length - 1] : firstYear;
+
+      dataInicio = `${firstYear}-${firstMonthNum}-01 00:00:00`;
+      
+      const now = new Date();
+      let endDay = new Date(parseInt(lastYear), parseInt(lastMonthNum), 0).getDate();
+      if (parseInt(lastYear) === now.getFullYear() && parseInt(lastMonthNum) === now.getMonth() + 1) {
+         endDay = now.getDate();
+      }
+      const endDayStr = endDay.toString().padStart(2, '0');
+      dataFim = `${lastYear}-${lastMonthNum}-${endDayStr} 23:59:59`;
     }
-
-    let years: string[] = [];
-    if (request.periodSelection?.year) {
-       years = Array.isArray(request.periodSelection.year) ? request.periodSelection.year : [request.periodSelection.year];
-    } else {
-       const yearFilter = request.selectedFilters?.find(f => f.title.toLowerCase().includes('ano'));
-       if (yearFilter) years = yearFilter.selectedValues;
-    }
-
-    if (months.length === 0) return;
-
-    const monthAbbrevToNum: Record<string, string> = {
-      jan: '01', fev: '02', mar: '03', abr: '04', mai: '05', jun: '06',
-      jul: '07', ago: '08', set: '09', out: '10', nov: '11', dez: '12',
-    };
-
-    months = months.filter(m => m.toLowerCase() !== 'all');
-    if (months.length === 0) return;
-
-    months.sort((a, b) => parseInt(monthAbbrevToNum[a.toLowerCase()] ?? '0') - parseInt(monthAbbrevToNum[b.toLowerCase()] ?? '0'));
-    
-    years = years.filter(y => y.toLowerCase() !== 'all');
-    if (years.length > 0) years.sort();
-
-    const firstMonthStr = months[0].toLowerCase();
-    const lastMonthStr = months[months.length - 1].toLowerCase();
-    
-    const firstMonthNum = monthAbbrevToNum[firstMonthStr] || '01';
-    const lastMonthNum = monthAbbrevToNum[lastMonthStr] || '12';
-
-    const firstYear = years.length > 0 ? years[0] : new Date().getFullYear().toString();
-    const lastYear = years.length > 0 ? years[years.length - 1] : firstYear;
-
-    const dataInicio = `${firstYear}-${firstMonthNum}-01 00:00:00`;
-    
-    const now = new Date();
-    let endDay = new Date(parseInt(lastYear), parseInt(lastMonthNum), 0).getDate();
-    if (parseInt(lastYear) === now.getFullYear() && parseInt(lastMonthNum) === now.getMonth() + 1) {
-       endDay = now.getDate();
-    }
-    const endDayStr = endDay.toString().padStart(2, '0');
-    const dataFim = `${lastYear}-${lastMonthNum}-${endDayStr} 23:59:59`;
 
     this.incidenceService.prefetchIncidences(dataInicio, dataFim, polo).catch(console.error);
   }

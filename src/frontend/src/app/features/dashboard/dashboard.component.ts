@@ -8533,6 +8533,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
               const matchers = [...(base.propria || []), ...(base.parceira || []), ...(base.prefixes || [])];
               for (const matcher of matchers) {
                 if (teamName.startsWith(matcher)) {
+                  console.log('Matched team:', teamName, 'to base:', base.name, 'with localBase:', base.localBase);
                   if (base.localBase && base.localBase.length > 0) {
                     const parts = base.localBase[0].split(',');
                     if (parts.length === 2) {
@@ -9038,16 +9039,16 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return val;
     };
     
-    if (ev.prev_nr_ordem) {
+        if (kpiKey === '1ª OS') {
+       if (inc.baseLat != null && inc.baseLon != null && inc.lat != null && inc.lon != null && canEstimateBase(inc)) {
+          const mins = getMins(inc.baseLat, inc.baseLon, inc.lat, inc.lon);
+          distStr = ` | Deslocamento estimando (Base): ${mins} min`;
+       }
+    } else if (ev.prev_nr_ordem) {
        const prevInc = this.getIncidenceForOrder(teamName, ev.prev_nr_ordem);
        if (prevInc && prevInc.lat != null && prevInc.lon != null && inc.lat != null && inc.lon != null && canEstimateOsToOs(prevInc, inc)) {
           const mins = getMins(prevInc.lat, prevInc.lon, inc.lat, inc.lon);
           distStr = ` | Deslocamento estimando (OS ${ev.prev_nr_ordem}): ${mins} min`;
-       }
-    } else {
-       if (inc.baseLat != null && inc.baseLon != null && inc.lat != null && inc.lon != null && canEstimateBase(inc)) {
-          const mins = getMins(inc.baseLat, inc.baseLon, inc.lat, inc.lon);
-          distStr = ` | Deslocamento estimando (Base): ${mins} min`;
        }
     }
     
