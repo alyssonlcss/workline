@@ -39,6 +39,84 @@ export class IncidenceEnrichmentService {
     this.bases = this.loadBaseCoordinates();
   }
 
+  private readonly geocodeCache = new Map<string, { lat: number; lon: number } | null>();
+  private readonly reverseGeocodeCache = new Map<string, string | null>();
+  private readonly routeCache = new Map<string, number | null>();
+  private lastNominatimRequestTime = 0;
+
+  private async nominatimRequest(url: string): Promise<any> {
+    const now = Date.now();
+    const timeSinceLast = now - this.lastNominatimRequestTime;
+    if (timeSinceLast < 1000) {
+      await new Promise(resolve => setTimeout(resolve, 1000 - timeSinceLast));
+    }
+    this.lastNominatimRequestTime = Date.now();
+    try {
+      const res = await fetch(url, { headers: { 'User-Agent': 'WorklineApp/1.0 (internal)' } });
+      if (!res.ok) throw new Error(`Nominatim error: ${res.status}`);
+      return await res.json();
+    } catch (e) {
+      console.error('[Nominatim] fetch failed:', e);
+      return null;
+    }
+  }
+
+  private async geocodeMunicipio(municipio: string): Promise<{ lat: number; lon: number } | null> {
+    if (!municipio) return null;
+    const cacheKey = municipio.toLowerCase().trim();
+    if (this.geocodeCache.has(cacheKey)) return this.geocodeCache.get(cacheKey)!;
+    
+    const q = encodeURIComponent(`${municipio}, Ceará, Brazil`);
+    const data = await this.nominatimRequest(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`);
+    if (data && data.length > 0) {
+      const result = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+      this.geocodeCache.set(cacheKey, result);
+      return result;
+    }
+    this.geocodeCache.set(cacheKey, null);
+    return null;
+  }
+
+  private async reverseGeocode(lat: number, lon: number): Promise<string | null> {
+    const cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)}`;
+    if (this.reverseGeocodeCache.has(cacheKey)) return this.reverseGeocodeCache.get(cacheKey)!;
+    
+    const data = await this.nominatimRequest(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+    if (data && data.address) {
+      const localidade = data.address.town || data.address.village || data.address.city_district || data.address.suburb || data.address.hamlet;
+      if (localidade) {
+         this.reverseGeocodeCache.set(cacheKey, localidade);
+         return localidade;
+      }
+    }
+    this.reverseGeocodeCache.set(cacheKey, null);
+    return null;
+  }
+
+  private async getOsrmRoutingEstimate(lat1: number, lon1: number, lat2: number, lon2: number): Promise<number | null> {
+    const key = `${lat1},${lon1}|${lat2},${lon2}`;
+    if (this.routeCache.has(key)) return this.routeCache.get(key)!;
+
+    const url = `http://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`;
+    try {
+      const res = await fetch(url, { headers: { 'User-Agent': 'WorklineApp/1.0 (internal)' } });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+          const durationSec = data.routes[0].duration;
+          const mins = Math.max(1, Math.round(durationSec / 60));
+          this.routeCache.set(key, mins);
+          return mins;
+        }
+      }
+    } catch (e) {
+      console.error('[OSRM] fetch failed:', e);
+    }
+    
+    this.routeCache.set(key, null);
+    return null;
+  }
+
   /**
    * Enriches multiple incidences in batch (Fetch Inicial).
    * Designed for the main visible cards on the dashboard.
@@ -105,7 +183,7 @@ export class IncidenceEnrichmentService {
         console.log(`[DEBUG] Openview payload keys for ${incidenceNumber}:`, Object.keys(payload).join(', '));
       }
 
-      return this.buildEnrichedIncidence(incidenceNumber, payload);
+      return await this.buildEnrichedIncidence(incidenceNumber, payload);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       // Extract status from message if available, else assume 400/500
@@ -119,57 +197,70 @@ export class IncidenceEnrichmentService {
   /**
    * Builds the full enriched incidence from a raw API payload.
    */
-  private buildEnrichedIncidence(
+  private async buildEnrichedIncidence(
     incidenceNumber: string,
     payload: ExternalIncidencePayload,
-  ): EnrichedIncidence {
-    const lat = payload.latitude != null ? Number(payload.latitude) : null;
-    const lon = payload.longitude != null ? Number(payload.longitude) : null;
-    const hasCoords = lat != null && lon != null && !isNaN(lat) && !isNaN(lon) && (lat !== 0 || lon !== 0);
+  ): Promise<EnrichedIncidence> {
+    let lat = payload.latitude != null ? Number(payload.latitude) : null;
+    let lon = payload.longitude != null ? Number(payload.longitude) : null;
+    let hasCoords = lat != null && lon != null && !isNaN(lat) && !isNaN(lon) && (lat !== 0 || lon !== 0);
 
-    // ── Location & Maps URL ──
-    const mapsUrl = hasCoords ? `${this.mapsUrlTemplate}/${lat},${lon}` : null;
-
-    // Location label logic
     let locationLabel: string | null = null;
     let locationFieldUsed: string | null = null;
     
     if (hasCoords) {
-      const parts = [payload.bairro, payload.municipio].filter(Boolean);
-      if (parts.length > 0) {
-        locationLabel = parts.join(', ');
+      const localidade = await this.reverseGeocode(lat!, lon!);
+      const muni = payload.municipio;
+      if (localidade && muni && localidade.toLowerCase() !== muni.toLowerCase()) {
+        locationLabel = `${localidade}, ${muni}`;
       } else {
-        locationLabel = `${lat!.toFixed(4)}, ${lon!.toFixed(4)}`;
+        const parts = [payload.bairro, muni].filter(Boolean);
+        locationLabel = parts.length > 0 ? parts.join(', ') : `${lat!.toFixed(4)}, ${lon!.toFixed(4)}`;
       }
     } else {
-      if (payload.municipio) {
-        locationLabel = payload.municipio;
-        locationFieldUsed = 'município';
-      } else if ((payload as any).conjunto) {
-        locationLabel = (payload as any).conjunto;
-        locationFieldUsed = 'conjunto';
+      const fallbackStr = payload.municipio || (payload as any).conjunto;
+      if (fallbackStr) {
+        const geocoded = await this.geocodeMunicipio(fallbackStr);
+        if (geocoded) {
+          lat = geocoded.lat;
+          lon = geocoded.lon;
+          hasCoords = true;
+        }
+        locationLabel = fallbackStr;
+        locationFieldUsed = payload.municipio ? 'município' : 'conjunto';
       }
     }
 
-    // ── Nearest base & estimated return ──
+    let mapsUrl = hasCoords ? `${this.mapsUrlTemplate}/${lat},${lon}` : null;
+    if (!mapsUrl && locationLabel) {
+      mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationLabel)}`;
+    }
+
     let estimatedReturnMin: number | null = null;
     let nearestBaseName: string | null = null;
+    let baseLat: number | null = null;
+    let baseLon: number | null = null;
 
     if (hasCoords && this.bases.length > 0) {
       const nearest = this.findNearestBase(lat!, lon!);
       if (nearest) {
         nearestBaseName = nearest.name;
-        // Haversine distance → estimate at 40 km/h average speed (urban/rural mix)
+        baseLat = nearest.lat;
+        baseLon = nearest.lon;
         const distKm = this.haversineDistance(lat!, lon!, nearest.lat, nearest.lon);
-        estimatedReturnMin = Math.round((distKm / 40) * 60);
+        const drivingDistKm = distKm * 1.4;
+        estimatedReturnMin = Math.round((drivingDistKm / 30) * 60);
         if (estimatedReturnMin < 1) estimatedReturnMin = 1;
+        
+        const osrmMins = await this.getOsrmRoutingEstimate(lat!, lon!, nearest.lat, nearest.lon);
+        if (osrmMins !== null) {
+          estimatedReturnMin = osrmMins;
+        }
       }
     }
 
-    // ── Tags ──
     const tags: IncidenceTag[] = [];
 
-    // Blue Tag: Nível de Tensão
     if (payload.nivelTensao) {
       tags.push({
         type: 'nivel_tensao',
@@ -178,7 +269,6 @@ export class IncidenceEnrichmentService {
       });
     }
 
-    // Orange Tag: 5 Regras de Ouro
     const cumpre5RO = payload.cumpreRegrasOuro;
     if (
       cumpre5RO === true ||
@@ -192,18 +282,12 @@ export class IncidenceEnrichmentService {
       });
     }
 
-    // ── Flags ──
     const flags: IncidenceFlag[] = [];
 
-    // Blue Flag: Localização + Retorno Estimado
     if (locationLabel) {
-      const retornoText = estimatedReturnMin != null
-        ? ` | deslocamento estimado: ${estimatedReturnMin} min`
-        : '';
-        
       const locPrefixText = locationFieldUsed ? `Localização (${locationFieldUsed}):` : `Localização:`;
       const locPrefixHtml = `<b><span style="color:#1d4ed8;">${locPrefixText}</span></b>`;
-      const plainTextInfo = `${locationLabel}${retornoText}`;
+      const plainTextInfo = `${locationLabel}`;
       
       const linkContent = mapsUrl
         ? `<a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" style="color:#1d4ed8;text-decoration:underline;">${plainTextInfo}</a>`
@@ -218,7 +302,6 @@ export class IncidenceEnrichmentService {
       });
     }
 
-    // Blue Flag: Observação com formatação
     if (payload.observacao && payload.observacao.trim().length > 0) {
       const obs = payload.observacao.trim();
       const prefixHtml = `<b><span style="color:#1d4ed8;">Reporte de execução:</span></b>`;
@@ -242,6 +325,10 @@ export class IncidenceEnrichmentService {
       tags,
       flags,
       status: 'enriched',
+      lat: hasCoords ? lat : null,
+      lon: hasCoords ? lon : null,
+      baseLat,
+      baseLon,
     };
   }
 

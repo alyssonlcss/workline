@@ -53,6 +53,14 @@ export interface EnrichedIncidence {
 
   /** Whether the enrichment succeeded or the API returned no data. */
   status: 'enriched' | 'not_found' | 'error';
+  /** Geocoded or raw latitude used for location */
+  lat?: number | null;
+  /** Geocoded or raw longitude used for location */
+  lon?: number | null;
+  /** Nearest base latitude */
+  baseLat?: number | null;
+  /** Nearest base longitude */
+  baseLon?: number | null;
 
   /** Error message if status is 'error'. */
   errorMessage?: string;

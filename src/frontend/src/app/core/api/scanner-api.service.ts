@@ -614,6 +614,10 @@ export interface EnrichedIncidence {
   flags: IncidenceFlag[];
   status: 'enriched' | 'not_found' | 'error';
   errorMessage?: string;
+  lat?: number | null;
+  lon?: number | null;
+  baseLat?: number | null;
+  baseLon?: number | null;
 }
 
 export interface GeneratedReport {

@@ -2,6 +2,7 @@
 // Software proprietário e confidencial. Uso não autorizado é proibido.
 import { CommonModule } from '@angular/common';
 import { buildTimelineSegments, getEvidenceColor } from '../../shared/utils/timeline-segment.utils';
+import { haversineDistance } from '../../shared/utils/dashboard-presentation.utils';
 import { TimelineVisualComponent } from '../../shared/components/timeline-visual/timeline-visual.component';
 import { AfterViewInit, Component, ElementRef, NgZone, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import type { Subscription } from 'rxjs';
@@ -751,7 +752,7 @@ type SavedFilterState = {
                             <ng-template #osDiaEvTpl let-ev>
                               <div class="osdia-ev-header">
     <span class="osdia-ev-ordem">OS {{ ev.nr_ordem }}</span>
-                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+                                <ng-container *ngIf="getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev) as inc">
       <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngFor="let t of inc.tags">{{ t.label }}</span>
     </ng-container>
                                 <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngIf="!ev.prev_liberada">1ª OS</span>
@@ -773,7 +774,7 @@ type SavedFilterState = {
                                 <li *ngFor="let alert of getAlerts('OS Dia', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
                                   <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                                 </li>
-                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+                                <ng-container *ngIf="getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev) as inc">
     <li *ngFor="let flag of inc.flags" class="osdia-ev-alert" [class.osdia-ev-alert--info]="flag.color === 'blue'">
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
@@ -870,7 +871,7 @@ type SavedFilterState = {
                             <ng-template #eficienciaEvTpl let-ev>
                               <div class="osdia-ev-header">
     <span class="osdia-ev-ordem">OS {{ ev.nr_ordem }}</span>
-                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+                                <ng-container *ngIf="getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev) as inc">
       <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngFor="let t of inc.tags">{{ t.label }}</span>
     </ng-container>
                                 <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngIf="!ev.prev_liberada">1ª OS</span>
@@ -899,7 +900,7 @@ type SavedFilterState = {
                                 <li *ngIf="ev.flags.includes('tempo_padrao_vazio')" class="osdia-ev-alert">
                                   <strong>Tempo Padrão ausente:</strong> <span [innerHTML]="highlightMin(eficienciaAlertBody('tempo_padrao_vazio', ev))"></span>
                                 </li>
-                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+                                <ng-container *ngIf="getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev) as inc">
     <li *ngFor="let flag of inc.flags" class="osdia-ev-alert" [class.osdia-ev-alert--info]="flag.color === 'blue'">
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
@@ -1003,7 +1004,7 @@ type SavedFilterState = {
                               <ng-template #utilizacaoEvTpl let-ev>
                                 <div class="osdia-ev-header">
     <span class="osdia-ev-ordem">OS {{ ev.nr_ordem }}</span>
-                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+                                <ng-container *ngIf="getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev) as inc">
       <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngFor="let t of inc.tags">{{ t.label }}</span>
     </ng-container>
                                   <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngIf="!ev.prev_liberada">1ª OS</span>
@@ -1025,7 +1026,7 @@ type SavedFilterState = {
                                   <li *ngFor="let alert of getAlerts('Utilização', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
                                     <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                                   </li>
-                                  <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+                                  <ng-container *ngIf="getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev) as inc">
     <li *ngFor="let flag of inc.flags" class="osdia-ev-alert" [class.osdia-ev-alert--info]="flag.color === 'blue'">
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
@@ -1100,7 +1101,7 @@ type SavedFilterState = {
                         <ng-template #tmeImpEvTpl let-ev>
                           <div class="osdia-ev-header">
     <span class="osdia-ev-ordem">OS {{ ev.nr_ordem }}</span>
-                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+                                <ng-container *ngIf="getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev) as inc">
       <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngFor="let t of inc.tags">{{ t.label }}</span>
     </ng-container>
                             <span class="rpt-osdia-flag" *ngFor="let f of ev.flags">{{ tmeImpFlagLabel(f) }}</span>
@@ -1148,7 +1149,7 @@ type SavedFilterState = {
                             <li *ngFor="let alert of getAlerts('TME Improdutivo', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
                               <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                             </li>
-                            <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+                            <ng-container *ngIf="getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev) as inc">
     <li *ngFor="let flag of inc.flags" class="osdia-ev-alert" [class.osdia-ev-alert--info]="flag.color === 'blue'">
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
@@ -1225,7 +1226,7 @@ type SavedFilterState = {
                         <ng-template #loginEvTpl let-ev>
                           <div class="osdia-ev-header">
     <span class="osdia-ev-ordem">{{ ev.date_ref || '—' }}</span>
-                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+                                <ng-container *ngIf="getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev) as inc">
       <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngFor="let t of inc.tags">{{ t.label }}</span>
     </ng-container>
                             <span class="rpt-osdia-flag" *ngFor="let f of ev.flags">{{ loginFlagLabel(f) }}</span>
@@ -1245,7 +1246,7 @@ type SavedFilterState = {
                             <li *ngFor="let alert of getAlerts('1º Login', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
                               <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                             </li>
-                            <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+                            <ng-container *ngIf="getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev) as inc">
     <li *ngFor="let flag of inc.flags" class="osdia-ev-alert" [class.osdia-ev-alert--info]="flag.color === 'blue'">
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
@@ -1315,7 +1316,7 @@ type SavedFilterState = {
                         <ng-template #deslocEvTpl let-ev>
                           <div class="osdia-ev-header">
     <span class="osdia-ev-ordem">{{ ev.date_ref || '—' }}{{ ev.nr_ordem ? ' · OS ' + ev.nr_ordem : '' }}</span>
-                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+                                <ng-container *ngIf="getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev) as inc">
       <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngFor="let t of inc.tags">{{ t.label }}</span>
     </ng-container>
                             <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngIf="ev.is_primeira_os_jornada" title="Primeira OS da jornada">1ª OS</span>
@@ -1326,7 +1327,7 @@ type SavedFilterState = {
                             <li *ngFor="let alert of getAlerts('1º Desloc.', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
                               <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                             </li>
-                            <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+                            <ng-container *ngIf="getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev) as inc">
     <li *ngFor="let flag of inc.flags" class="osdia-ev-alert" [class.osdia-ev-alert--info]="flag.color === 'blue'">
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
@@ -1396,7 +1397,7 @@ type SavedFilterState = {
                         <ng-template #retornoEvTpl let-ev>
                           <div class="osdia-ev-header">
     <span class="osdia-ev-ordem">{{ ev.date_ref || '—' }}</span>
-                                <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+                                <ng-container *ngIf="getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev) as inc">
       <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngFor="let t of inc.tags">{{ t.label }}</span>
     </ng-container>
                             <span class="rpt-osdia-flag" *ngFor="let f of ev.flags">{{ retornoFlagLabel(f) }}</span>
@@ -1416,7 +1417,7 @@ type SavedFilterState = {
                             <li *ngFor="let alert of getAlerts('Retorno Base', ev)" class="osdia-ev-alert" [class.osdia-ev-alert--warn]="alert.isWarn">
                               <strong>{{ alert.title }}</strong> <span [innerHTML]="highlightMin(alert.bodyHtml)"></span>
                             </li>
-                            <ng-container *ngIf="getIncidenceForOrder(analysis.team, ev.nr_ordem) as inc">
+                            <ng-container *ngIf="getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev) as inc">
     <li *ngFor="let flag of inc.flags" class="osdia-ev-alert" [class.osdia-ev-alert--info]="flag.color === 'blue'">
       <span [innerHTML]="sanitizeHtml(flag.html)"></span>
     </li>
@@ -5244,6 +5245,33 @@ type SavedFilterState = {
 })
 export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   protected readonly api = inject(ScannerApiService);
+  protected readonly osrmCache = signal(new Map<string, number | null>());
+
+  private readonly pendingOsrmFetches = new Set<string>();
+
+  private fetchOsrmEstimate(lat1: number, lon1: number, lat2: number, lon2: number): void {
+    const key = `${lat1},${lon1}|${lat2},${lon2}`;
+    if (this.pendingOsrmFetches.has(key) || this.osrmCache().has(key)) return;
+    this.pendingOsrmFetches.add(key);
+    
+    const url = `http://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`;
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        const finalMap = new Map(this.osrmCache());
+        if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+          finalMap.set(key, Math.max(1, Math.round(data.routes[0].duration / 60)));
+        } else {
+          finalMap.set(key, -1);
+        }
+        this.osrmCache.set(finalMap);
+      })
+      .catch(() => {
+        const finalMap = new Map(this.osrmCache());
+        finalMap.set(key, -1);
+        this.osrmCache.set(finalMap);
+      });
+  }
   private readonly zone = inject(NgZone);
   private readonly pdfService = inject(DashboardPdfService);
   private readonly chartService = inject(DashboardChartService);
@@ -6692,6 +6720,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       deslocAlertBody: (flag: string, ev: any) => this.deslocAlertBody(flag, ev),
       retornoAlertBody: (flag: string, ev: any) => this.retornoAlertBody(flag, ev),
       getAlerts: (kpi: string, ev: any) => this.getAlerts(kpi, ev),
+      getDynamicIncidenceForOrder: (kpi: string, team: string, ev: any) => this.getDynamicIncidenceForOrder(kpi, team, ev),
     };
   }
 
@@ -8704,6 +8733,78 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     } catch { /* corrupt data – ignore */ }
     return null;
+  }
+
+  
+  protected getDynamicIncidenceForOrder(kpiKey: string, teamName: string, ev: any): import('../../core/api/scanner-api.service').EnrichedIncidence | undefined {
+    const inc = this.getIncidenceForOrder(teamName, ev.nr_ordem);
+    if (!inc) return undefined;
+    
+    const locFlagIndex = inc.flags.findIndex((f: any) => f.type === 'localizacao');
+    if (locFlagIndex === -1) return inc;
+    
+    const clone = { ...inc, flags: [...inc.flags] };
+    const locFlag = { ...clone.flags[locFlagIndex] };
+    
+    let distStr = '';
+    
+    const incHasNativeCoords = inc.raw?.latitude != null && inc.raw?.longitude != null && !isNaN(Number(inc.raw.latitude)) && !isNaN(Number(inc.raw.longitude)) && (Number(inc.raw.latitude) !== 0 || Number(inc.raw.longitude) !== 0);
+    const norm = (s: string | undefined | null) => (s || '').trim().toLowerCase();
+    
+    const canEstimateOsToOs = (prevInc: any, currInc: any) => {
+       if (incHasNativeCoords) return true;
+       return norm(prevInc.raw?.municipio) !== norm(currInc.raw?.municipio);
+    };
+    
+    const canEstimateBase = (currInc: any) => {
+       if (incHasNativeCoords) return true;
+       return norm(currInc.raw?.municipio) !== norm(currInc.nearestBaseName);
+    };
+    
+    const getMins = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+      const key = `${lat1},${lon1}|${lat2},${lon2}`;
+      const cache = this.osrmCache();
+      if (!cache.has(key)) {
+        this.fetchOsrmEstimate(lat1, lon1, lat2, lon2);
+        return Math.max(1, Math.round((haversineDistance(lat1, lon1, lat2, lon2) * 1.4 / 30) * 60));
+      }
+      const val = cache.get(key);
+      if (val === null || val === -1 || val === undefined) {
+        return Math.max(1, Math.round((haversineDistance(lat1, lon1, lat2, lon2) * 1.4 / 30) * 60));
+      }
+      return val;
+    };
+    
+    if (ev.prev_nr_ordem) {
+       const prevInc = this.getIncidenceForOrder(teamName, ev.prev_nr_ordem);
+       if (prevInc && prevInc.lat != null && prevInc.lon != null && inc.lat != null && inc.lon != null && canEstimateOsToOs(prevInc, inc)) {
+          const mins = getMins(prevInc.lat, prevInc.lon, inc.lat, inc.lon);
+          distStr = ` | Deslocamento estimando (OS ${ev.prev_nr_ordem}): ${mins} min`;
+       }
+    } else if (ev.is_primeira_os_jornada) {
+       if (inc.baseLat != null && inc.baseLon != null && inc.lat != null && inc.lon != null && canEstimateBase(inc)) {
+          const mins = getMins(inc.baseLat, inc.baseLon, inc.lat, inc.lon);
+          distStr = ` | Deslocamento estimando (Base): ${mins} min`;
+       }
+    }
+    
+    if (kpiKey === 'Retorno Base') {
+       if (inc.estimatedReturnMin != null && canEstimateBase(inc)) {
+          distStr += ` | Retorno estimando (OS Atual): ${inc.estimatedReturnMin} min`;
+       }
+    }
+    
+    if (distStr) {
+      locFlag.plainText = `${locFlag.plainText}${distStr}`;
+      if (locFlag.html.includes('</a>')) {
+         locFlag.html = locFlag.html.replace('</a>', `${distStr}</a>`);
+      } else {
+         locFlag.html = `${locFlag.html}${distStr}`;
+      }
+      clone.flags[locFlagIndex] = locFlag;
+    }
+    
+    return clone;
   }
 
   protected getIncidenceForOrder(teamName: string, nrOrdem: string | number | undefined): import('../../core/api/scanner-api.service').EnrichedIncidence | undefined {

@@ -38,6 +38,7 @@ export interface PdfHelpers {
   deslocAlertBody: (flag: string, ev: { alertTexts?: Record<string, string> }) => string;
   retornoAlertBody: (flag: string, ev: { alertTexts?: Record<string, string> }) => string;
   getAlerts: (kpi: string, ev: any) => any[];
+    getDynamicIncidenceForOrder?: (kpi: string, team: string, ev: any) => import('../../../core/api/scanner-api.service').EnrichedIncidence | undefined;
 }
 
 export interface SemOsDetail {
@@ -1062,8 +1063,22 @@ export class DashboardPdfService {
                   orderItems.push(alertWarnItemRuns(alert.title, [{ text: cleanBody, color: DARK }]));
                 } else {
                   orderItems.push(alertItem(`${alert.title} ${cleanBody}`));
+                  }
+                });
+                
+                if (helpers.getDynamicIncidenceForOrder) {
+                  const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
+                  if (inc && inc.flags) {
+                    inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
+                      const txt = flag.plainText || flag.html.replace(/<[^>]*>/g, '');
+                      orderItems.push({
+                        text: [ { text: txt.trim(), color: '#1d4ed8', bold: true } ],
+                        margin: [8, 1, 0, 1],
+                        fontSize: 6.5
+                      });
+                    });
+                  }
                 }
-              });
 
               const customFlags: string[] = [];
               if (ev.sem_os_details?.find((d: any) => d.type === 'entre_os' && d.interval_discounted && d.min >= 10)) {
@@ -1145,8 +1160,22 @@ export class DashboardPdfService {
                   orderItems.push(alertWarnItemRuns(alert.title, [{ text: cleanBody, color: DARK }]));
                 } else {
                   orderItems.push(alertItem(`${alert.title} ${cleanBody}`));
+                  }
+                });
+                
+                if (helpers.getDynamicIncidenceForOrder) {
+                  const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
+                  if (inc && inc.flags) {
+                    inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
+                      const txt = flag.plainText || flag.html.replace(/<[^>]*>/g, '');
+                      orderItems.push({
+                        text: [ { text: txt.trim(), color: '#1d4ed8', bold: true } ],
+                        margin: [8, 1, 0, 1],
+                        fontSize: 6.5
+                      });
+                    });
+                  }
                 }
-              });
 
               const orderBlock: any[] = [orderHead(ev.nr_ordem, ev.flags ?? [], (f) => helpers.eficienciaFlagLabel(f), undefined, !ev.prev_liberada)];
               if (orderItems.length > 0) orderBlock.push(indentBlock(orderItems, '#94a3b8', 6));
@@ -1231,8 +1260,22 @@ export class DashboardPdfService {
                   orderItems.push(alertWarnItemRuns(alert.title, [{ text: cleanBody, color: DARK }]));
                 } else {
                   orderItems.push(alertItem(`${alert.title} ${cleanBody}`));
+                  }
+                });
+                
+                if (helpers.getDynamicIncidenceForOrder) {
+                  const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
+                  if (inc && inc.flags) {
+                    inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
+                      const txt = flag.plainText || flag.html.replace(/<[^>]*>/g, '');
+                      orderItems.push({
+                        text: [ { text: txt.trim(), color: '#1d4ed8', bold: true } ],
+                        margin: [8, 1, 0, 1],
+                        fontSize: 6.5
+                      });
+                    });
+                  }
                 }
-              });
 
               const customFlags: string[] = [];
               if (ev.sem_os_details?.find((d: any) => d.type === 'entre_os' && d.interval_discounted && d.min >= 10)) {
@@ -1299,8 +1342,22 @@ export class DashboardPdfService {
                   orderItems.push(alertWarnItemRuns(alert.title, [{ text: cleanBody, color: DARK }]));
                 } else {
                   orderItems.push(alertItem(`${alert.title} ${cleanBody}`));
+                  }
+                });
+                
+                if (helpers.getDynamicIncidenceForOrder) {
+                  const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
+                  if (inc && inc.flags) {
+                    inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
+                      const txt = flag.plainText || flag.html.replace(/<[^>]*>/g, '');
+                      orderItems.push({
+                        text: [ { text: txt.trim(), color: '#1d4ed8', bold: true } ],
+                        margin: [8, 1, 0, 1],
+                        fontSize: 6.5
+                      });
+                    });
+                  }
                 }
-              });
 
               const orderBlock: any[] = [orderHead(ev.nr_ordem, ev.flags ?? [], (f) => helpers.tmeImpFlagLabel(f), undefined)];
               if (orderItems.length > 0) orderBlock.push(indentBlock(orderItems, '#94a3b8', 6));
@@ -1344,8 +1401,22 @@ export class DashboardPdfService {
                 dayItems.push(alertWarnItemRuns(alert.title, [{ text: cleanBody, color: DARK }]));
               } else {
                 dayItems.push(alertItem(`${alert.title} ${cleanBody}`));
+                }
+              });
+              
+              if (helpers.getDynamicIncidenceForOrder) {
+                const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
+                if (inc && inc.flags) {
+                  inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
+                    const txt = flag.plainText || flag.html.replace(/<[^>]*>/g, '');
+                    dayItems.push({
+                      text: [ { text: txt.trim(), color: '#1d4ed8', bold: true } ],
+                      margin: [8, 1, 0, 1],
+                      fontSize: 6.5
+                    });
+                  });
+                }
               }
-            });
 
             teamItems.push({ stack: [
               {
@@ -1403,8 +1474,22 @@ export class DashboardPdfService {
                 dayItems.push(alertWarnItemRuns(alert.title, [{ text: cleanBody, color: DARK }]));
               } else {
                 dayItems.push(alertItem(`${alert.title} ${cleanBody}`));
+                }
+              });
+              
+              if (helpers.getDynamicIncidenceForOrder) {
+                const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
+                if (inc && inc.flags) {
+                  inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
+                    const txt = flag.plainText || flag.html.replace(/<[^>]*>/g, '');
+                    dayItems.push({
+                      text: [ { text: txt.trim(), color: '#1d4ed8', bold: true } ],
+                      margin: [8, 1, 0, 1],
+                      fontSize: 6.5
+                    });
+                  });
+                }
               }
-            });
 
             teamItems.push({ stack: [
               {
@@ -1458,8 +1543,22 @@ export class DashboardPdfService {
                 dayItems.push(alertWarnItemRuns(alert.title, [{ text: cleanBody, color: DARK }]));
               } else {
                 dayItems.push(alertItem(`${alert.title} ${cleanBody}`));
+                }
+              });
+              
+              if (helpers.getDynamicIncidenceForOrder) {
+                const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
+                if (inc && inc.flags) {
+                  inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
+                    const txt = flag.plainText || flag.html.replace(/<[^>]*>/g, '');
+                    dayItems.push({
+                      text: [ { text: txt.trim(), color: '#1d4ed8', bold: true } ],
+                      margin: [8, 1, 0, 1],
+                      fontSize: 6.5
+                    });
+                  });
+                }
               }
-            });
 
             teamItems.push({ stack: [
               {
