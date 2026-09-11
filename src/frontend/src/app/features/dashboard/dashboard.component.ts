@@ -8031,10 +8031,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const abortController = new AbortController();
     this.activeDownloadAbort = abortController;
 
-    const getIncPromise = import('rxjs').then(({ firstValueFrom }) => {
-      console.log('[Dashboard] Disparando get-incidencias simultaneamente ao data-download...');
-      return firstValueFrom(this.api.getIncidencias());
-    });
+    
 
     this.api.dataDownloadWithProgress(
       {
@@ -8083,11 +8080,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             next: async (result) => {
               this.hasLoadedDownloadData = true;
               let rawIncidencias = undefined;
-              try {
-                 rawIncidencias = await getIncPromise;
-              } catch (e) {
-                 console.warn('[Dashboard] get-incidencias background falhou:', e);
-              }
+                try {
+                  console.log('[Dashboard] Buscando get-incidencias apos o data-download...');
+                  rawIncidencias = await firstValueFrom(this.api.getIncidencias());
+                } catch (e) {
+                   console.warn('[Dashboard] get-incidencias falhou:', e);
+                }
               this.updateReportDataAndDates(result.generatedReport, rawIncidencias);
               this.loading.set(false);
               this.progressMessage.set('');
@@ -8528,7 +8526,26 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       const dataMap = new Map(this.enrichedIncidenceData());
       
       // Builder local (substitui o do Backend)
-      const buildEnriched = (payload: any, incidenceNumber: string) => {
+      const getBaseCoordsForTeam = (teamName: string) => {
+          if (!this.basesConfig) return null;
+          for (const polo of this.basesConfig.polos) {
+            for (const base of polo.bases) {
+              const matchers = [...(base.propria || []), ...(base.parceira || []), ...(base.prefixes || [])];
+              for (const matcher of matchers) {
+                if (teamName.startsWith(matcher)) {
+                  if (base.localBase && base.localBase.length > 0) {
+                    const parts = base.localBase[0].split(',');
+                    if (parts.length === 2) {
+                      return { lat: parseFloat(parts[0]), lon: parseFloat(parts[1]) };
+                    }
+                  }
+                }
+              }
+            }
+          }
+          return null;
+        };
+        const buildEnriched = (payload: any, incidenceNumber: string, teamName: string) => {
         let lat = payload.latitude != null ? Number(payload.latitude) : null;
         let lon = payload.longitude != null ? Number(payload.longitude) : null;
         let hasCoords = lat != null && lon != null && !isNaN(lat) && !isNaN(lon) && (lat !== 0 || lon !== 0);
@@ -8642,7 +8659,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       for (const req of Array.from(ordersToFetch.values())) {
         const payload = incidenciasMap.get(req.incidence);
         if (payload) {
-          dataMap.set(`${req.team}|${req.incidence}`, buildEnriched(payload, req.incidence));
+          dataMap.set(`${req.team}|${req.incidence}`, buildEnriched(payload, req.incidence, req.team));
         } else {
           dataMap.set(`${req.team}|${req.incidence}`, {
             incidenceNumber: req.incidence,
@@ -9027,7 +9044,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const mins = getMins(prevInc.lat, prevInc.lon, inc.lat, inc.lon);
           distStr = ` | Deslocamento estimando (OS ${ev.prev_nr_ordem}): ${mins} min`;
        }
-    } else if (ev.is_primeira_os_jornada) {
+    } else {
        if (inc.baseLat != null && inc.baseLon != null && inc.lat != null && inc.lon != null && canEstimateBase(inc)) {
           const mins = getMins(inc.baseLat, inc.baseLon, inc.lat, inc.lon);
           distStr = ` | Deslocamento estimando (Base): ${mins} min`;
@@ -9035,8 +9052,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     
     if (kpiKey === 'Retorno Base') {
-       if (inc.estimatedReturnMin != null && canEstimateBase(inc)) {
-          distStr += ` | Retorno estimando (OS Atual): ${inc.estimatedReturnMin} min`;
+       if (inc.baseLat != null && inc.baseLon != null && inc.lat != null && inc.lon != null && canEstimateBase(inc)) {
+          const mins = getMins(inc.lat, inc.lon, inc.baseLat, inc.baseLon);
+          distStr += ` | Retorno estimando (OS Atual): ${mins} min`;
        }
     }
     

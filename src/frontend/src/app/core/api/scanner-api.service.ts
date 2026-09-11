@@ -708,6 +708,7 @@ export interface BasesConfig {
     bases: Array<{
       name: string;
       propria?: string[];
+        localBase?: string[];
       parceira?: string[];
       prefixes?: string[];
     }>;

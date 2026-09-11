@@ -2548,6 +2548,8 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
       maxClicks,
     });
 
+    await this.resetVisibleFilters(page);
+
     return false;
   }
 
