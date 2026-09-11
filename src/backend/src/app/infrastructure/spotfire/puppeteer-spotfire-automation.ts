@@ -483,7 +483,7 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
 
       let result: { applied: boolean; reason: string } = { applied: false, reason: 'not attempted' };
       let lastAttemptReason = 'not attempted';
-      const MAX_FILTER_RETRIES = 2;
+      const MAX_FILTER_RETRIES = 1;
 
       // Outer retry loop: each retry re-locates and re-applies the filter from scratch.
       // On the last outer round we also reset all filters before retrying.
@@ -510,8 +510,8 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
           await this.ensureAllFiltersVisible(page);
         }
 
-        // Inner retry: 3 quick attempts per round
-        for (let attempt = 1; attempt <= 3; attempt += 1) {
+        // Inner retry: 2 quick attempts per round
+        for (let attempt = 1; attempt <= 2; attempt += 1) {
           result = await this.applySingleFilter(page, filter);
           lastAttemptReason = result.reason;
 

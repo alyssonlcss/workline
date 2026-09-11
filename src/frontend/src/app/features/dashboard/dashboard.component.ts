@@ -5246,6 +5246,10 @@ type SavedFilterState = {
 export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   protected readonly api = inject(ScannerApiService);
   protected readonly osrmCache = signal(new Map<string, number | null>());
+  private nominatimCacheMap = new Map<string, any>();
+  private activeGeocodingTimer: any = null;
+  private geocodingQueue: string[] = [];
+
 
   private readonly pendingOsrmFetches = new Set<string>();
 
@@ -6979,9 +6983,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     }
 
-    if (ordersToFetch.size > 0) {
-      this.fetchIncidenceBatch(Array.from(ordersToFetch.values()));
-    }
+    
   }
 
   protected async exportTeamCardToPng(event: Event, teamName: string): Promise<void> {
@@ -8029,6 +8031,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const abortController = new AbortController();
     this.activeDownloadAbort = abortController;
 
+    const getIncPromise = import('rxjs').then(({ firstValueFrom }) => {
+      console.log('[Dashboard] Disparando get-incidencias simultaneamente ao data-download...');
+      return firstValueFrom(this.api.getIncidencias());
+    });
+
     this.api.dataDownloadWithProgress(
       {
         reportTitle: this.reportTitle(),
@@ -8073,9 +8080,15 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             jobId: this.jobId(),
             reportFilters: this.buildReportFiltersPayload(),
           }).subscribe({
-            next: (result) => {
+            next: async (result) => {
               this.hasLoadedDownloadData = true;
-              this.updateReportDataAndDates(result.generatedReport);
+              let rawIncidencias = undefined;
+              try {
+                 rawIncidencias = await getIncPromise;
+              } catch (e) {
+                 console.warn('[Dashboard] get-incidencias background falhou:', e);
+              }
+              this.updateReportDataAndDates(result.generatedReport, rawIncidencias);
               this.loading.set(false);
               this.progressMessage.set('');
               this.setupAnimations();
@@ -8461,79 +8474,309 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }, 300);
   }
 
-    protected async fetchIncidenceBatch(incidencesToFetch: { team: string; incidence: string }[]): Promise<void> {
-    if (incidencesToFetch.length === 0) return;
+    
 
+  
+  private async triggerIncidenceBatchFetch(report: GeneratedReport, preFetchedData?: any[]): Promise<void> {
     try {
       const { firstValueFrom } = await import('rxjs');
-      const dataMap = new Map(this.enrichedIncidenceData());
       
-      for (const req of incidencesToFetch) {
-        try {
-          const enriched = await firstValueFrom(this.api.enrichSingleIncidence({ incidence: req.incidence, team: req.team }));
-          console.log(`[Dashboard] Received enriched incidence ${req.incidence}:`, enriched);
-          const strOs = String(enriched.incidenceNumber);
-          dataMap.set(`${req.team}|${strOs}`, enriched);
-          // Pequeno atraso para evitar bloqueio da API externa por excesso de requisições concorrentes
-          await new Promise(r => setTimeout(r, 150));
-        } catch (err) {
-          console.warn(`[Dashboard] Failed to fetch incidence ${req.incidence}:`, err);
-        }
+      let rawIncidencias = preFetchedData;
+      if (!rawIncidencias) {
+        console.log('[Dashboard] Buscando TODAS as incidências da API (bulk fetch)...');
+        rawIncidencias = await firstValueFrom(this.api.getIncidencias());
       }
+      console.log(`[Dashboard] Carregadas ${rawIncidencias?.length || 0} incidências da API.`);
       
-      this.enrichedIncidenceData.set(dataMap);
-      
-      try {
-        localStorage.setItem('scanner_incidence_cache', JSON.stringify(Array.from(dataMap.entries())));
-      } catch (e) {
-        console.warn('Failed to save incidence cache', e);
+      const incidenciasMap = new Map<string, any>();
+      for (const inc of rawIncidencias) {
+         const num = String(inc.incidencia || (inc as any).numero);
+         incidenciasMap.set(num, inc);
       }
-    } catch (err) {
-      console.warn('[Dashboard] Failed to fetch incidence batch:', err);
-    }
-  }
 
-  private triggerIncidenceBatchFetch(report: GeneratedReport): void {
-    const ordersToFetch = new Map<string, { team: string, incidence: string }>();
-    
-    const analysisTypes = [
-      'osDiaAnalysis', 'utilizacaoAnalysis', 'tmeImpAnalysis', 
-      'primeiroLoginAnalysis', 'primeiroDeslocAnalysis', 'retornoBaseAnalysis'
-    ] as const;
-
-    for (const type of analysisTypes) {
-      const arr = report.specialAnalysis?.[type] as any[];
-      if (arr) {
-        for (const ev of arr) {
-          if (ev.team) {
-            const topOrders = (ev.flaggedOrders || ev.orders || ev.tempoPadraoVazioOrders || ev.missingOrders || []) as any[];
-            const extraOrders = (ev.extraFlaggedOrders || []) as any[];
-            const groups = this.allDateGroupsForKpi(topOrders, extraOrders);
-            for (const grp of groups) {
-               for (const order of grp.visibleItems) {
-                 if (order.nr_ordem) {
-                   const strOs = String(order.nr_ordem);
-                   const mapKey = `${ev.team}|${strOs}`;
-                   if (!ordersToFetch.has(mapKey)) {
-                     ordersToFetch.set(mapKey, { team: ev.team, incidence: strOs });
+      const ordersToFetch = new Map<string, { team: string, incidence: string }>();
+      const analysisTypes = [
+        'osDiaAnalysis', 'utilizacaoAnalysis', 'tmeImpAnalysis', 
+        'primeiroLoginAnalysis', 'primeiroDeslocAnalysis', 'retornoBaseAnalysis'
+      ] as const;
+  
+      for (const type of analysisTypes) {
+        const arr = report.specialAnalysis?.[type] as any[];
+        if (arr) {
+          for (const ev of arr) {
+            if (ev.team) {
+              const topOrders = (ev.flaggedOrders || ev.orders || ev.tempoPadraoVazioOrders || ev.missingOrders || []) as any[];
+              const extraOrders = (ev.extraFlaggedOrders || []) as any[];
+              const groups = this.allDateGroupsForKpi(topOrders, extraOrders);
+                for (const grp of groups) {
+                   const allItems = [...grp.visibleItems, ...grp.hiddenItems];
+                   for (const order of allItems) {
+                   if (order.nr_ordem) {
+                     const strOs = String(order.nr_ordem);
+                     const mapKey = `${ev.team}|${strOs}`;
+                     if (!ordersToFetch.has(mapKey)) {
+                       ordersToFetch.set(mapKey, { team: ev.team, incidence: strOs });
+                     }
                    }
                  }
-               }
+              }
             }
           }
         }
       }
-    }
-    
-    if (ordersToFetch.size > 0) {
-      this.fetchIncidenceBatch(Array.from(ordersToFetch.values()));
+
+      const dataMap = new Map(this.enrichedIncidenceData());
+      
+      // Builder local (substitui o do Backend)
+      const buildEnriched = (payload: any, incidenceNumber: string) => {
+        let lat = payload.latitude != null ? Number(payload.latitude) : null;
+        let lon = payload.longitude != null ? Number(payload.longitude) : null;
+        let hasCoords = lat != null && lon != null && !isNaN(lat) && !isNaN(lon) && (lat !== 0 || lon !== 0);
+
+        
+          
+          
+          let usedField = '';
+          let locationLabel = '';
+          
+          const mun = (payload.municipio || '').trim();
+          let extraInfo = '';
+          
+          if (payload.bairro) {
+             extraInfo = payload.bairro.trim();
+             usedField = 'Bairro';
+          } else if (payload.conjunto) {
+             extraInfo = payload.conjunto.trim();
+             usedField = 'Conjunto';
+          } else if (payload.localidade) {
+             extraInfo = payload.localidade.trim();
+             usedField = 'Localidade';
+          }
+          
+          if (hasCoords) {
+             usedField = 'Nativa';
+          } else if (!usedField && mun) {
+             usedField = 'Município';
+          }
+          
+          let locPrefixText = usedField ? `Localização (${usedField}):` : 'Localização:';
+          
+          if (!extraInfo) {
+             locationLabel = mun || 'Localização não informada';
+          } else if (!mun) {
+             locationLabel = extraInfo;
+          } else if (extraInfo.toLowerCase() === mun.toLowerCase()) {
+             locationLabel = mun;
+          } else {
+             locationLabel = `${extraInfo}, ${mun}`;
+          }
+          
+          const tags: import('../../core/api/scanner-api.service').IncidenceTag[] = [];
+          if (payload.urgente === 'SIM') tags.push({ label: 'Urgente', color: 'red' });
+          if (payload.eletrodependente === 'SIM') tags.push({ label: 'Eletrodep.', color: 'red' });
+          if (payload.clienteEssencial === 'SIM') tags.push({ label: 'Essencial', color: 'orange' });
+          if (payload.amplaChip === 'SIM') tags.push({ label: 'Chip', color: 'blue' });
+          if (payload.energiaSolar === 'SIM') tags.push({ label: 'Solar', color: 'orange' });
+          if (payload.reincidente === 'SIM') tags.push({ label: 'Reincid.', color: 'red' });
+          if (payload.improdutiva === 'SIM') tags.push({ label: 'Improdut.', color: 'yellow' });
+          
+          if (payload.afetacaoMaxima && typeof payload.afetacaoMaxima === 'string') {
+            const parts = payload.afetacaoMaxima.split(',').map((p: string) => p.trim());
+            const cPart = parts.find((p: string) => p.startsWith('C='));
+            if (cPart) {
+              const cVal = parseInt(cPart.split('=')[1], 10);
+              if (!isNaN(cVal) && cVal > 0) {
+                tags.push({ label: `${cVal} Clientes`, color: 'blue' });
+              }
+            }
+          }
+
+          const nt = payload.nivelTensao || payload.nivel_tensao;
+          if (nt) {
+            tags.push({ type: 'nivel_tensao', label: `NT: ${nt}`, color: 'blue' });
+          }
+
+          const cumpre5RO = payload.cumpreRegrasOuro || payload.cumpre_regras_ouro;
+          if (cumpre5RO === true || cumpre5RO === 'true' || cumpre5RO === 'SIM' || (typeof cumpre5RO === 'string' && cumpre5RO.toLowerCase() === 'sim')) {
+            tags.push({ type: 'regras_ouro', label: '5RO', color: 'orange' });
+          }
+
+          const flags = [];
+          
+          if (payload.observacao && payload.observacao.trim().length > 0) {
+            const obs = payload.observacao.trim();
+            flags.push({ 
+              type: 'observacao_m300',
+              html: `<b><span style="color:#1d4ed8;">Reporte de execução:</span></b> ${obs}`, 
+              plainText: `Reporte de execução: ${obs}`,
+              color: 'blue' 
+            });
+          }
+          if (payload.condominio === 'SIM') flags.push({ label: 'Condomínio', emoji: '🏢', html: '', plainText: '' });
+          if (payload.iluminacaoPublica === 'SIM') flags.push({ label: 'Ilum. Púb.', emoji: '💡', html: '', plainText: '' });
+          if (payload.areaRisco === 'SIM') flags.push({ label: 'Área Risco', emoji: '⚠️', html: '', plainText: '' });
+          
+          let mapsUrl = hasCoords ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}` : null;
+
+        if (locationLabel && locationLabel !== 'Localização não informada') {
+          
+          const plainTextInfo = `${locationLabel}`;
+          flags.push({
+            type: 'localizacao',
+            html: `<b><span style="color:#1d4ed8;">${locPrefixText}</span></b> ${mapsUrl ? `<a href="${mapsUrl}" target="_blank">${plainTextInfo}</a>` : plainTextInfo}`,
+            plainText: `${locPrefixText} ${plainTextInfo}`,
+            href: mapsUrl ?? undefined,
+            color: 'blue',
+          });
+        }
+        
+        return {
+          incidenceNumber,
+          raw: payload,
+          locationLabel,
+          estimatedReturnMin: null,
+          nearestBaseName: null,
+          mapsUrl,
+          tags,
+          flags,
+          status: 'enriched' as 'enriched',
+          lat: hasCoords ? lat : null,
+          lon: hasCoords ? lon : null,
+          baseLat: null,
+          baseLon: null,
+        };
+      };
+
+      for (const req of Array.from(ordersToFetch.values())) {
+        const payload = incidenciasMap.get(req.incidence);
+        if (payload) {
+          dataMap.set(`${req.team}|${req.incidence}`, buildEnriched(payload, req.incidence));
+        } else {
+          dataMap.set(`${req.team}|${req.incidence}`, {
+            incidenceNumber: req.incidence,
+            raw: { incidencia: req.incidence } as any,
+            locationLabel: null,
+            estimatedReturnMin: null,
+            nearestBaseName: null,
+            mapsUrl: null,
+            tags: [],
+            flags: [],
+            status: 'not_found' as 'not_found',
+          } as any);
+        }
+      }
+      
+      this.enrichedIncidenceData.set(dataMap);
+        
+        // Popular a fila de geocoding com todas as O.S. que têm coordenadas nativas
+        this.geocodingQueue = [];
+        for (const [key, inc] of dataMap.entries()) {
+          if (inc.lat != null && inc.lon != null) {
+            this.geocodingQueue.push(key);
+          }
+        }
+        
+        if (this.geocodingQueue.length > 0) {
+          this.startGeocodingQueue();
+        }
+      
+      try {
+        localStorage.setItem('scanner_incidence_cache', JSON.stringify(Array.from(dataMap.entries())));
+      } catch (e) { }
+    } catch (e) {
+      console.error('[Dashboard] Error building incidence data locally', e);
     }
   }
 
-  private updateReportDataAndDates(report: GeneratedReport) {
+
+  
+  private startGeocodingQueue() {
+    if (this.activeGeocodingTimer) {
+      clearInterval(this.activeGeocodingTimer);
+    }
+    
+    // Process one incidence per second (1 req/s Nominatim limit)
+    this.activeGeocodingTimer = setInterval(async () => {
+      if (this.geocodingQueue.length === 0) {
+        clearInterval(this.activeGeocodingTimer);
+        this.activeGeocodingTimer = null;
+        return;
+      }
+      
+      const incidenceKey = this.geocodingQueue.shift();
+      if (!incidenceKey) return;
+      
+      const dataMap = this.enrichedIncidenceData();
+      const inc = dataMap.get(incidenceKey);
+      if (!inc || !inc.lat || !inc.lon) return;
+      
+      const lat = inc.lat;
+      const lon = inc.lon;
+      const cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)}`;
+      
+      let geoData = this.nominatimCacheMap.get(cacheKey);
+      
+      if (!geoData) {
+        try {
+          // console.log('[Dashboard] Geocoding', lat, lon);
+          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14`, {
+            headers: {
+              'Accept-Language': 'pt-BR',
+              'User-Agent': 'Workline-App/2.2.1'
+            }
+          });
+          const result = await response.json();
+          
+          if (result && result.address) {
+            const addr = result.address;
+            const bairroDistrito = addr.suburb || addr.city_district || addr.village || addr.hamlet || addr.town || addr.municipality || '';
+            const city = addr.city || addr.town || addr.municipality || '';
+            
+            geoData = { bairro: bairroDistrito, municipio: city };
+            this.nominatimCacheMap.set(cacheKey, geoData);
+          }
+        } catch (e) {
+          console.warn('[Dashboard] Nominatim geocode failed', e);
+        }
+      }
+      
+      if (geoData) {
+        // Update the incidence's location label
+        let locLabel = geoData.bairro ? `${geoData.bairro}, ${geoData.municipio || inc.raw.municipio}` : (geoData.municipio || inc.raw.municipio || 'Localização não informada');
+        
+        // Find and update the localizacao flag
+        const flags = [...inc.flags];
+        const locIndex = flags.findIndex(f => f.type === 'localizacao');
+        if (locIndex !== -1) {
+          const locFlag = { ...flags[locIndex] };
+          
+          const prefix = 'Localização (Nativa):';
+          const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
+          
+          locFlag.html = `<b><span style="color:#1d4ed8;">${prefix}</span></b> <a href="${mapsUrl}" target="_blank">${locLabel}</a>`;
+          locFlag.plainText = `${prefix} ${locLabel}`;
+          
+          flags[locIndex] = locFlag;
+        }
+        
+        const updatedInc = {
+          ...inc,
+          locationLabel: locLabel,
+          flags
+        };
+        
+        // Create new map to trigger change detection
+        const newMap = new Map(dataMap);
+        newMap.set(incidenceKey, updatedInc);
+        this.enrichedIncidenceData.set(newMap);
+      }
+    }, 1100); // 1.1 seconds to be safe
+  }
+
+  private updateReportDataAndDates(report: GeneratedReport, preFetchedData?: any[]) {
     this.availableDates = report.availableDates || [];
     this.reportData.set(report);
-    this.triggerIncidenceBatchFetch(report);
+    this.triggerIncidenceBatchFetch(report, preFetchedData);
 
     // Clear any interactive UI state to avoid remnants from the previous report
     this.expandedEvidenceTeams.set({});
@@ -8752,14 +8995,25 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const norm = (s: string | undefined | null) => (s || '').trim().toLowerCase();
     
     const canEstimateOsToOs = (prevInc: any, currInc: any) => {
-       if (incHasNativeCoords) return true;
-       return norm(prevInc.raw?.municipio) !== norm(currInc.raw?.municipio);
-    };
-    
-    const canEstimateBase = (currInc: any) => {
-       if (incHasNativeCoords) return true;
-       return norm(currInc.raw?.municipio) !== norm(currInc.nearestBaseName);
-    };
+         const prevHasCoords = prevInc.raw?.latitude != null && prevInc.raw?.longitude != null;
+         const currHasCoords = currInc.raw?.latitude != null && currInc.raw?.longitude != null;
+         if (prevHasCoords && currHasCoords) return true;
+         
+         const m1 = norm(prevInc.raw?.municipio);
+         const m2 = norm(currInc.raw?.municipio);
+         if (!m1 || !m2) return false;
+         return m1 !== m2;
+      };
+      
+      const canEstimateBase = (currInc: any) => {
+         const currHasCoords = currInc.raw?.latitude != null && currInc.raw?.longitude != null;
+         if (currHasCoords) return true;
+         
+         const m1 = norm(currInc.raw?.municipio);
+         const m2 = norm(currInc.nearestBaseName);
+         if (!m1 || !m2) return false;
+         return m1 !== m2;
+      };
     
     const getMins = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
       const key = `${lat1},${lon1}|${lat2},${lon2}`;
@@ -8796,7 +9050,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     
     if (distStr) {
       locFlag.plainText = `${locFlag.plainText}${distStr}`;
-      if (locFlag.html.includes('</a>')) {
+      if (locFlag.html && locFlag.html.includes('</a>')) {
          locFlag.html = locFlag.html.replace('</a>', `${distStr}</a>`);
       } else {
          locFlag.html = `${locFlag.html}${distStr}`;

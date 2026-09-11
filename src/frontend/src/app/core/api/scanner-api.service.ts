@@ -590,17 +590,19 @@ export interface ExternalIncidencePayload {
 }
 
 export interface IncidenceTag {
-  type: 'nivel_tensao' | 'regras_ouro';
+  type?: string;
   label: string;
-  color: 'blue' | 'orange';
+  color: string;
 }
 
 export interface IncidenceFlag {
-  type: 'localizacao' | 'observacao_m300';
+  type?: string;
+  label?: string;
+  emoji?: string;
   html: string;
   plainText: string;
   href?: string;
-  color: 'blue';
+  color?: string;
 }
 
 export interface EnrichedIncidence {
@@ -867,7 +869,7 @@ export class ScannerApiService {
 
   // ── External Incidence Integration (isolated from M300/Spotfire) ──
 
-  public enrichSingleIncidence(payload: { incidence: string, team?: string }): Observable<EnrichedIncidence> {
-    return this.http.post<EnrichedIncidence>(`${this.baseUrl}/incidence/enrich-single`, payload);
+  public getIncidencias(): Observable<ExternalIncidencePayload[]> {
+    return this.http.get<ExternalIncidencePayload[]>(`${this.baseUrl}/incidence/get-incidencias`);
   }
 }
