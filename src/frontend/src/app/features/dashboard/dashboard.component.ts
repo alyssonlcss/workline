@@ -8712,7 +8712,15 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         if (payload.iluminacaoPublica === 'SIM') flags.push({ label: 'Ilum. Púb.', emoji: '💡', html: '', plainText: '' });
         if (payload.areaRisco === 'SIM') flags.push({ label: 'Área Risco', emoji: '⚠️', html: '', plainText: '' });
 
-        let mapsUrl = hasCoords ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}` : null;
+        const baseInfo = getBaseCoordsForTeam(teamName);
+        let mapsUrl = null;
+        if (hasCoords) {
+           if (baseInfo && baseInfo.lat != null && baseInfo.lon != null) {
+              mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${baseInfo.lat},${baseInfo.lon}&destination=${lat},${lon}`;
+           } else {
+              mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
+           }
+        }
 
         if (locationLabel && locationLabel !== 'Localização não informada') {
 
@@ -8725,7 +8733,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             color: 'blue',
           });
         }
-        const baseInfo = getBaseCoordsForTeam(teamName);
 
         return {
           incidenceNumber,
@@ -9126,16 +9133,21 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return val;
     };
 
-    if (ev.is_primeira_os_jornada) {
+    let newHref = '';
+
+    const isPrimeiraOs = ev.is_primeira_os_jornada || !ev.prev_liberada;
+    if (isPrimeiraOs) {
       if (inc.baseLat != null && inc.baseLon != null && inc.lat != null && inc.lon != null && canEstimateBase(inc)) {
         const mins = getMins(inc.baseLat, inc.baseLon, inc.lat, inc.lon);
         distStr = ` | Deslocamento estimando (Base): ${mins} min`;
+        newHref = `https://www.google.com/maps/dir/?api=1&origin=${inc.baseLat},${inc.baseLon}&destination=${inc.lat},${inc.lon}`;
       }
     } else if (ev.prev_nr_ordem) {
       const prevInc = this.getIncidenceForOrder(teamName, ev.prev_nr_ordem);
       if (prevInc && prevInc.lat != null && prevInc.lon != null && inc.lat != null && inc.lon != null && canEstimateOsToOs(prevInc, inc)) {
         const mins = getMins(prevInc.lat, prevInc.lon, inc.lat, inc.lon);
         distStr = ` | Deslocamento estimando (OS ${ev.prev_nr_ordem}): ${mins} min`;
+        newHref = `https://www.google.com/maps/dir/?api=1&origin=${prevInc.lat},${prevInc.lon}&destination=${inc.lat},${inc.lon}`;
       }
     }
 
@@ -9143,13 +9155,18 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       if (inc.baseLat != null && inc.baseLon != null && inc.lat != null && inc.lon != null && canEstimateBase(inc)) {
         const mins = getMins(inc.lat, inc.lon, inc.baseLat, inc.baseLon);
         distStr += ` | Retorno estimando (OS Atual): ${mins} min`;
+        newHref = `https://www.google.com/maps/dir/?api=1&origin=${inc.lat},${inc.lon}&destination=${inc.baseLat},${inc.baseLon}`;
       }
     }
 
     if (distStr) {
       locFlag.plainText = `${locFlag.plainText}${distStr}`;
       if (locFlag.html && locFlag.html.includes('</a>')) {
-        locFlag.html = locFlag.html.replace('</a>', `${distStr}</a>`);
+        let updatedHtml = locFlag.html;
+        if (newHref) {
+           updatedHtml = updatedHtml.replace(/href="[^"]+"/, `href="${newHref}"`);
+        }
+        locFlag.html = updatedHtml.replace('</a>', `${distStr}</a>`);
       } else {
         locFlag.html = `${locFlag.html}${distStr}`;
       }
