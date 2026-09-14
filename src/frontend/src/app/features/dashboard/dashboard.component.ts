@@ -8497,10 +8497,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
         if (!minDate || !maxDate) return;
 
-        if (selectedDates.length === 1) {
-           minDate.setDate(minDate.getDate() - 1);
-           maxDate.setDate(maxDate.getDate() + 1);
-        }
+        minDate.setDate(minDate.getDate() - 1);
+        maxDate.setDate(maxDate.getDate() + 1);
         
         const dataInicioStr = `${minDate.getFullYear()}-${String(minDate.getMonth() + 1).padStart(2, '0')}-${String(minDate.getDate()).padStart(2, '0')} 00:00:00`;
         const dataFimStr = `${maxDate.getFullYear()}-${String(maxDate.getMonth() + 1).padStart(2, '0')}-${String(maxDate.getDate()).padStart(2, '0')} 23:59:59`;
