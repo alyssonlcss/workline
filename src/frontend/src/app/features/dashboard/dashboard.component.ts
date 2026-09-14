@@ -5257,7 +5257,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const key = `${lat1},${lon1}|${lat2},${lon2}`;
     if (this.pendingOsrmFetches.has(key) || this.osrmCache().has(key)) return;
     this.pendingOsrmFetches.add(key);
-    
+
     const url = `http://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`;
     fetch(url)
       .then(r => r.json())
@@ -5763,11 +5763,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       const filters = this.buildReportFiltersPayload();
       const currentTeamTypes = filters.teamTypes || [];
       const isGlobalContrastar = currentTeamTypes.includes('propria') && currentTeamTypes.includes('parceira');
-      
+
       // Se o filtro do modal for específico e o relatório atual não incluir ESSE tipo específico, precisamos buscar.
       // (Se o relatório global estiver em 'todas' ou 'contrastar', ele já tem os dados, basta filtrar localmente).
       const needsFetch = typeFilter !== 'todas' && !isGlobalContrastar && !currentTeamTypes.includes(typeFilter as any);
-      
+
       if (needsFetch) {
         this.shareModeLoading.set('current');
         const result = await import('rxjs').then(m => m.firstValueFrom(
@@ -5807,17 +5807,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       const base = getBaseForTeam(rw.team);
 
       if (rw.entreOs) {
-         if (!baseEntreOsMap[base]) baseEntreOsMap[base] = [];
-         baseEntreOsMap[base].push({
-           team: rw.team,
-           count: rw.entreOs.count,
-           distinctDaysCount: rw.entreOs.distinctDaysCount,
-           totalOrders: rw.totalOrders,
-           diasTrab: rw.diasTrab,
-           avgMin: rw.entreOs.avgMin,
-           globalAvg: rw.entreOs.globalAvg,
-           sumOver15Min: rw.entreOs.sumOver15Min
-         });
+        if (!baseEntreOsMap[base]) baseEntreOsMap[base] = [];
+        baseEntreOsMap[base].push({
+          team: rw.team,
+          count: rw.entreOs.count,
+          distinctDaysCount: rw.entreOs.distinctDaysCount,
+          totalOrders: rw.totalOrders,
+          diasTrab: rw.diasTrab,
+          avgMin: rw.entreOs.avgMin,
+          globalAvg: rw.entreOs.globalAvg,
+          sumOver15Min: rw.entreOs.sumOver15Min
+        });
       }
 
       if (rw.desvios && rw.desvios.length > 0) {
@@ -5825,19 +5825,19 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         const top3 = rw.desvios.slice(0, 3);
         const problemStr = top3.map(d => {
           const showOS = ['Partida', 'Desl. Intervalo', '2º Desp.', 'TME IMP'].includes(d.name);
-          let timesStr = showOS 
+          let timesStr = showOS
             ? `${d.count}x em ${rw.totalOrders} OS (${rw.diasTrab} dias)`
             : (d.name === 'Retorno a Base' && d.limitMin !== undefined)
               ? `${d.count}x em ${rw.diasTrab} dias acima de ${d.limitMin}min`
               : `${d.count}x em ${rw.diasTrab} dias`;
-          
+
           if (['Partida', 'Desl. Intervalo'].includes(d.name)) {
             timesStr += ' (Tempo Elevado)';
           }
-          
+
           const aboveAvg = d.globalAvg > 0 ? d.avgMin - d.globalAvg : 0;
           const aboveAvgStr = aboveAvg > 0 ? ` (+${aboveAvg}m base)` : '';
-          
+
           let emoji = '⚠️';
           if (d.name === 'Partida') emoji = '🏁';
           else if (d.name === 'Desl. Intervalo') emoji = '⏸️';
@@ -5874,7 +5874,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         const pA = a.split('/'); const pB = b.split('/');
         if (pA.length === 3 && pB.length === 3) {
           return new Date(parseInt(pA[2]), parseInt(pA[1]) - 1, parseInt(pA[0])).getTime() -
-                 new Date(parseInt(pB[2]), parseInt(pB[1]) - 1, parseInt(pB[0])).getTime();
+            new Date(parseInt(pB[2]), parseInt(pB[1]) - 1, parseInt(pB[0])).getTime();
         }
         return a.localeCompare(b);
       });
@@ -5897,7 +5897,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       const minDdMm = minDate.slice(0, 5);
       const maxDdMm = maxDate.slice(0, 5);
       periodStr = minDdMm === maxDdMm ? minDdMm : `${minDdMm} - ${maxDdMm}`;
-      
+
       const pA = minDate.split('/'); const pB = maxDate.split('/');
       if (pA.length === 3 && pB.length === 3) {
         const dA = new Date(parseInt(pA[2]), parseInt(pA[1]) - 1, parseInt(pA[0]));
@@ -6074,7 +6074,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             if (t.pctImp > 0.20) teamEmoji = '🔴';
             else if (t.pctImp > 0.15) teamEmoji = '🟠';
             else if (t.pctImp > 0.10) teamEmoji = '🟡';
-            
+
             msg += `🚐 *${t.team}* | ${teamEmoji}\n`;
             msg += `${L3}Total de OS: ${t.totalOrders} | Improdutivas: ${t.impOrders} (*${pctFmt}%*)\n`;
             msg += `${L3}⏱️ TME Geral IMP: ${t.avgTmeImp} min\n`;
@@ -6084,7 +6084,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             }
             msg += `\n`;
           }
-          
+
           msg += `📝 *RETORNO DA SUPERVISÃO | Resumo das Tratativas:*\n\n\n\n`;
           msg += `Data: ___/___/____\n`;
           msg += `Autor: ______________________\n\n`;
@@ -6248,6 +6248,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           { key: 'primeiroDesloc', statusKey: 'primeiroDesloc', label: '1º Desloc. da Base', fmt: v => `${v?.toFixed(0)}m` },
           { key: 'retornoBase', statusKey: 'retornoBase', label: 'Retorno Base', fmt: v => `${v?.toFixed(0)}m` },
         ];
+
+        const getNormalizedNumber = (numStr: string) => {
+          const match = String(numStr).match(/\d+/);
+          return match ? match[0].replace(/^0+/, '') : String(numStr);
+        };
 
         let kpisImpactados: string[] = [];
         kpisMap.forEach(k => {
@@ -6429,7 +6434,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             ].join(' · ');
           const section = { report: result.generatedReport, title: mode === 'despacho' ? 'Relatório de Despacho' : 'Relatório Atual', subtitle };
           const { dateRangeLabel } = this.buildPdfFileName(section, exportType);
-          
+
           if (!shareAfter) {
             if (mode === 'despacho') {
               this.pdfService.downloadDespachoPdf({ ...section, dateRangeLabel }, 'relatorio-despacho');
@@ -6442,7 +6447,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             });
           } else {
             try {
-              const file = mode === 'despacho' 
+              const file = mode === 'despacho'
                 ? await this.pdfService.generateDespachoPdfFile({ ...section, dateRangeLabel }, 'relatorio-despacho')
                 : await this.buildPdfFileForShare(section, 'atual');
               this.downloadFileFromMemory(file);
@@ -6792,23 +6797,23 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   ): Array<{ dateRef: string; items: T[]; extraItems: T[]; visibleItems: T[]; hiddenItems: T[] }> {
     const topGroups = this.groupByDateRef(top);
     const extraGroups = this.groupByDateRef(extra ?? []);
-    
+
     const topDates = new Set(topGroups.map(g => g.dateRef));
     const extraOnlyDates = new Set(
       extraGroups.map(g => g.dateRef).filter(d => !topDates.has(d)),
     );
-    
+
     const parseDate = (s: string): number => {
       const p = s.split('/');
       return p.length >= 3 ? +p[2] * 10000 + +p[1] * 100 + +p[0] : 0;
     };
-    
+
     const allDates = [...topDates, ...extraOnlyDates];
-    
+
     const result = allDates.map(d => {
       const items = topGroups.find(g => g.dateRef === d)?.items || [];
       const extraItems = extraGroups.find(eg => eg.dateRef === d)?.items || [];
-      
+
       const allItems = [...items, ...extraItems];
       allItems.sort((a, b) => {
         const ocA = this.getOciosoTotal(a) ?? 0;
@@ -6837,7 +6842,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         hiddenItems
       };
     });
-    
+
     return result.sort((a, b) => parseDate(a.dateRef) - parseDate(b.dateRef));
   }
 
@@ -6848,27 +6853,27 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   protected getVerMaisGradient(hiddenItems: any[]): string {
     if (!hiddenItems || hiddenItems.length === 0) return '';
     let red = 0, yellow = 0, green = 0;
-    
+
     for (const ev of hiddenItems) {
       const color = getEvidenceColor(ev);
       if (color === 'red') red++;
       else if (color === 'yellow') yellow++;
       else green++;
     }
-    
+
     const total = hiddenItems.length;
     const rp = (red / total) * 100;
     const yp = (yellow / total) * 100;
     const gp = (green / total) * 100;
-    
+
     let start = 0;
     const stops = [];
-    
+
     // Cores exatas dos segmentos da timeline (tons)
     const redColor = '#f87171'; // vermelho dos segmentos
     const yellowColor = '#fde68a'; // amarelo dos segmentos ociosos
     const greenColor = '#bbf7d0'; // verde dos segmentos normais
-    
+
     if (red > 0) {
       const mid = start + rp / 2;
       stops.push(`${redColor} 0%`);
@@ -6886,11 +6891,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       stops.push(`${greenColor} 100%`);
       start += gp;
     }
-    
+
     if (stops.length === 2 && stops[0].split(' ')[0] === stops[1].split(' ')[0]) {
       return stops[0].split(' ')[0];
     }
-    
+
     return `linear-gradient(to right, ${stops.join(', ')})`;
   }
 
@@ -6943,9 +6948,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     else if (kpiKey === '1º Login') arr = report.specialAnalysis?.primeiroLoginAnalysis;
     else if (kpiKey === '1º Desloc.') arr = report.specialAnalysis?.primeiroDeslocAnalysis;
     else if (kpiKey === 'Retorno Base') arr = report.specialAnalysis?.retornoBaseAnalysis;
-    
+
     const analysisTypes = [
-      'osDiaAnalysis', 'utilizacaoAnalysis', 'tmeImpAnalysis', 
+      'osDiaAnalysis', 'utilizacaoAnalysis', 'tmeImpAnalysis',
       'primeiroLoginAnalysis', 'primeiroDeslocAnalysis', 'retornoBaseAnalysis'
     ] as const;
 
@@ -6956,26 +6961,26 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       if (typeArr) {
         const ev = typeArr.find(a => a.team === team);
         if (ev) {
-           const topOrders = (ev.flaggedOrders || ev.orders || ev.tempoPadraoVazioOrders || ev.missingOrders || []) as any[];
-           const extraOrders = (ev.extraFlaggedOrders || []) as any[];
-           const groups = this.allDateGroupsForKpi(topOrders, extraOrders);
-           const grp = groups.find(g => g.dateRef === dateRef);
-           if (grp) {
-              for (const order of grp.hiddenItems) {
-                 if (order.nr_ordem) {
-                   const strOs = String(order.nr_ordem);
-                   const mapKey = `${ev.team}|${strOs}`;
-                   if (!this.enrichedIncidenceData().has(mapKey) && !ordersToFetch.has(mapKey)) {
-                     ordersToFetch.set(mapKey, { team: ev.team, incidence: strOs });
-                   }
-                 }
+          const topOrders = (ev.flaggedOrders || ev.orders || ev.tempoPadraoVazioOrders || ev.missingOrders || []) as any[];
+          const extraOrders = (ev.extraFlaggedOrders || []) as any[];
+          const groups = this.allDateGroupsForKpi(topOrders, extraOrders);
+          const grp = groups.find(g => g.dateRef === dateRef);
+          if (grp) {
+            for (const order of grp.hiddenItems) {
+              if (order.nr_ordem) {
+                const strOs = String(order.nr_ordem);
+                const mapKey = `${ev.team}|${strOs}`;
+                if (!this.enrichedIncidenceData().has(mapKey) && !ordersToFetch.has(mapKey)) {
+                  ordersToFetch.set(mapKey, { team: ev.team, incidence: strOs });
+                }
               }
-           }
+            }
+          }
         }
       }
     }
 
-    
+
   }
 
   protected async exportTeamCardToPng(event: Event, teamName: string): Promise<void> {
@@ -6995,12 +7000,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         const toast = document.createElement('div');
         toast.innerText = msg;
         toast.style.position = 'fixed';
-        
+
         // Posição próxima ao botão
         const rect = button.getBoundingClientRect();
         toast.style.top = `${Math.max(10, rect.top - 36)}px`;
         toast.style.left = `${Math.max(10, rect.left - 130)}px`;
-        
+
         toast.style.backgroundColor = isError ? '#ef4444' : '#10b981'; // Vermelho ou Verde
         toast.style.color = '#fff';
         toast.style.padding = '6px 12px';
@@ -7012,12 +7017,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         toast.style.fontWeight = '600';
         toast.style.opacity = '0';
         toast.style.transition = 'opacity 0.2s ease-in-out';
-        
+
         document.body.appendChild(toast);
-        
+
         // Fade in
         requestAnimationFrame(() => toast.style.opacity = '1');
-        
+
         // Fade out
         setTimeout(() => {
           toast.style.opacity = '0';
@@ -7574,14 +7579,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         return `Sem OS: ${mEO} min sem nova OS — Lib. Anterior (${d.from ?? '—'})${d.desp_anterior ? ' · Desp. Anterior (' + d.desp_anterior + ')' : ''} até Despachada (${d.to ?? '—'})${d.interval_discounted ? ' — intervalo descontado' : ''} — ${pctAbove(mEO)}% acima do limite (${SEM_OS_LIMIT} min)${fmtAvg(d.above_avg_pct, d.global_avg_min)}.`;
       }
       case 'fim_jornada': {
-          const fromLabelFJ = d.from_label ?? 'Última Liberada';
-          const excessFJ = (d as any).excess_min;
-          
-          if (excessFJ != null && excessFJ > 0) {
-             return `Retorno Excedente: ${this.nf(excessFJ)} min acima do limite permitido de 40 min de retorno à base — Retorno a base totalizou ${this.nf(d.min)} min entre ${fromLabelFJ} (${d.from ?? '?'}) e Log Off (${d.to ?? '?'}).`;
-          }
-          return `Retorno a base: ${this.nf(d.min)} min entre ${fromLabelFJ} (${d.from ?? '?'}) e Log Off (${d.to ?? '?'}).`;
+        const fromLabelFJ = d.from_label ?? 'Última Liberada';
+        const excessFJ = (d as any).excess_min;
+
+        if (excessFJ != null && excessFJ > 0) {
+          return `Retorno Excedente: ${this.nf(excessFJ)} min acima do limite permitido de 40 min de retorno à base — Retorno a base totalizou ${this.nf(d.min)} min entre ${fromLabelFJ} (${d.from ?? '?'}) e Log Off (${d.to ?? '?'}).`;
         }
+        return `Retorno a base: ${this.nf(d.min)} min entre ${fromLabelFJ} (${d.from ?? '?'}) e Log Off (${d.to ?? '?'}).`;
+      }
       case 'intervalo_deslocamento': {
         const mID = Math.round(d.min);
         const fromLabel = d.from_label ?? 'Lib. Anterior';
@@ -8022,7 +8027,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const abortController = new AbortController();
     this.activeDownloadAbort = abortController;
 
-    
+
 
     this.api.dataDownloadWithProgress(
       {
@@ -8054,7 +8059,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             this.activeDownloadAbort = undefined;
             this.progressMessage.set(`Gerando relatório ${this.reportTypeLabel().toLowerCase()}...`);
             this.jobId.set(result.jobId);
-            
+
             // Resetar os filtros do relatório para (Todos) ao finalizar nova extração.
             // Impede que filtros salvos de um polo anterior ocultem os dados recém-extraídos.
             const baseAnaliticoFilters = this.buildReportFilterStates('analitico');
@@ -8456,9 +8461,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }, 300);
   }
 
-    
 
-  
+
+
   private async triggerIncidenceBatchFetch(report: GeneratedReport, preFetchedData?: any[]): Promise<void> {
     try {
       const { firstValueFrom } = await import('rxjs');
@@ -8479,19 +8484,19 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
         let minDate: Date | null = null;
         let maxDate: Date | null = null;
-        
+
         for (const ds of selectedDates) {
           // Parse dd/MM or string to Date object roughly, assuming report.availableDates order or just pass them if backend handles.
           // Wait, backend expects YYYY-MM-DD.
           // Since availableDates are in "12/09", we can append current year.
           const parts = ds.split('/');
           if (parts.length >= 2) {
-             const day = parseInt(parts[0], 10);
-             const month = parseInt(parts[1], 10) - 1;
-             const year = parts.length >= 3 ? parseInt(parts[2], 10) : new Date().getFullYear();
-             const d = new Date(year, month, day);
-             if (!minDate || d < minDate) minDate = new Date(d.getTime());
-             if (!maxDate || d > maxDate) maxDate = new Date(d.getTime());
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1;
+            const year = parts.length >= 3 ? parseInt(parts[2], 10) : new Date().getFullYear();
+            const d = new Date(year, month, day);
+            if (!minDate || d < minDate) minDate = new Date(d.getTime());
+            if (!maxDate || d > maxDate) maxDate = new Date(d.getTime());
           }
         }
 
@@ -8499,14 +8504,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
         minDate.setDate(minDate.getDate() - 1);
         maxDate.setDate(maxDate.getDate() + 1);
-        
+
         const dataInicioStr = `${minDate.getFullYear()}-${String(minDate.getMonth() + 1).padStart(2, '0')}-${String(minDate.getDate()).padStart(2, '0')} 00:00:00`;
         const dataFimStr = `${maxDate.getFullYear()}-${String(maxDate.getMonth() + 1).padStart(2, '0')}-${String(maxDate.getDate()).padStart(2, '0')} 23:59:59`;
 
         // We need the teams to determine Polos. We can get them from the report.
         const allTeams = new Set<string>();
         const analysisTypes = [
-          'osDiaAnalysis', 'utilizacaoAnalysis', 'tmeImpAnalysis', 
+          'osDiaAnalysis', 'utilizacaoAnalysis', 'tmeImpAnalysis',
           'primeiroLoginAnalysis', 'primeiroDeslocAnalysis', 'retornoBaseAnalysis'
         ] as const;
         for (const type of analysisTypes) {
@@ -8520,47 +8525,63 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
         const poloSet = new Set<string>();
         for (const team of allTeams) {
-            if (!this.basesConfig) continue;
-            for (const polo of this.basesConfig.polos) {
-              for (const base of polo.bases) {
-                const matchers = [...(base.propria || []), ...(base.parceira || []), ...(base.prefixes || [])];
-                for (const matcher of matchers) {
-                  if (team.startsWith(matcher)) {
-                     poloSet.add(polo.name);
-                  }
+          if (!this.basesConfig) continue;
+          for (const polo of this.basesConfig.polos) {
+            for (const base of polo.bases) {
+              const matchers = [...(base.propria || []), ...(base.parceira || []), ...(base.prefixes || [])];
+              for (const matcher of matchers) {
+                if (team.includes(matcher)) {
+                  poloSet.add(polo.name);
                 }
               }
             }
+          }
         }
 
         const openviewPoloMapping: Record<string, string> = {
-            'atlântico': 'ATLANTICO',
-            'centro-norte': 'DECEN',
-            'norte': 'DNORT'
+          'atlântico': 'ATLANTICO',
+          'centro-norte': 'DECEN',
+          'norte': 'DNORT'
         };
         const formattedPolos = Array.from(poloSet).map(p => openviewPoloMapping[p.toLowerCase()] || p);
         if (formattedPolos.length === 0) {
-           console.log('[Dashboard] Nenhuma equipe com polo correspondente, abortando fetch');
-           return;
+          console.log('[Dashboard] Nenhuma equipe com polo correspondente, abortando fetch');
+          return;
         }
 
         console.log(`[Dashboard] Buscando incidências da API (on-demand) para polos ${formattedPolos.join(', ')} e datas ${dataInicioStr} a ${dataFimStr}...`);
         rawIncidencias = await firstValueFrom(this.api.getIncidencias(dataInicioStr, dataFimStr, formattedPolos));
       }
       console.log(`[Dashboard] Carregadas ${rawIncidencias?.length || 0} incidências da API.`);
-      
-      const incidenciasMap = new Map<string, any>();
-      for (const inc of rawIncidencias) {
-         const num = String(inc.incidencia || (inc as any).numero);
-         incidenciasMap.set(num, inc);
-      }
+
+      const incidenciasList = rawIncidencias.filter(inc => {
+        const num = String(inc.incidencia || (inc as any).numero);
+        return num && num.trim() !== '';
+      });
+
+      const findIncidencePayload = (reqIncidence: string) => {
+        const reqStr = String(reqIncidence);
+        // Ordenamos por length decrescente para que IDs maiores deem match primeiro (evita falso positivo se um ID for substring do outro)
+        const sorted = [...incidenciasList].sort((a, b) => {
+           const idA = String(a.incidencia || (a as any).numero).trim();
+           const idB = String(b.incidencia || (b as any).numero).trim();
+           return idB.length - idA.length;
+        });
+        for (const inc of sorted) {
+          const openviewId = String(inc.incidencia || (inc as any).numero).trim();
+          if (reqStr.includes(openviewId)) {
+            return inc;
+          }
+        }
+        return null;
+      };
 
       const ordersToFetch = new Map<string, { team: string, incidence: string }>();
       const analysisTypes = [
-        'osDiaAnalysis', 'utilizacaoAnalysis', 'tmeImpAnalysis', 
+        'osDiaAnalysis', 'utilizacaoAnalysis', 'tmeImpAnalysis',
         'primeiroLoginAnalysis', 'primeiroDeslocAnalysis', 'retornoBaseAnalysis'
       ] as const;
-  
+
       for (const type of analysisTypes) {
         const arr = report.specialAnalysis?.[type] as any[];
         if (arr) {
@@ -8569,17 +8590,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
               const topOrders = (ev.flaggedOrders || ev.orders || ev.tempoPadraoVazioOrders || ev.missingOrders || []) as any[];
               const extraOrders = (ev.extraFlaggedOrders || []) as any[];
               const groups = this.allDateGroupsForKpi(topOrders, extraOrders);
-                for (const grp of groups) {
-                   const allItems = [...grp.visibleItems, ...grp.hiddenItems];
-                   for (const order of allItems) {
-                   if (order.nr_ordem) {
-                     const strOs = String(order.nr_ordem);
-                     const mapKey = `${ev.team}|${strOs}`;
-                     if (!ordersToFetch.has(mapKey)) {
-                       ordersToFetch.set(mapKey, { team: ev.team, incidence: strOs });
-                     }
-                   }
-                 }
+              for (const grp of groups) {
+                const allItems = [...grp.visibleItems, ...grp.hiddenItems];
+                for (const order of allItems) {
+                  if (order.nr_ordem) {
+                    const strOs = String(order.nr_ordem);
+                    const mapKey = `${ev.team}|${strOs}`;
+                    if (!ordersToFetch.has(mapKey)) {
+                      ordersToFetch.set(mapKey, { team: ev.team, incidence: strOs });
+                    }
+                  }
+                }
               }
             }
           }
@@ -8587,113 +8608,114 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       }
 
       const dataMap = new Map(this.enrichedIncidenceData());
-      
+
       // Builder local (substitui o do Backend)
       const getBaseCoordsForTeam = (teamName: string) => {
-          if (!this.basesConfig) return null;
-          for (const polo of this.basesConfig.polos) {
-            for (const base of polo.bases) {
-              const matchers = [...(base.propria || []), ...(base.parceira || []), ...(base.prefixes || [])];
-              for (const matcher of matchers) {
-                if (teamName.startsWith(matcher)) {
-                  console.log('Matched team:', teamName, 'to base:', base.name, 'with localBase:', base.localBase);
-                  if (base.localBase && base.localBase.length > 0) {
-                    const parts = base.localBase[0].split(',');
-                    if (parts.length === 2) {
-                      return { lat: parseFloat(parts[0]), lon: parseFloat(parts[1]), name: base.name };
-                    }
+        if (!this.basesConfig) return null;
+        for (const polo of this.basesConfig.polos) {
+          for (const base of polo.bases) {
+            const matchers = [...(base.propria || []), ...(base.parceira || []), ...(base.prefixes || [])];
+            for (const matcher of matchers) {
+              if (teamName.includes(matcher)) {
+                console.log('Matched team:', teamName, 'to base:', base.name, 'with localBase:', base.localBase);
+                if (base.localBase && base.localBase.length > 0) {
+                  const parts = base.localBase[0].split(',');
+                  if (parts.length === 2) {
+                    return { lat: parseFloat(parts[0]), lon: parseFloat(parts[1]), name: base.name };
                   }
-                  return { name: base.name };
                 }
+                return { name: base.name };
               }
             }
           }
-          return null;
-        };
-        const buildEnriched = (payload: any, incidenceNumber: string, teamName: string) => {
+        }
+        console.warn(`[Dashboard] Nenhuma base encontrada para a equipe: '${teamName}'`);
+        return null;
+      };
+      const buildEnriched = (payload: any, incidenceNumber: string, teamName: string) => {
         let lat = payload.latitude != null ? Number(payload.latitude) : null;
         let lon = payload.longitude != null ? Number(payload.longitude) : null;
         let hasCoords = lat != null && lon != null && !isNaN(lat) && !isNaN(lon) && (lat !== 0 || lon !== 0);
 
-        
-          
-          
-          let usedField = '';
-            let locationLabel = '';
-            
-            const mun = (payload.municipio || '').trim();
-            let extraInfo = '';
-            
-            if (hasCoords) {
-               usedField = 'Nativa';
-            } else if (mun) {
-               usedField = 'Município';
-            } else if (payload.conjunto) {
-               extraInfo = payload.conjunto.trim();
-               usedField = 'Conjunto';
+
+
+
+        let usedField = '';
+        let locationLabel = '';
+
+        const mun = (payload.municipio || '').trim();
+        let extraInfo = '';
+
+        if (hasCoords) {
+          usedField = 'Nativa';
+        } else if (mun) {
+          usedField = 'Município';
+        } else if (payload.conjunto) {
+          extraInfo = payload.conjunto.trim();
+          usedField = 'Conjunto';
+        }
+
+        let locPrefixText = usedField ? `Localização (${usedField}):` : 'Localização:';
+
+        if (!extraInfo) {
+          locationLabel = mun || 'Localização não informada';
+        } else if (!mun) {
+          locationLabel = extraInfo;
+        } else if (extraInfo.toLowerCase() === mun.toLowerCase()) {
+          locationLabel = mun;
+        } else {
+          locationLabel = `${extraInfo}, ${mun}`;
+        }
+
+        const tags: import('../../core/api/scanner-api.service').IncidenceTag[] = [];
+        if (payload.urgente === 'SIM') tags.push({ label: 'Urgente', color: 'red' });
+        if (payload.eletrodependente === 'SIM') tags.push({ label: 'Eletrodep.', color: 'red' });
+        if (payload.clienteEssencial === 'SIM') tags.push({ label: 'Essencial', color: 'orange' });
+        if (payload.amplaChip === 'SIM') tags.push({ label: 'Chip', color: 'blue' });
+        if (payload.energiaSolar === 'SIM') tags.push({ label: 'Solar', color: 'orange' });
+        if (payload.reincidente === 'SIM') tags.push({ label: 'Reincid.', color: 'red' });
+        if (payload.improdutiva === 'SIM') tags.push({ label: 'Improdut.', color: 'yellow' });
+
+        if (payload.afetacaoMaxima && typeof payload.afetacaoMaxima === 'string') {
+          const parts = payload.afetacaoMaxima.split(',').map((p: string) => p.trim());
+          const cPart = parts.find((p: string) => p.startsWith('C='));
+          if (cPart) {
+            const cVal = parseInt(cPart.split('=')[1], 10);
+            if (!isNaN(cVal) && cVal > 0) {
+              tags.push({ label: `${cVal} Clientes`, color: 'blue' });
             }
-            
-            let locPrefixText = usedField ? `Localização (${usedField}):` : 'Localização:';
-          
-          if (!extraInfo) {
-             locationLabel = mun || 'Localização não informada';
-          } else if (!mun) {
-             locationLabel = extraInfo;
-          } else if (extraInfo.toLowerCase() === mun.toLowerCase()) {
-             locationLabel = mun;
-          } else {
-             locationLabel = `${extraInfo}, ${mun}`;
           }
-          
-          const tags: import('../../core/api/scanner-api.service').IncidenceTag[] = [];
-          if (payload.urgente === 'SIM') tags.push({ label: 'Urgente', color: 'red' });
-          if (payload.eletrodependente === 'SIM') tags.push({ label: 'Eletrodep.', color: 'red' });
-          if (payload.clienteEssencial === 'SIM') tags.push({ label: 'Essencial', color: 'orange' });
-          if (payload.amplaChip === 'SIM') tags.push({ label: 'Chip', color: 'blue' });
-          if (payload.energiaSolar === 'SIM') tags.push({ label: 'Solar', color: 'orange' });
-          if (payload.reincidente === 'SIM') tags.push({ label: 'Reincid.', color: 'red' });
-          if (payload.improdutiva === 'SIM') tags.push({ label: 'Improdut.', color: 'yellow' });
-          
-          if (payload.afetacaoMaxima && typeof payload.afetacaoMaxima === 'string') {
-            const parts = payload.afetacaoMaxima.split(',').map((p: string) => p.trim());
-            const cPart = parts.find((p: string) => p.startsWith('C='));
-            if (cPart) {
-              const cVal = parseInt(cPart.split('=')[1], 10);
-              if (!isNaN(cVal) && cVal > 0) {
-                tags.push({ label: `${cVal} Clientes`, color: 'blue' });
-              }
-            }
-          }
+        }
 
-          const nt = payload.nivelTensao || payload.nivel_tensao;
-          if (nt) {
-            tags.push({ type: 'nivel_tensao', label: `NT: ${nt}`, color: 'blue' });
-          }
+        const nt = payload.nivelTensao || payload.nivel_tensao;
+        if (nt) {
+          tags.push({ type: 'nivel_tensao', label: `NT: ${nt}`, color: 'blue' });
+        }
 
-          const cumpre5RO = payload.cumpreRegrasOuro || payload.cumpre_regras_ouro;
-          if (cumpre5RO === true || cumpre5RO === 'true' || cumpre5RO === 'SIM' || (typeof cumpre5RO === 'string' && cumpre5RO.toLowerCase() === 'sim')) {
-            tags.push({ type: 'regras_ouro', label: '5RO', color: 'orange' });
-          }
+        const cumpre5RO = payload.cumpreRegrasOuro || payload.cumpre_regras_ouro;
+        if (cumpre5RO === true || cumpre5RO === 'true' || cumpre5RO === 'SIM' || (typeof cumpre5RO === 'string' && cumpre5RO.toLowerCase() === 'sim')) {
+          tags.push({ type: 'regras_ouro', label: '5RO', color: 'orange' });
+        }
 
-          const flags = [];
-          
-          if (payload.observacao && payload.observacao.trim().length > 0) {
-            const obs = payload.observacao.trim();
-            flags.push({ 
-              type: 'observacao_m300',
-              html: `<b><span style="color:#1d4ed8;">Reporte de execução:</span></b> ${obs}`, 
-              plainText: `Reporte de execução: ${obs}`,
-              color: 'blue' 
-            });
-          }
-          if (payload.condominio === 'SIM') flags.push({ label: 'Condomínio', emoji: '🏢', html: '', plainText: '' });
-          if (payload.iluminacaoPublica === 'SIM') flags.push({ label: 'Ilum. Púb.', emoji: '💡', html: '', plainText: '' });
-          if (payload.areaRisco === 'SIM') flags.push({ label: 'Área Risco', emoji: '⚠️', html: '', plainText: '' });
-          
-          let mapsUrl = hasCoords ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}` : null;
+        const flags = [];
+
+        if (payload.observacao && payload.observacao.trim().length > 0) {
+          const obs = payload.observacao.trim();
+          flags.push({
+            type: 'observacao_m300',
+            html: `<b><span style="color:#1d4ed8;">Reporte de execução:</span></b> ${obs}`,
+            plainText: `Reporte de execução: ${obs}`,
+            color: 'blue'
+          });
+        }
+        if (payload.condominio === 'SIM') flags.push({ label: 'Condomínio', emoji: '🏢', html: '', plainText: '' });
+        if (payload.iluminacaoPublica === 'SIM') flags.push({ label: 'Ilum. Púb.', emoji: '💡', html: '', plainText: '' });
+        if (payload.areaRisco === 'SIM') flags.push({ label: 'Área Risco', emoji: '⚠️', html: '', plainText: '' });
+
+        let mapsUrl = hasCoords ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}` : null;
 
         if (locationLabel && locationLabel !== 'Localização não informada') {
-          
+
           const plainTextInfo = `${locationLabel}`;
           flags.push({
             type: 'localizacao',
@@ -8704,7 +8726,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           });
         }
         const baseInfo = getBaseCoordsForTeam(teamName);
-        
+
         return {
           incidenceNumber,
           raw: payload,
@@ -8723,7 +8745,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       };
 
       for (const req of Array.from(ordersToFetch.values())) {
-        const payload = incidenciasMap.get(req.incidence);
+        const payload = findIncidencePayload(req.incidence);
         if (payload) {
           dataMap.set(`${req.team}|${req.incidence}`, buildEnriched(payload, req.incidence, req.team));
         } else {
@@ -8740,21 +8762,21 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           } as any);
         }
       }
-      
+
       this.enrichedIncidenceData.set(dataMap);
-        
-        // Popular a fila de geocoding com todas as O.S. que têm coordenadas nativas
-        this.geocodingQueue = [];
-        for (const [key, inc] of dataMap.entries()) {
-          if (inc.lat != null && inc.lon != null) {
-            this.geocodingQueue.push(key);
-          }
+
+      // Popular a fila de geocoding com todas as O.S. que têm coordenadas nativas
+      this.geocodingQueue = [];
+      for (const [key, inc] of dataMap.entries()) {
+        if (inc.lat != null && inc.lon != null) {
+          this.geocodingQueue.push(key);
         }
-        
-        if (this.geocodingQueue.length > 0) {
-          this.startGeocodingQueue();
-        }
-      
+      }
+
+      if (this.geocodingQueue.length > 0) {
+        this.startGeocodingQueue();
+      }
+
       try {
         // No more caching in localStorage
       } catch (e) { }
@@ -8764,12 +8786,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
 
-  
+
   private startGeocodingQueue() {
     if (this.activeGeocodingTimer) {
       clearInterval(this.activeGeocodingTimer);
     }
-    
+
     // Process one incidence per second (1 req/s Nominatim limit)
     this.activeGeocodingTimer = setInterval(async () => {
       if (this.geocodingQueue.length === 0) {
@@ -8777,20 +8799,20 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         this.activeGeocodingTimer = null;
         return;
       }
-      
+
       const incidenceKey = this.geocodingQueue.shift();
       if (!incidenceKey) return;
-      
+
       const dataMap = this.enrichedIncidenceData();
       const inc = dataMap.get(incidenceKey);
       if (!inc || !inc.lat || !inc.lon) return;
-      
+
       const lat = inc.lat;
       const lon = inc.lon;
       const cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)}`;
-      
+
       let geoData = this.nominatimCacheMap.get(cacheKey);
-      
+
       if (!geoData) {
         try {
           // console.log('[Dashboard] Geocoding', lat, lon);
@@ -8801,12 +8823,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             }
           });
           const result = await response.json();
-          
+
           if (result && result.address) {
             const addr = result.address;
             const bairroDistrito = addr.suburb || addr.city_district || addr.village || addr.hamlet || addr.town || addr.municipality || '';
             const city = addr.city || addr.town || addr.municipality || '';
-            
+
             geoData = { bairro: bairroDistrito, municipio: city };
             this.nominatimCacheMap.set(cacheKey, geoData);
           }
@@ -8814,32 +8836,32 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           console.warn('[Dashboard] Nominatim geocode failed', e);
         }
       }
-      
+
       if (geoData) {
         // Update the incidence's location label
         let locLabel = geoData.bairro ? `${geoData.bairro}, ${geoData.municipio || inc.raw.municipio}` : (geoData.municipio || inc.raw.municipio || 'Localização não informada');
-        
+
         // Find and update the localizacao flag
         const flags = [...inc.flags];
         const locIndex = flags.findIndex(f => f.type === 'localizacao');
         if (locIndex !== -1) {
           const locFlag = { ...flags[locIndex] };
-          
+
           const prefix = 'Localização (Nativa):';
           const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
-          
+
           locFlag.html = `<b><span style="color:#1d4ed8;">${prefix}</span></b> <a href="${mapsUrl}" target="_blank">${locLabel}</a>`;
           locFlag.plainText = `${prefix} ${locLabel}`;
-          
+
           flags[locIndex] = locFlag;
         }
-        
+
         const updatedInc = {
           ...inc,
           locationLabel: locLabel,
           flags
         };
-        
+
         // Create new map to trigger change detection
         const newMap = new Map(dataMap);
         newMap.set(incidenceKey, updatedInc);
@@ -9053,43 +9075,43 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     return null;
   }
 
-  
+
   protected getDynamicIncidenceForOrder(kpiKey: string, teamName: string, ev: any): import('../../core/api/scanner-api.service').EnrichedIncidence | undefined {
     const inc = this.getIncidenceForOrder(teamName, ev.nr_ordem);
     if (!inc) return undefined;
-    
+
     const locFlagIndex = inc.flags.findIndex((f: any) => f.type === 'localizacao');
     if (locFlagIndex === -1) return inc;
-    
+
     const clone = { ...inc, flags: [...inc.flags] };
     const locFlag = { ...clone.flags[locFlagIndex] };
-    
+
     let distStr = '';
-    
+
     const incHasNativeCoords = inc.raw?.latitude != null && inc.raw?.longitude != null && !isNaN(Number(inc.raw.latitude)) && !isNaN(Number(inc.raw.longitude)) && (Number(inc.raw.latitude) !== 0 || Number(inc.raw.longitude) !== 0);
     const norm = (s: string | undefined | null) => (s || '').trim().toLowerCase();
-    
+
     const canEstimateOsToOs = (prevInc: any, currInc: any) => {
-         const prevHasCoords = prevInc.raw?.latitude != null && prevInc.raw?.longitude != null;
-         const currHasCoords = currInc.raw?.latitude != null && currInc.raw?.longitude != null;
-         if (prevHasCoords && currHasCoords) return true;
-         
-         const m1 = norm(prevInc.raw?.municipio);
-         const m2 = norm(currInc.raw?.municipio);
-         if (!m1 || !m2) return false;
-         return m1 !== m2;
-      };
-      
-      const canEstimateBase = (currInc: any) => {
-         const currHasCoords = currInc.raw?.latitude != null && currInc.raw?.longitude != null;
-         if (currHasCoords) return true;
-         
-         const m1 = norm(currInc.raw?.municipio);
-         const m2 = norm(currInc.nearestBaseName);
-         if (!m1 || !m2) return false;
-         return m1 !== m2;
-      };
-    
+      const prevHasCoords = prevInc.raw?.latitude != null && prevInc.raw?.longitude != null;
+      const currHasCoords = currInc.raw?.latitude != null && currInc.raw?.longitude != null;
+      if (prevHasCoords && currHasCoords) return true;
+
+      const m1 = norm(prevInc.raw?.municipio);
+      const m2 = norm(currInc.raw?.municipio);
+      if (!m1 || !m2) return false;
+      return m1 !== m2;
+    };
+
+    const canEstimateBase = (currInc: any) => {
+      const currHasCoords = currInc.raw?.latitude != null && currInc.raw?.longitude != null;
+      if (currHasCoords) return true;
+
+      const m1 = norm(currInc.raw?.municipio);
+      const m2 = norm(currInc.nearestBaseName);
+      if (!m1 || !m2) return false;
+      return m1 !== m2;
+    };
+
     const getMins = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
       const key = `${lat1},${lon1}|${lat2},${lon2}`;
       const cache = this.osrmCache();
@@ -9103,37 +9125,37 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       }
       return val;
     };
-    
-        if (ev.is_primeira_os_jornada) {
-       if (inc.baseLat != null && inc.baseLon != null && inc.lat != null && inc.lon != null && canEstimateBase(inc)) {
-          const mins = getMins(inc.baseLat, inc.baseLon, inc.lat, inc.lon);
-          distStr = ` | Deslocamento estimando (Base): ${mins} min`;
-       }
+
+    if (ev.is_primeira_os_jornada) {
+      if (inc.baseLat != null && inc.baseLon != null && inc.lat != null && inc.lon != null && canEstimateBase(inc)) {
+        const mins = getMins(inc.baseLat, inc.baseLon, inc.lat, inc.lon);
+        distStr = ` | Deslocamento estimando (Base): ${mins} min`;
+      }
     } else if (ev.prev_nr_ordem) {
-       const prevInc = this.getIncidenceForOrder(teamName, ev.prev_nr_ordem);
-       if (prevInc && prevInc.lat != null && prevInc.lon != null && inc.lat != null && inc.lon != null && canEstimateOsToOs(prevInc, inc)) {
-          const mins = getMins(prevInc.lat, prevInc.lon, inc.lat, inc.lon);
-          distStr = ` | Deslocamento estimando (OS ${ev.prev_nr_ordem}): ${mins} min`;
-       }
+      const prevInc = this.getIncidenceForOrder(teamName, ev.prev_nr_ordem);
+      if (prevInc && prevInc.lat != null && prevInc.lon != null && inc.lat != null && inc.lon != null && canEstimateOsToOs(prevInc, inc)) {
+        const mins = getMins(prevInc.lat, prevInc.lon, inc.lat, inc.lon);
+        distStr = ` | Deslocamento estimando (OS ${ev.prev_nr_ordem}): ${mins} min`;
+      }
     }
-    
+
     if (kpiKey === 'Retorno Base') {
-       if (inc.baseLat != null && inc.baseLon != null && inc.lat != null && inc.lon != null && canEstimateBase(inc)) {
-          const mins = getMins(inc.lat, inc.lon, inc.baseLat, inc.baseLon);
-          distStr += ` | Retorno estimando (OS Atual): ${mins} min`;
-       }
+      if (inc.baseLat != null && inc.baseLon != null && inc.lat != null && inc.lon != null && canEstimateBase(inc)) {
+        const mins = getMins(inc.lat, inc.lon, inc.baseLat, inc.baseLon);
+        distStr += ` | Retorno estimando (OS Atual): ${mins} min`;
+      }
     }
-    
+
     if (distStr) {
       locFlag.plainText = `${locFlag.plainText}${distStr}`;
       if (locFlag.html && locFlag.html.includes('</a>')) {
-         locFlag.html = locFlag.html.replace('</a>', `${distStr}</a>`);
+        locFlag.html = locFlag.html.replace('</a>', `${distStr}</a>`);
       } else {
-         locFlag.html = `${locFlag.html}${distStr}`;
+        locFlag.html = `${locFlag.html}${distStr}`;
       }
       clone.flags[locFlagIndex] = locFlag;
     }
-    
+
     return clone;
   }
 
@@ -9170,7 +9192,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   protected sanitizeHtml(html: string): import('@angular/platform-browser').SafeHtml {
     // If you don't have DomSanitizer injected, we can just return it as any or string, 
     // but typically Angular requires SafeHtml. If DomSanitizer isn't available, returning raw string works for [innerHTML] if it's trusted.
-    return html as any; 
+    return html as any;
   }
 
 }
