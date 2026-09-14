@@ -221,7 +221,7 @@ export async function createServer() {
             const endDayStr = endDay.toString().padStart(2, '0');
             const dataFim = `${lastYear}-${lastMonthNum}-${endDayStr} 23:59:59`;
             
-            incidenceService.prefetchIncidences(dataInicio, dataFim, polo, onProgress).catch(console.error);
+            // Prefetch removido. A busca de incidências será disparada on-demand pelo Frontend.
           }
         }
       }
@@ -558,7 +558,17 @@ export async function createServer() {
       return reply.code(503).send({ message: 'External incidence integration is not configured.' });
     }
 
-    const results = await incidenceService.getAllCachedIncidences();
+    const { dataInicio, dataFim, polos } = request.query as any;
+    if (!dataInicio || !dataFim || !polos) {
+      return reply.code(400).send({ message: 'Missing dataInicio, dataFim, or polos in query string.' });
+    }
+    
+    const polosArray = typeof polos === 'string' ? polos.split(',') : Array.isArray(polos) ? polos : [];
+    if (polosArray.length === 0) {
+      return reply.code(400).send({ message: 'Invalid polos parameter.' });
+    }
+
+    const results = await incidenceService.fetchIncidences(dataInicio, dataFim, polosArray);
     return reply.send(results);
   });
 

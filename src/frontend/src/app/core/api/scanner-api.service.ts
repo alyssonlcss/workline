@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Alysson Pinheiro. Todos os direitos reservados.
 // Software proprietário e confidencial. Uso não autorizado é proibido.
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
@@ -870,7 +870,11 @@ export class ScannerApiService {
 
   // ── External Incidence Integration (isolated from M300/Spotfire) ──
 
-  public getIncidencias(): Observable<ExternalIncidencePayload[]> {
-    return this.http.get<ExternalIncidencePayload[]>(`${this.baseUrl}/incidence/get-incidencias`);
+  public getIncidencias(dataInicio: string, dataFim: string, polos: string[]): Observable<ExternalIncidencePayload[]> {
+    const params = new HttpParams()
+      .set('dataInicio', dataInicio)
+      .set('dataFim', dataFim)
+      .set('polos', polos.join(','));
+    return this.http.get<ExternalIncidencePayload[]>(`${this.baseUrl}/incidence/get-incidencias`, { params });
   }
 }

@@ -127,8 +127,6 @@ export class StartScannerJobUseCase {
       const endDayStr = endDay.toString().padStart(2, '0');
       dataFim = `${lastYear}-${lastMonthNum}-${endDayStr} 23:59:59`;
     }
-
-    this.incidenceService.prefetchIncidences(dataInicio, dataFim, polo).catch(console.error);
   }
 
   private async run(job: ScannerJob): Promise<void> {

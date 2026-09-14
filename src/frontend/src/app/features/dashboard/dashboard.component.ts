@@ -5556,14 +5556,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   };
 
   public ngOnInit(): void {
-    try {
-      const cached = localStorage.getItem('scanner_incidence_cache');
-      if (cached) {
-        this.enrichedIncidenceData.set(new Map(JSON.parse(cached)));
-      }
-    } catch (err) {
-      console.warn('Failed to load incidence cache', err);
-    }
     this.api.getBasesConfig().subscribe(config => {
       this.basesConfig = config;
       const options: string[] = [];
@@ -8024,7 +8016,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.progressLog.set([]);
     this.errorMessage.set('');
 
-    localStorage.removeItem('scanner_incidence_cache');
     this.enrichedIncidenceData.set(new Map());
 
     const selectedFilters = this.buildSelectedFilters();
@@ -8079,14 +8070,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           }).subscribe({
             next: async (result) => {
               this.hasLoadedDownloadData = true;
-              let rawIncidencias = undefined;
-                try {
-                  console.log('[Dashboard] Buscando get-incidencias apos o data-download...');
-                  rawIncidencias = await firstValueFrom(this.api.getIncidencias());
-                } catch (e) {
-                   console.warn('[Dashboard] get-incidencias falhou:', e);
-                }
-              this.updateReportDataAndDates(result.generatedReport, rawIncidencias);
+              this.updateReportDataAndDates(result.generatedReport, undefined);
               this.loading.set(false);
               this.progressMessage.set('');
               this.setupAnimations();
@@ -8478,11 +8462,87 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   private async triggerIncidenceBatchFetch(report: GeneratedReport, preFetchedData?: any[]): Promise<void> {
     try {
       const { firstValueFrom } = await import('rxjs');
-      
+
       let rawIncidencias = preFetchedData;
+
       if (!rawIncidencias) {
-        console.log('[Dashboard] Buscando TODAS as incidências da API (bulk fetch)...');
-        rawIncidencias = await firstValueFrom(this.api.getIncidencias());
+        const dateFilter = this.reportFilterStates().find((filter) => filter.key === 'reportDataRef');
+        let selectedDates: string[] = [];
+        if (dateFilter && !dateFilter.value.includes(ALL_OPTION)) {
+          selectedDates = dateFilter.value;
+        }
+
+        if (selectedDates.length === 0) {
+          console.log('[Dashboard] Nenhuma data selecionada no filtro. Ignorando busca de incidências no Openview.');
+          return;
+        }
+
+        let minDate: Date | null = null;
+        let maxDate: Date | null = null;
+        
+        for (const ds of selectedDates) {
+          // Parse dd/MM or string to Date object roughly, assuming report.availableDates order or just pass them if backend handles.
+          // Wait, backend expects YYYY-MM-DD.
+          // Since availableDates are in "12/09", we can append current year.
+          const parts = ds.split('/');
+          if (parts.length >= 2) {
+             const day = parseInt(parts[0], 10);
+             const month = parseInt(parts[1], 10) - 1;
+             const year = parts.length >= 3 ? parseInt(parts[2], 10) : new Date().getFullYear();
+             const d = new Date(year, month, day);
+             if (!minDate || d < minDate) minDate = d;
+             if (!maxDate || d > maxDate) maxDate = d;
+          }
+        }
+
+        if (!minDate || !maxDate) return;
+        
+        const dataInicioStr = `${minDate.getFullYear()}-${String(minDate.getMonth() + 1).padStart(2, '0')}-${String(minDate.getDate()).padStart(2, '0')} 00:00:00`;
+        const dataFimStr = `${maxDate.getFullYear()}-${String(maxDate.getMonth() + 1).padStart(2, '0')}-${String(maxDate.getDate()).padStart(2, '0')} 23:59:59`;
+
+        // We need the teams to determine Polos. We can get them from the report.
+        const allTeams = new Set<string>();
+        const analysisTypes = [
+          'osDiaAnalysis', 'utilizacaoAnalysis', 'tmeImpAnalysis', 
+          'primeiroLoginAnalysis', 'primeiroDeslocAnalysis', 'retornoBaseAnalysis'
+        ] as const;
+        for (const type of analysisTypes) {
+          const arr = report.specialAnalysis?.[type] as any[];
+          if (arr) {
+            for (const ev of arr) {
+              if (ev.team) allTeams.add(ev.team);
+            }
+          }
+        }
+
+        const poloSet = new Set<string>();
+        for (const team of allTeams) {
+            if (!this.basesConfig) continue;
+            for (const polo of this.basesConfig.polos) {
+              for (const base of polo.bases) {
+                const matchers = [...(base.propria || []), ...(base.parceira || []), ...(base.prefixes || [])];
+                for (const matcher of matchers) {
+                  if (team.startsWith(matcher)) {
+                     poloSet.add(polo.name);
+                  }
+                }
+              }
+            }
+        }
+
+        const openviewPoloMapping: Record<string, string> = {
+            'atlântico': 'ATLANTICO',
+            'centro-norte': 'DECEN',
+            'norte': 'DNORT'
+        };
+        const formattedPolos = Array.from(poloSet).map(p => openviewPoloMapping[p.toLowerCase()] || p);
+        if (formattedPolos.length === 0) {
+           console.log('[Dashboard] Nenhuma equipe com polo correspondente, abortando fetch');
+           return;
+        }
+
+        console.log(`[Dashboard] Buscando incidências da API (on-demand) para polos ${formattedPolos.join(', ')} e datas ${dataInicioStr} a ${dataFimStr}...`);
+        rawIncidencias = await firstValueFrom(this.api.getIncidencias(dataInicioStr, dataFimStr, formattedPolos));
       }
       console.log(`[Dashboard] Carregadas ${rawIncidencias?.length || 0} incidências da API.`);
       
@@ -8537,9 +8597,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
                   if (base.localBase && base.localBase.length > 0) {
                     const parts = base.localBase[0].split(',');
                     if (parts.length === 2) {
-                      return { lat: parseFloat(parts[0]), lon: parseFloat(parts[1]) };
+                      return { lat: parseFloat(parts[0]), lon: parseFloat(parts[1]), name: base.name };
                     }
                   }
+                  return { name: base.name };
                 }
               }
             }
@@ -8639,21 +8700,22 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             color: 'blue',
           });
         }
+        const baseInfo = getBaseCoordsForTeam(teamName);
         
         return {
           incidenceNumber,
           raw: payload,
           locationLabel,
           estimatedReturnMin: null,
-          nearestBaseName: null,
+          nearestBaseName: baseInfo ? baseInfo.name : null,
           mapsUrl,
           tags,
           flags,
           status: 'enriched' as 'enriched',
           lat: hasCoords ? lat : null,
           lon: hasCoords ? lon : null,
-          baseLat: null,
-          baseLon: null,
+          baseLat: baseInfo && baseInfo.lat != null ? baseInfo.lat : null,
+          baseLon: baseInfo && baseInfo.lon != null ? baseInfo.lon : null,
         };
       };
 
@@ -8691,7 +8753,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       
       try {
-        localStorage.setItem('scanner_incidence_cache', JSON.stringify(Array.from(dataMap.entries())));
+        // No more caching in localStorage
       } catch (e) { }
     } catch (e) {
       console.error('[Dashboard] Error building incidence data locally', e);
@@ -9039,7 +9101,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return val;
     };
     
-        if (kpiKey === '1ª OS') {
+        if (ev.is_primeira_os_jornada) {
        if (inc.baseLat != null && inc.baseLon != null && inc.lat != null && inc.lon != null && canEstimateBase(inc)) {
           const mins = getMins(inc.baseLat, inc.baseLon, inc.lat, inc.lon);
           distStr = ` | Deslocamento estimando (Base): ${mins} min`;
