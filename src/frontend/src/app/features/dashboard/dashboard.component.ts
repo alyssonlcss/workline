@@ -406,9 +406,13 @@ type SavedFilterState = {
                         ⬇ Baixar
                       </button>
                       <button class="export-action-btn export-action-btn--share"
-                        (click)="shareMode('current')"
+                        [class.export-action-btn--share-ready]="pendingShareMode() === 'current'"
+                        (click)="pendingShareMode() === 'current' ? triggerPendingShare() : shareMode('current')"
                         [disabled]="!!shareModeLoading()" title="Compartilhar via Windows">
-                        {{ shareModeLoading() === 'current' ? '⏳ Preparando...' : '📤 Compartilhar' }}
+                        <ng-container *ngIf="shareModeLoading() === 'current'">⏳ Preparando...</ng-container>
+                        <ng-container *ngIf="shareModeLoading() !== 'current'">
+                          {{ pendingShareMode() === 'current' ? '✔️ Compartilhar Agora' : '📤 Compartilhar' }}
+                        </ng-container>
                       </button>
                     </div>
                   </div>
@@ -427,9 +431,13 @@ type SavedFilterState = {
                         ⬇ Baixar
                       </button>
                       <button class="export-action-btn export-action-btn--share"
-                        (click)="shareMode('proprias')"
+                        [class.export-action-btn--share-ready]="pendingShareMode() === 'proprias'"
+                        (click)="pendingShareMode() === 'proprias' ? triggerPendingShare() : shareMode('proprias')"
                         [disabled]="!!shareModeLoading()" title="Compartilhar via Windows">
-                        {{ shareModeLoading() === 'proprias' ? '⏳ Preparando...' : '📤 Compartilhar' }}
+                        <ng-container *ngIf="shareModeLoading() === 'proprias'">⏳ Preparando...</ng-container>
+                        <ng-container *ngIf="shareModeLoading() !== 'proprias'">
+                          {{ pendingShareMode() === 'proprias' ? '✔️ Compartilhar Agora' : '📤 Compartilhar' }}
+                        </ng-container>
                       </button>
                     </div>
                   </div>
@@ -448,9 +456,13 @@ type SavedFilterState = {
                         ⬇ Baixar
                       </button>
                       <button class="export-action-btn export-action-btn--share"
-                        (click)="shareMode('parceiras')"
+                        [class.export-action-btn--share-ready]="pendingShareMode() === 'parceiras'"
+                        (click)="pendingShareMode() === 'parceiras' ? triggerPendingShare() : shareMode('parceiras')"
                         [disabled]="!!shareModeLoading()" title="Compartilhar via Windows">
-                        {{ shareModeLoading() === 'parceiras' ? '⏳ Preparando...' : '📤 Compartilhar' }}
+                        <ng-container *ngIf="shareModeLoading() === 'parceiras'">⏳ Preparando...</ng-container>
+                        <ng-container *ngIf="shareModeLoading() !== 'parceiras'">
+                          {{ pendingShareMode() === 'parceiras' ? '✔️ Compartilhar Agora' : '📤 Compartilhar' }}
+                        </ng-container>
                       </button>
                     </div>
                   </div>
@@ -468,9 +480,13 @@ type SavedFilterState = {
                         ⬇ Baixar
                       </button>
                       <button class="export-action-btn export-action-btn--share"
-                        (click)="shareMode('despacho')"
+                        [class.export-action-btn--share-ready]="pendingShareMode() === 'despacho'"
+                        (click)="pendingShareMode() === 'despacho' ? triggerPendingShare() : shareMode('despacho')"
                         [disabled]="!!shareModeLoading()" title="Compartilhar via Windows">
-                        {{ shareModeLoading() === 'despacho' ? '⏳ Preparando...' : '📤 Compartilhar' }}
+                        <ng-container *ngIf="shareModeLoading() === 'despacho'">⏳ Preparando...</ng-container>
+                        <ng-container *ngIf="shareModeLoading() !== 'despacho'">
+                          {{ pendingShareMode() === 'despacho' ? '✔️ Compartilhar Agora' : '📤 Compartilhar' }}
+                        </ng-container>
                       </button>
                     </div>
                   </div>
@@ -6126,9 +6142,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
    * Nesse ponto temos um gesto fresco do usuário → navigator.share funciona.
    */
   protected async triggerPendingShare(): Promise<void> {
+    console.log('[Share Flow] Botão de fallback "Compartilhar Agora" clicado.');
     const files = this.pendingShareFiles();
-    if (!files) return;
+    if (!files) {
+      console.warn('[Share Flow] Nenhum arquivo pendente para compartilhar.');
+      return;
+    }
     const text = this.pendingShareText() ?? '';
+    console.log(`[Share Flow] Tentando compartilhar ${files.length} arquivo(s)...`);
     await this.tryShare(files, text);
     this.pendingShareFiles.set(null);
     this.pendingShareText.set(null);
@@ -6143,15 +6164,28 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   protected async shareMode(mode: 'current' | 'proprias' | 'parceiras' | 'despacho'): Promise<void> {
     if (this.shareModeLoading()) return;
+    console.log(`[Share Flow] Iniciando preparação para compartilhar modo: ${mode}`);
     this.shareModeLoading.set(mode);
     this.exportError.set('');
     try {
+      console.log(`[Share Flow] Buscando dados e gerando PDFs no backend...`);
       const { files, sections } = await this.fetchAndBuildFiles(mode);
       const text = this.includeAttentionMessage() ? this.buildShareText(sections) : '';
+      console.log(`[Share Flow] PDFs gerados: ${files.length} arquivo(s). Iniciando download em memória...`);
       files.forEach(f => this.downloadFileFromMemory(f));
-      await this.tryShare(files, text);
-      this.exportModalOpen.set(false);
-    } catch {
+      
+      const shared = await this.tryShare(files, text);
+      if (shared) {
+        console.log(`[Share Flow] Compartilhamento automático via Windows Share foi concluído com sucesso.`);
+        this.exportModalOpen.set(false);
+      } else {
+        console.warn(`[Share Flow] O compartilhamento automático foi bloqueado (provavelmente pelo tempo do backend). Exibindo fallback "Compartilhar Agora".`);
+        this.pendingShareFiles.set(files);
+        this.pendingShareText.set(text);
+        this.pendingShareMode.set(mode);
+      }
+    } catch (e: any) {
+      console.error(`[Share Flow] Falha no processo de preparação dos PDFs:`, e);
       this.exportError.set('Falha ao gerar o PDF. Tente novamente.');
     } finally {
       this.shareModeLoading.set(null);
@@ -6557,20 +6591,29 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
    * Retorna true se navigator.share foi invocado com sucesso, false caso contrário.
    */
   private async tryShare(files: File[], text?: string | null): Promise<boolean> {
-    if (!navigator.share) return false;
+    if (!navigator.share) {
+      console.warn('[Share Flow] navigator.share não é suportado neste navegador.');
+      return false;
+    }
     if (typeof navigator.canShare === 'function' && !navigator.canShare({ files })) {
-      console.warn('[Share] canShare({ files }) retornou false:', files.map(f => `${f.name} (${f.type})`));
+      console.warn('[Share Flow] canShare({ files }) retornou false. Arquivos podem ser inválidos ou formato não suportado:', files.map(f => `${f.name} (${f.type})`));
       return false;
     }
     try {
+      console.log(`[Share Flow] Chamando navigator.share com ${files.length} arquivo(s)...`);
       await navigator.share({
         title: 'Relatórios de Campo',
         text: text ?? 'Segue em anexo o(s) relatório(s) analítico(s).',
         files,
       });
+      console.log('[Share Flow] navigator.share invocado com sucesso!');
       return true;
     } catch (e: any) {
-      if (e?.name !== 'AbortError') console.warn('[Share] falhou:', e);
+      if (e?.name !== 'AbortError') {
+        console.warn(`[Share Flow] falhou. Motivo: ${e.name} - ${e.message}`, e);
+      } else {
+        console.log(`[Share Flow] Usuário cancelou o compartilhamento (AbortError).`);
+      }
       return false;
     }
   }
