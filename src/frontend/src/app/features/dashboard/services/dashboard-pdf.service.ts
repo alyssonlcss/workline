@@ -1,3 +1,4 @@
+import { IncidencePdfFormatter } from '../utils/incidence-pdf-formatter.util';
 // Copyright (c) 2026 Alysson Pinheiro. Todos os direitos reservados.
 // Software proprietário e confidencial. Uso não autorizado é proibido.
 import { Injectable } from '@angular/core';
@@ -1075,51 +1076,9 @@ export class DashboardPdfService {
                 if (helpers.getDynamicIncidenceForOrder) {
                   const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
                   if (inc && inc.flags) {
-                    inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
-                      const txt = (flag.plainText || flag.html.replace(/<[^>]*>/g, '')).replace(/\n/g, ' ').trim();
-                      const colonIndex = txt.indexOf(':');
-                      const linkProps = flag.href ? { link: flag.href, decoration: 'underline' } : {};
-                      
-                      const buildTextNodes = (contentStr: string, isValue: boolean) => {
-                        const baseColor = isValue ? '#334155' : '#1d4ed8';
-                        const baseBold = !isValue;
-                        const finalLinkProps = isValue ? linkProps : (flag.href ? { link: flag.href, decoration: 'underline' } : {});
-                        
-                        if (flag.retornoHref && flag.retornoStr && contentStr.endsWith(flag.retornoStr)) {
-                          const firstPart = contentStr.substring(0, contentStr.length - flag.retornoStr.length);
-                          return [
-                            { text: firstPart, color: baseColor, bold: baseBold, ...finalLinkProps },
-                            { text: ' | ', color: '#334155', bold: false },
-                            { text: flag.retornoStr.replace(' | ', ''), color: '#334155', bold: false, link: flag.retornoHref, decoration: 'underline' }
-                          ];
-                        }
-                        return [ { text: contentStr, color: baseColor, bold: baseBold, ...finalLinkProps } ];
-                      };
-
-                      if (colonIndex > -1) {
-                        const prefix = txt.substring(0, colonIndex + 1);
-                        const rest = txt.substring(colonIndex + 1);
-                        orderItems.push({
-                          text: [
-                            { text: prefix, color: '#1d4ed8', bold: true },
-                            ...buildTextNodes(rest, true)
-                          ],
-                          margin: [8, 1, 0, 1],
-                          fontSize: 6.5
-                        });
-                      } else {
-                        orderItems.push({
-                          text: buildTextNodes(txt, false),
-                          margin: [8, 1, 0, 1],
-                          fontSize: 6.5
-                        });
-                      }
-                    });
+                    orderItems.push(...IncidencePdfFormatter.extractBlueFlags(inc.flags));
                   }
-                  if (inc && inc.tags) {
-                    const extraTags = inc.tags.map((t: any) => t.label);
-                    ev.flags = [...new Set([...(ev.flags || []), ...extraTags])];
-                  }
+                  if (inc && inc.tags) { IncidencePdfFormatter.appendTagsToEventFlags(inc.tags, ev); }
                 }
 
               const customFlags: string[] = [];
@@ -1208,51 +1167,9 @@ export class DashboardPdfService {
                 if (helpers.getDynamicIncidenceForOrder) {
                   const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
                   if (inc && inc.flags) {
-                    inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
-                      const txt = (flag.plainText || flag.html.replace(/<[^>]*>/g, '')).replace(/\n/g, ' ').trim();
-                      const colonIndex = txt.indexOf(':');
-                      const linkProps = flag.href ? { link: flag.href, decoration: 'underline' } : {};
-                      
-                      const buildTextNodes = (contentStr: string, isValue: boolean) => {
-                        const baseColor = isValue ? '#334155' : '#1d4ed8';
-                        const baseBold = !isValue;
-                        const finalLinkProps = isValue ? linkProps : (flag.href ? { link: flag.href, decoration: 'underline' } : {});
-                        
-                        if (flag.retornoHref && flag.retornoStr && contentStr.endsWith(flag.retornoStr)) {
-                          const firstPart = contentStr.substring(0, contentStr.length - flag.retornoStr.length);
-                          return [
-                            { text: firstPart, color: baseColor, bold: baseBold, ...finalLinkProps },
-                            { text: ' | ', color: '#334155', bold: false },
-                            { text: flag.retornoStr.replace(' | ', ''), color: '#334155', bold: false, link: flag.retornoHref, decoration: 'underline' }
-                          ];
-                        }
-                        return [ { text: contentStr, color: baseColor, bold: baseBold, ...finalLinkProps } ];
-                      };
-
-                      if (colonIndex > -1) {
-                        const prefix = txt.substring(0, colonIndex + 1);
-                        const rest = txt.substring(colonIndex + 1);
-                        orderItems.push({
-                          text: [
-                            { text: prefix, color: '#1d4ed8', bold: true },
-                            ...buildTextNodes(rest, true)
-                          ],
-                          margin: [8, 1, 0, 1],
-                          fontSize: 6.5
-                        });
-                      } else {
-                        orderItems.push({
-                          text: buildTextNodes(txt, false),
-                          margin: [8, 1, 0, 1],
-                          fontSize: 6.5
-                        });
-                      }
-                    });
+                    orderItems.push(...IncidencePdfFormatter.extractBlueFlags(inc.flags));
                   }
-                  if (inc && inc.tags) {
-                    const extraTags = inc.tags.map((t: any) => t.label);
-                    ev.flags = [...new Set([...(ev.flags || []), ...extraTags])];
-                  }
+                  if (inc && inc.tags) { IncidencePdfFormatter.appendTagsToEventFlags(inc.tags, ev); }
                 }
 
               const orderBlock: any[] = [orderHead(ev.nr_ordem, ev.flags ?? [], (f) => helpers.eficienciaFlagLabel(f), undefined, !ev.prev_liberada)];
@@ -1344,51 +1261,9 @@ export class DashboardPdfService {
                 if (helpers.getDynamicIncidenceForOrder) {
                   const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
                   if (inc && inc.flags) {
-                    inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
-                      const txt = (flag.plainText || flag.html.replace(/<[^>]*>/g, '')).replace(/\n/g, ' ').trim();
-                      const colonIndex = txt.indexOf(':');
-                      const linkProps = flag.href ? { link: flag.href, decoration: 'underline' } : {};
-                      
-                      const buildTextNodes = (contentStr: string, isValue: boolean) => {
-                        const baseColor = isValue ? '#334155' : '#1d4ed8';
-                        const baseBold = !isValue;
-                        const finalLinkProps = isValue ? linkProps : (flag.href ? { link: flag.href, decoration: 'underline' } : {});
-                        
-                        if (flag.retornoHref && flag.retornoStr && contentStr.endsWith(flag.retornoStr)) {
-                          const firstPart = contentStr.substring(0, contentStr.length - flag.retornoStr.length);
-                          return [
-                            { text: firstPart, color: baseColor, bold: baseBold, ...finalLinkProps },
-                            { text: ' | ', color: '#334155', bold: false },
-                            { text: flag.retornoStr.replace(' | ', ''), color: '#334155', bold: false, link: flag.retornoHref, decoration: 'underline' }
-                          ];
-                        }
-                        return [ { text: contentStr, color: baseColor, bold: baseBold, ...finalLinkProps } ];
-                      };
-
-                      if (colonIndex > -1) {
-                        const prefix = txt.substring(0, colonIndex + 1);
-                        const rest = txt.substring(colonIndex + 1);
-                        orderItems.push({
-                          text: [
-                            { text: prefix, color: '#1d4ed8', bold: true },
-                            ...buildTextNodes(rest, true)
-                          ],
-                          margin: [8, 1, 0, 1],
-                          fontSize: 6.5
-                        });
-                      } else {
-                        orderItems.push({
-                          text: buildTextNodes(txt, false),
-                          margin: [8, 1, 0, 1],
-                          fontSize: 6.5
-                        });
-                      }
-                    });
+                    orderItems.push(...IncidencePdfFormatter.extractBlueFlags(inc.flags));
                   }
-                  if (inc && inc.tags) {
-                    const extraTags = inc.tags.map((t: any) => t.label);
-                    ev.flags = [...new Set([...(ev.flags || []), ...extraTags])];
-                  }
+                  if (inc && inc.tags) { IncidencePdfFormatter.appendTagsToEventFlags(inc.tags, ev); }
                 }
 
               const customFlags: string[] = [];
@@ -1462,51 +1337,9 @@ export class DashboardPdfService {
                 if (helpers.getDynamicIncidenceForOrder) {
                   const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
                   if (inc && inc.flags) {
-                    inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
-                      const txt = (flag.plainText || flag.html.replace(/<[^>]*>/g, '')).replace(/\n/g, ' ').trim();
-                      const colonIndex = txt.indexOf(':');
-                      const linkProps = flag.href ? { link: flag.href, decoration: 'underline' } : {};
-                      
-                      const buildTextNodes = (contentStr: string, isValue: boolean) => {
-                        const baseColor = isValue ? '#334155' : '#1d4ed8';
-                        const baseBold = !isValue;
-                        const finalLinkProps = isValue ? linkProps : (flag.href ? { link: flag.href, decoration: 'underline' } : {});
-                        
-                        if (flag.retornoHref && flag.retornoStr && contentStr.endsWith(flag.retornoStr)) {
-                          const firstPart = contentStr.substring(0, contentStr.length - flag.retornoStr.length);
-                          return [
-                            { text: firstPart, color: baseColor, bold: baseBold, ...finalLinkProps },
-                            { text: ' | ', color: '#334155', bold: false },
-                            { text: flag.retornoStr.replace(' | ', ''), color: '#334155', bold: false, link: flag.retornoHref, decoration: 'underline' }
-                          ];
-                        }
-                        return [ { text: contentStr, color: baseColor, bold: baseBold, ...finalLinkProps } ];
-                      };
-
-                      if (colonIndex > -1) {
-                        const prefix = txt.substring(0, colonIndex + 1);
-                        const rest = txt.substring(colonIndex + 1);
-                        orderItems.push({
-                          text: [
-                            { text: prefix, color: '#1d4ed8', bold: true },
-                            ...buildTextNodes(rest, true)
-                          ],
-                          margin: [8, 1, 0, 1],
-                          fontSize: 6.5
-                        });
-                      } else {
-                        orderItems.push({
-                          text: buildTextNodes(txt, false),
-                          margin: [8, 1, 0, 1],
-                          fontSize: 6.5
-                        });
-                      }
-                    });
+                    orderItems.push(...IncidencePdfFormatter.extractBlueFlags(inc.flags));
                   }
-                  if (inc && inc.tags) {
-                    const extraTags = inc.tags.map((t: any) => t.label);
-                    ev.flags = [...new Set([...(ev.flags || []), ...extraTags])];
-                  }
+                  if (inc && inc.tags) { IncidencePdfFormatter.appendTagsToEventFlags(inc.tags, ev); }
                 }
 
               const orderBlock: any[] = [orderHead(ev.nr_ordem, ev.flags ?? [], (f) => helpers.tmeImpFlagLabel(f), undefined)];
@@ -1557,51 +1390,9 @@ export class DashboardPdfService {
               if (helpers.getDynamicIncidenceForOrder) {
                 const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
                 if (inc && inc.flags) {
-                  inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
-                    const txt = (flag.plainText || flag.html.replace(/<[^>]*>/g, '')).replace(/\n/g, ' ').trim();
-                    const colonIndex = txt.indexOf(':');
-                    const linkProps = flag.href ? { link: flag.href, decoration: 'underline' } : {};
-                    
-                    const buildTextNodes = (contentStr: string, isValue: boolean) => {
-                      const baseColor = isValue ? '#334155' : '#1d4ed8';
-                      const baseBold = !isValue;
-                      const finalLinkProps = isValue ? linkProps : (flag.href ? { link: flag.href, decoration: 'underline' } : {});
-                      
-                      if (flag.retornoHref && flag.retornoStr && contentStr.endsWith(flag.retornoStr)) {
-                        const firstPart = contentStr.substring(0, contentStr.length - flag.retornoStr.length);
-                        return [
-                          { text: firstPart, color: baseColor, bold: baseBold, ...finalLinkProps },
-                          { text: ' | ', color: '#334155', bold: false },
-                          { text: flag.retornoStr.replace(' | ', ''), color: '#334155', bold: false, link: flag.retornoHref, decoration: 'underline' }
-                        ];
-                      }
-                      return [ { text: contentStr, color: baseColor, bold: baseBold, ...finalLinkProps } ];
-                    };
-
-                    if (colonIndex > -1) {
-                      const prefix = txt.substring(0, colonIndex + 1);
-                      const rest = txt.substring(colonIndex + 1);
-                      dayItems.push({
-                        text: [
-                          { text: prefix, color: '#1d4ed8', bold: true },
-                          ...buildTextNodes(rest, true)
-                        ],
-                        margin: [8, 1, 0, 1],
-                        fontSize: 6.5
-                      });
-                    } else {
-                      dayItems.push({
-                        text: buildTextNodes(txt, false),
-                        margin: [8, 1, 0, 1],
-                        fontSize: 6.5
-                      });
-                    }
-                  });
+                  dayItems.push(...IncidencePdfFormatter.extractBlueFlags(inc.flags));
                 }
-                if (inc && inc.tags) {
-                  const extraTags = inc.tags.map((t: any) => t.label);
-                  ev.flags = [...new Set([...(ev.flags || []), ...extraTags])];
-                }
+                if (inc && inc.tags) { IncidencePdfFormatter.appendTagsToEventFlags(inc.tags, ev); }
               }
 
             teamItems.push({ stack: [
@@ -1677,51 +1468,9 @@ export class DashboardPdfService {
               if (helpers.getDynamicIncidenceForOrder) {
                 const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
                 if (inc && inc.flags) {
-                  inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
-                    const txt = (flag.plainText || flag.html.replace(/<[^>]*>/g, '')).replace(/\n/g, ' ').trim();
-                    const colonIndex = txt.indexOf(':');
-                    const linkProps = flag.href ? { link: flag.href, decoration: 'underline' } : {};
-                    
-                    const buildTextNodes = (contentStr: string, isValue: boolean) => {
-                      const baseColor = isValue ? '#334155' : '#1d4ed8';
-                      const baseBold = !isValue;
-                      const finalLinkProps = isValue ? linkProps : (flag.href ? { link: flag.href, decoration: 'underline' } : {});
-                      
-                      if (flag.retornoHref && flag.retornoStr && contentStr.endsWith(flag.retornoStr)) {
-                        const firstPart = contentStr.substring(0, contentStr.length - flag.retornoStr.length);
-                        return [
-                          { text: firstPart, color: baseColor, bold: baseBold, ...finalLinkProps },
-                          { text: ' | ', color: '#334155', bold: false },
-                          { text: flag.retornoStr.replace(' | ', ''), color: '#334155', bold: false, link: flag.retornoHref, decoration: 'underline' }
-                        ];
-                      }
-                      return [ { text: contentStr, color: baseColor, bold: baseBold, ...finalLinkProps } ];
-                    };
-
-                    if (colonIndex > -1) {
-                      const prefix = txt.substring(0, colonIndex + 1);
-                      const rest = txt.substring(colonIndex + 1);
-                      dayItems.push({
-                        text: [
-                          { text: prefix, color: '#1d4ed8', bold: true },
-                          ...buildTextNodes(rest, true)
-                        ],
-                        margin: [8, 1, 0, 1],
-                        fontSize: 6.5
-                      });
-                    } else {
-                      dayItems.push({
-                        text: buildTextNodes(txt, false),
-                        margin: [8, 1, 0, 1],
-                        fontSize: 6.5
-                      });
-                    }
-                  });
+                  dayItems.push(...IncidencePdfFormatter.extractBlueFlags(inc.flags));
                 }
-                if (inc && inc.tags) {
-                  const extraTags = inc.tags.map((t: any) => t.label);
-                  ev.flags = [...new Set([...(ev.flags || []), ...extraTags])];
-                }
+                if (inc && inc.tags) { IncidencePdfFormatter.appendTagsToEventFlags(inc.tags, ev); }
               }
 
             teamItems.push({ stack: [
@@ -1782,51 +1531,9 @@ export class DashboardPdfService {
               if (helpers.getDynamicIncidenceForOrder) {
                 const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
                 if (inc && inc.flags) {
-                  inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
-                    const txt = (flag.plainText || flag.html.replace(/<[^>]*>/g, '')).replace(/\n/g, ' ').trim();
-                    const colonIndex = txt.indexOf(':');
-                    const linkProps = flag.href ? { link: flag.href, decoration: 'underline' } : {};
-                    
-                    const buildTextNodes = (contentStr: string, isValue: boolean) => {
-                      const baseColor = isValue ? '#334155' : '#1d4ed8';
-                      const baseBold = !isValue;
-                      const finalLinkProps = isValue ? linkProps : (flag.href ? { link: flag.href, decoration: 'underline' } : {});
-                      
-                      if (flag.retornoHref && flag.retornoStr && contentStr.endsWith(flag.retornoStr)) {
-                        const firstPart = contentStr.substring(0, contentStr.length - flag.retornoStr.length);
-                        return [
-                          { text: firstPart, color: baseColor, bold: baseBold, ...finalLinkProps },
-                          { text: ' | ', color: '#334155', bold: false },
-                          { text: flag.retornoStr.replace(' | ', ''), color: '#334155', bold: false, link: flag.retornoHref, decoration: 'underline' }
-                        ];
-                      }
-                      return [ { text: contentStr, color: baseColor, bold: baseBold, ...finalLinkProps } ];
-                    };
-
-                    if (colonIndex > -1) {
-                      const prefix = txt.substring(0, colonIndex + 1);
-                      const rest = txt.substring(colonIndex + 1);
-                      dayItems.push({
-                        text: [
-                          { text: prefix, color: '#1d4ed8', bold: true },
-                          ...buildTextNodes(rest, true)
-                        ],
-                        margin: [8, 1, 0, 1],
-                        fontSize: 6.5
-                      });
-                    } else {
-                      dayItems.push({
-                        text: buildTextNodes(txt, false),
-                        margin: [8, 1, 0, 1],
-                        fontSize: 6.5
-                      });
-                    }
-                  });
+                  dayItems.push(...IncidencePdfFormatter.extractBlueFlags(inc.flags));
                 }
-                if (inc && inc.tags) {
-                  const extraTags = inc.tags.map((t: any) => t.label);
-                  ev.flags = [...new Set([...(ev.flags || []), ...extraTags])];
-                }
+                if (inc && inc.tags) { IncidencePdfFormatter.appendTagsToEventFlags(inc.tags, ev); }
               }
 
             teamItems.push({ stack: [
