@@ -9151,25 +9151,43 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     }
 
-    if (kpiKey === 'Retorno Base') {
+    const fimJornada = ev.retorno_excedente_details || (ev.sem_os_details && Array.isArray(ev.sem_os_details) ? ev.sem_os_details.find((s: any) => s.type === 'fim_jornada') : null);
+    const isLastOs = kpiKey === 'Retorno Base' || !!fimJornada || !!ev.log_off_corrigido || !!ev.log_off;
+    let retornoStr = '';
+    let retornoHref = '';
+
+    if (isLastOs) {
       if (inc.baseLat != null && inc.baseLon != null && inc.lat != null && inc.lon != null && canEstimateBase(inc)) {
         const mins = getMins(inc.lat, inc.lon, inc.baseLat, inc.baseLon);
-        distStr += ` | Retorno estimando (OS Atual): ${mins} min`;
-        newHref = `https://www.google.com/maps/dir/?api=1&origin=${inc.lat},${inc.lon}&destination=${inc.baseLat},${inc.baseLon}`;
+        retornoStr = ` | Retorno estimado: ${mins} min`;
+        retornoHref = `https://www.google.com/maps/dir/?api=1&origin=${inc.lat},${inc.lon}&destination=${inc.baseLat},${inc.baseLon}`;
       }
     }
 
-    if (distStr) {
-      locFlag.plainText = `${locFlag.plainText}${distStr}`;
-      if (locFlag.html && locFlag.html.includes('</a>')) {
-        let updatedHtml = locFlag.html;
-        if (newHref) {
-           updatedHtml = updatedHtml.replace(/href="[^"]+"/, `href="${newHref}"`);
+    if (distStr || retornoStr) {
+      locFlag.plainText = `${locFlag.plainText}${distStr}${retornoStr}`;
+      
+      let updatedHtml = locFlag.html;
+      if (distStr) {
+        if (updatedHtml.includes('</a>')) {
+          if (newHref) {
+             updatedHtml = updatedHtml.replace(/href="[^"]+"/, `href="${newHref}"`);
+          }
+          updatedHtml = updatedHtml.replace('</a>', `${distStr}</a>`);
+        } else {
+          updatedHtml = `${updatedHtml}${distStr}`;
         }
-        locFlag.html = updatedHtml.replace('</a>', `${distStr}</a>`);
-      } else {
-        locFlag.html = `${locFlag.html}${distStr}`;
       }
+      
+      if (retornoStr) {
+        if (retornoHref) {
+          updatedHtml += ` | <a href="${retornoHref}" target="_blank">${retornoStr.replace(' | ', '')}</a>`;
+        } else {
+          updatedHtml += retornoStr;
+        }
+      }
+      
+      locFlag.html = updatedHtml;
       clone.flags[locFlagIndex] = locFlag;
     }
 
