@@ -867,13 +867,19 @@ export class DashboardPdfService {
 
       const orderHead = (nr_ordem: string, flags: string[], labelFn: (f: string) => string, extra?: string, isPrimeiraOs?: boolean, customFlags: string[] = []): any => {
         const allFlags = [...(flags || []).map(labelFn), ...customFlags];
+        const tags = allFlags.filter(f => f === '5RO' || f.startsWith('NT:'));
+        const regFlags = allFlags.filter(f => f !== '5RO' && !f.startsWith('NT:'));
         return {
           text: [
             { text: `OS ${nr_ordem}${extra ? ' | ' + extra : ''}`, bold: true, fontSize: 7.5, color: DARK },
             { text: '    ', fontSize: 7 },
             ...(isPrimeiraOs ? [{ text: '1\u00aa OS', bold: true, color: BLUE, fontSize: 6.5 }] : []),
-            ...allFlags.flatMap((f, i) => [
+            ...tags.flatMap((t, i) => [
               ...(i > 0 || isPrimeiraOs ? [{ text: '  |  ', color: MUTED, fontSize: 6.5 }] : []),
+              { text: t, bold: true, color: BLUE, fontSize: 6.5 }
+            ]),
+            ...regFlags.flatMap((f, i) => [
+              ...(i > 0 || isPrimeiraOs || tags.length > 0 ? [{ text: '  |  ', color: MUTED, fontSize: 6.5 }] : []),
               { text: f, bold: true, color: RED, fontSize: 6.5 },
             ]),
           ],
@@ -1070,13 +1076,49 @@ export class DashboardPdfService {
                   const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
                   if (inc && inc.flags) {
                     inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
-                      const txt = flag.plainText || flag.html.replace(/<[^>]*>/g, '');
-                      orderItems.push({
-                        text: [ { text: txt.trim(), color: '#1d4ed8', bold: true } ],
-                        margin: [8, 1, 0, 1],
-                        fontSize: 6.5
-                      });
+                      const txt = (flag.plainText || flag.html.replace(/<[^>]*>/g, '')).replace(/\n/g, ' ').trim();
+                      const colonIndex = txt.indexOf(':');
+                      const linkProps = flag.href ? { link: flag.href, decoration: 'underline' } : {};
+                      
+                      const buildTextNodes = (contentStr: string, isValue: boolean) => {
+                        const baseColor = isValue ? '#334155' : '#1d4ed8';
+                        const baseBold = !isValue;
+                        const finalLinkProps = isValue ? linkProps : (flag.href ? { link: flag.href, decoration: 'underline' } : {});
+                        
+                        if (flag.retornoHref && flag.retornoStr && contentStr.endsWith(flag.retornoStr)) {
+                          const firstPart = contentStr.substring(0, contentStr.length - flag.retornoStr.length);
+                          return [
+                            { text: firstPart, color: baseColor, bold: baseBold, ...finalLinkProps },
+                            { text: ' | ', color: '#334155', bold: false },
+                            { text: flag.retornoStr.replace(' | ', ''), color: '#334155', bold: false, link: flag.retornoHref, decoration: 'underline' }
+                          ];
+                        }
+                        return [ { text: contentStr, color: baseColor, bold: baseBold, ...finalLinkProps } ];
+                      };
+
+                      if (colonIndex > -1) {
+                        const prefix = txt.substring(0, colonIndex + 1);
+                        const rest = txt.substring(colonIndex + 1);
+                        orderItems.push({
+                          text: [
+                            { text: prefix, color: '#1d4ed8', bold: true },
+                            ...buildTextNodes(rest, true)
+                          ],
+                          margin: [8, 1, 0, 1],
+                          fontSize: 6.5
+                        });
+                      } else {
+                        orderItems.push({
+                          text: buildTextNodes(txt, false),
+                          margin: [8, 1, 0, 1],
+                          fontSize: 6.5
+                        });
+                      }
                     });
+                  }
+                  if (inc && inc.tags) {
+                    const extraTags = inc.tags.map((t: any) => t.label);
+                    ev.flags = [...new Set([...(ev.flags || []), ...extraTags])];
                   }
                 }
 
@@ -1167,13 +1209,49 @@ export class DashboardPdfService {
                   const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
                   if (inc && inc.flags) {
                     inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
-                      const txt = flag.plainText || flag.html.replace(/<[^>]*>/g, '');
-                      orderItems.push({
-                        text: [ { text: txt.trim(), color: '#1d4ed8', bold: true } ],
-                        margin: [8, 1, 0, 1],
-                        fontSize: 6.5
-                      });
+                      const txt = (flag.plainText || flag.html.replace(/<[^>]*>/g, '')).replace(/\n/g, ' ').trim();
+                      const colonIndex = txt.indexOf(':');
+                      const linkProps = flag.href ? { link: flag.href, decoration: 'underline' } : {};
+                      
+                      const buildTextNodes = (contentStr: string, isValue: boolean) => {
+                        const baseColor = isValue ? '#334155' : '#1d4ed8';
+                        const baseBold = !isValue;
+                        const finalLinkProps = isValue ? linkProps : (flag.href ? { link: flag.href, decoration: 'underline' } : {});
+                        
+                        if (flag.retornoHref && flag.retornoStr && contentStr.endsWith(flag.retornoStr)) {
+                          const firstPart = contentStr.substring(0, contentStr.length - flag.retornoStr.length);
+                          return [
+                            { text: firstPart, color: baseColor, bold: baseBold, ...finalLinkProps },
+                            { text: ' | ', color: '#334155', bold: false },
+                            { text: flag.retornoStr.replace(' | ', ''), color: '#334155', bold: false, link: flag.retornoHref, decoration: 'underline' }
+                          ];
+                        }
+                        return [ { text: contentStr, color: baseColor, bold: baseBold, ...finalLinkProps } ];
+                      };
+
+                      if (colonIndex > -1) {
+                        const prefix = txt.substring(0, colonIndex + 1);
+                        const rest = txt.substring(colonIndex + 1);
+                        orderItems.push({
+                          text: [
+                            { text: prefix, color: '#1d4ed8', bold: true },
+                            ...buildTextNodes(rest, true)
+                          ],
+                          margin: [8, 1, 0, 1],
+                          fontSize: 6.5
+                        });
+                      } else {
+                        orderItems.push({
+                          text: buildTextNodes(txt, false),
+                          margin: [8, 1, 0, 1],
+                          fontSize: 6.5
+                        });
+                      }
                     });
+                  }
+                  if (inc && inc.tags) {
+                    const extraTags = inc.tags.map((t: any) => t.label);
+                    ev.flags = [...new Set([...(ev.flags || []), ...extraTags])];
                   }
                 }
 
@@ -1267,13 +1345,49 @@ export class DashboardPdfService {
                   const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
                   if (inc && inc.flags) {
                     inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
-                      const txt = flag.plainText || flag.html.replace(/<[^>]*>/g, '');
-                      orderItems.push({
-                        text: [ { text: txt.trim(), color: '#1d4ed8', bold: true } ],
-                        margin: [8, 1, 0, 1],
-                        fontSize: 6.5
-                      });
+                      const txt = (flag.plainText || flag.html.replace(/<[^>]*>/g, '')).replace(/\n/g, ' ').trim();
+                      const colonIndex = txt.indexOf(':');
+                      const linkProps = flag.href ? { link: flag.href, decoration: 'underline' } : {};
+                      
+                      const buildTextNodes = (contentStr: string, isValue: boolean) => {
+                        const baseColor = isValue ? '#334155' : '#1d4ed8';
+                        const baseBold = !isValue;
+                        const finalLinkProps = isValue ? linkProps : (flag.href ? { link: flag.href, decoration: 'underline' } : {});
+                        
+                        if (flag.retornoHref && flag.retornoStr && contentStr.endsWith(flag.retornoStr)) {
+                          const firstPart = contentStr.substring(0, contentStr.length - flag.retornoStr.length);
+                          return [
+                            { text: firstPart, color: baseColor, bold: baseBold, ...finalLinkProps },
+                            { text: ' | ', color: '#334155', bold: false },
+                            { text: flag.retornoStr.replace(' | ', ''), color: '#334155', bold: false, link: flag.retornoHref, decoration: 'underline' }
+                          ];
+                        }
+                        return [ { text: contentStr, color: baseColor, bold: baseBold, ...finalLinkProps } ];
+                      };
+
+                      if (colonIndex > -1) {
+                        const prefix = txt.substring(0, colonIndex + 1);
+                        const rest = txt.substring(colonIndex + 1);
+                        orderItems.push({
+                          text: [
+                            { text: prefix, color: '#1d4ed8', bold: true },
+                            ...buildTextNodes(rest, true)
+                          ],
+                          margin: [8, 1, 0, 1],
+                          fontSize: 6.5
+                        });
+                      } else {
+                        orderItems.push({
+                          text: buildTextNodes(txt, false),
+                          margin: [8, 1, 0, 1],
+                          fontSize: 6.5
+                        });
+                      }
                     });
+                  }
+                  if (inc && inc.tags) {
+                    const extraTags = inc.tags.map((t: any) => t.label);
+                    ev.flags = [...new Set([...(ev.flags || []), ...extraTags])];
                   }
                 }
 
@@ -1349,13 +1463,49 @@ export class DashboardPdfService {
                   const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
                   if (inc && inc.flags) {
                     inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
-                      const txt = flag.plainText || flag.html.replace(/<[^>]*>/g, '');
-                      orderItems.push({
-                        text: [ { text: txt.trim(), color: '#1d4ed8', bold: true } ],
-                        margin: [8, 1, 0, 1],
-                        fontSize: 6.5
-                      });
+                      const txt = (flag.plainText || flag.html.replace(/<[^>]*>/g, '')).replace(/\n/g, ' ').trim();
+                      const colonIndex = txt.indexOf(':');
+                      const linkProps = flag.href ? { link: flag.href, decoration: 'underline' } : {};
+                      
+                      const buildTextNodes = (contentStr: string, isValue: boolean) => {
+                        const baseColor = isValue ? '#334155' : '#1d4ed8';
+                        const baseBold = !isValue;
+                        const finalLinkProps = isValue ? linkProps : (flag.href ? { link: flag.href, decoration: 'underline' } : {});
+                        
+                        if (flag.retornoHref && flag.retornoStr && contentStr.endsWith(flag.retornoStr)) {
+                          const firstPart = contentStr.substring(0, contentStr.length - flag.retornoStr.length);
+                          return [
+                            { text: firstPart, color: baseColor, bold: baseBold, ...finalLinkProps },
+                            { text: ' | ', color: '#334155', bold: false },
+                            { text: flag.retornoStr.replace(' | ', ''), color: '#334155', bold: false, link: flag.retornoHref, decoration: 'underline' }
+                          ];
+                        }
+                        return [ { text: contentStr, color: baseColor, bold: baseBold, ...finalLinkProps } ];
+                      };
+
+                      if (colonIndex > -1) {
+                        const prefix = txt.substring(0, colonIndex + 1);
+                        const rest = txt.substring(colonIndex + 1);
+                        orderItems.push({
+                          text: [
+                            { text: prefix, color: '#1d4ed8', bold: true },
+                            ...buildTextNodes(rest, true)
+                          ],
+                          margin: [8, 1, 0, 1],
+                          fontSize: 6.5
+                        });
+                      } else {
+                        orderItems.push({
+                          text: buildTextNodes(txt, false),
+                          margin: [8, 1, 0, 1],
+                          fontSize: 6.5
+                        });
+                      }
                     });
+                  }
+                  if (inc && inc.tags) {
+                    const extraTags = inc.tags.map((t: any) => t.label);
+                    ev.flags = [...new Set([...(ev.flags || []), ...extraTags])];
                   }
                 }
 
@@ -1408,13 +1558,49 @@ export class DashboardPdfService {
                 const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
                 if (inc && inc.flags) {
                   inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
-                    const txt = flag.plainText || flag.html.replace(/<[^>]*>/g, '');
-                    dayItems.push({
-                      text: [ { text: txt.trim(), color: '#1d4ed8', bold: true } ],
-                      margin: [8, 1, 0, 1],
-                      fontSize: 6.5
-                    });
+                    const txt = (flag.plainText || flag.html.replace(/<[^>]*>/g, '')).replace(/\n/g, ' ').trim();
+                    const colonIndex = txt.indexOf(':');
+                    const linkProps = flag.href ? { link: flag.href, decoration: 'underline' } : {};
+                    
+                    const buildTextNodes = (contentStr: string, isValue: boolean) => {
+                      const baseColor = isValue ? '#334155' : '#1d4ed8';
+                      const baseBold = !isValue;
+                      const finalLinkProps = isValue ? linkProps : (flag.href ? { link: flag.href, decoration: 'underline' } : {});
+                      
+                      if (flag.retornoHref && flag.retornoStr && contentStr.endsWith(flag.retornoStr)) {
+                        const firstPart = contentStr.substring(0, contentStr.length - flag.retornoStr.length);
+                        return [
+                          { text: firstPart, color: baseColor, bold: baseBold, ...finalLinkProps },
+                          { text: ' | ', color: '#334155', bold: false },
+                          { text: flag.retornoStr.replace(' | ', ''), color: '#334155', bold: false, link: flag.retornoHref, decoration: 'underline' }
+                        ];
+                      }
+                      return [ { text: contentStr, color: baseColor, bold: baseBold, ...finalLinkProps } ];
+                    };
+
+                    if (colonIndex > -1) {
+                      const prefix = txt.substring(0, colonIndex + 1);
+                      const rest = txt.substring(colonIndex + 1);
+                      dayItems.push({
+                        text: [
+                          { text: prefix, color: '#1d4ed8', bold: true },
+                          ...buildTextNodes(rest, true)
+                        ],
+                        margin: [8, 1, 0, 1],
+                        fontSize: 6.5
+                      });
+                    } else {
+                      dayItems.push({
+                        text: buildTextNodes(txt, false),
+                        margin: [8, 1, 0, 1],
+                        fontSize: 6.5
+                      });
+                    }
                   });
+                }
+                if (inc && inc.tags) {
+                  const extraTags = inc.tags.map((t: any) => t.label);
+                  ev.flags = [...new Set([...(ev.flags || []), ...extraTags])];
                 }
               }
 
@@ -1423,10 +1609,21 @@ export class DashboardPdfService {
                 text: [
                   { text: ev.date_ref || '\u2014', bold: true, fontSize: 7.5, color: DARK },
                   { text: '    ' },
-                  ...((ev.flags ?? []).flatMap((f: string, i: number) => [
-                    ...(i > 0 ? [{ text: '  |  ', color: MUTED, fontSize: 6.5 }] : []),
-                    { text: helpers.loginFlagLabel(f), bold: true, color: RED, fontSize: 6.5 },
-                  ])),
+                  ...(() => {
+                    const mapped = (ev.flags ?? []).map((f: string) => helpers.loginFlagLabel(f));
+                    const tags = mapped.filter((f: string) => f === '5RO' || f.startsWith('NT:'));
+                    const regFlags = mapped.filter((f: string) => f !== '5RO' && !f.startsWith('NT:'));
+                    return [
+                      ...tags.flatMap((t: string, i: number) => [
+                        ...(i > 0 ? [{ text: '  |  ', color: MUTED, fontSize: 6.5 }] : []),
+                        { text: t, bold: true, color: BLUE, fontSize: 6.5 }
+                      ]),
+                      ...regFlags.flatMap((f: string, i: number) => [
+                        ...(i > 0 || tags.length > 0 ? [{ text: '  |  ', color: MUTED, fontSize: 6.5 }] : []),
+                        { text: f, bold: true, color: RED, fontSize: 6.5 }
+                      ])
+                    ];
+                  })(),
                 ],
                 margin: [0, 6, 0, 2],
               },
@@ -1481,13 +1678,49 @@ export class DashboardPdfService {
                 const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
                 if (inc && inc.flags) {
                   inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
-                    const txt = flag.plainText || flag.html.replace(/<[^>]*>/g, '');
-                    dayItems.push({
-                      text: [ { text: txt.trim(), color: '#1d4ed8', bold: true } ],
-                      margin: [8, 1, 0, 1],
-                      fontSize: 6.5
-                    });
+                    const txt = (flag.plainText || flag.html.replace(/<[^>]*>/g, '')).replace(/\n/g, ' ').trim();
+                    const colonIndex = txt.indexOf(':');
+                    const linkProps = flag.href ? { link: flag.href, decoration: 'underline' } : {};
+                    
+                    const buildTextNodes = (contentStr: string, isValue: boolean) => {
+                      const baseColor = isValue ? '#334155' : '#1d4ed8';
+                      const baseBold = !isValue;
+                      const finalLinkProps = isValue ? linkProps : (flag.href ? { link: flag.href, decoration: 'underline' } : {});
+                      
+                      if (flag.retornoHref && flag.retornoStr && contentStr.endsWith(flag.retornoStr)) {
+                        const firstPart = contentStr.substring(0, contentStr.length - flag.retornoStr.length);
+                        return [
+                          { text: firstPart, color: baseColor, bold: baseBold, ...finalLinkProps },
+                          { text: ' | ', color: '#334155', bold: false },
+                          { text: flag.retornoStr.replace(' | ', ''), color: '#334155', bold: false, link: flag.retornoHref, decoration: 'underline' }
+                        ];
+                      }
+                      return [ { text: contentStr, color: baseColor, bold: baseBold, ...finalLinkProps } ];
+                    };
+
+                    if (colonIndex > -1) {
+                      const prefix = txt.substring(0, colonIndex + 1);
+                      const rest = txt.substring(colonIndex + 1);
+                      dayItems.push({
+                        text: [
+                          { text: prefix, color: '#1d4ed8', bold: true },
+                          ...buildTextNodes(rest, true)
+                        ],
+                        margin: [8, 1, 0, 1],
+                        fontSize: 6.5
+                      });
+                    } else {
+                      dayItems.push({
+                        text: buildTextNodes(txt, false),
+                        margin: [8, 1, 0, 1],
+                        fontSize: 6.5
+                      });
+                    }
                   });
+                }
+                if (inc && inc.tags) {
+                  const extraTags = inc.tags.map((t: any) => t.label);
+                  ev.flags = [...new Set([...(ev.flags || []), ...extraTags])];
                 }
               }
 
@@ -1550,13 +1783,49 @@ export class DashboardPdfService {
                 const inc = helpers.getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev);
                 if (inc && inc.flags) {
                   inc.flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
-                    const txt = flag.plainText || flag.html.replace(/<[^>]*>/g, '');
-                    dayItems.push({
-                      text: [ { text: txt.trim(), color: '#1d4ed8', bold: true } ],
-                      margin: [8, 1, 0, 1],
-                      fontSize: 6.5
-                    });
+                    const txt = (flag.plainText || flag.html.replace(/<[^>]*>/g, '')).replace(/\n/g, ' ').trim();
+                    const colonIndex = txt.indexOf(':');
+                    const linkProps = flag.href ? { link: flag.href, decoration: 'underline' } : {};
+                    
+                    const buildTextNodes = (contentStr: string, isValue: boolean) => {
+                      const baseColor = isValue ? '#334155' : '#1d4ed8';
+                      const baseBold = !isValue;
+                      const finalLinkProps = isValue ? linkProps : (flag.href ? { link: flag.href, decoration: 'underline' } : {});
+                      
+                      if (flag.retornoHref && flag.retornoStr && contentStr.endsWith(flag.retornoStr)) {
+                        const firstPart = contentStr.substring(0, contentStr.length - flag.retornoStr.length);
+                        return [
+                          { text: firstPart, color: baseColor, bold: baseBold, ...finalLinkProps },
+                          { text: ' | ', color: '#334155', bold: false },
+                          { text: flag.retornoStr.replace(' | ', ''), color: '#334155', bold: false, link: flag.retornoHref, decoration: 'underline' }
+                        ];
+                      }
+                      return [ { text: contentStr, color: baseColor, bold: baseBold, ...finalLinkProps } ];
+                    };
+
+                    if (colonIndex > -1) {
+                      const prefix = txt.substring(0, colonIndex + 1);
+                      const rest = txt.substring(colonIndex + 1);
+                      dayItems.push({
+                        text: [
+                          { text: prefix, color: '#1d4ed8', bold: true },
+                          ...buildTextNodes(rest, true)
+                        ],
+                        margin: [8, 1, 0, 1],
+                        fontSize: 6.5
+                      });
+                    } else {
+                      dayItems.push({
+                        text: buildTextNodes(txt, false),
+                        margin: [8, 1, 0, 1],
+                        fontSize: 6.5
+                      });
+                    }
                   });
+                }
+                if (inc && inc.tags) {
+                  const extraTags = inc.tags.map((t: any) => t.label);
+                  ev.flags = [...new Set([...(ev.flags || []), ...extraTags])];
                 }
               }
 

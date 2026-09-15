@@ -8737,7 +8737,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
         const cumpre5RO = payload.cumpreRegrasOuro || payload.cumpre_regras_ouro;
         if (cumpre5RO === true || cumpre5RO === 'true' || cumpre5RO === 'SIM' || (typeof cumpre5RO === 'string' && cumpre5RO.toLowerCase() === 'sim')) {
-          tags.push({ type: 'regras_ouro', label: '5RO', color: 'orange' });
+          tags.push({ type: 'regras_ouro', label: '5RO', color: 'blue' });
         }
 
         const flags = [];
@@ -9215,6 +9215,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         if (updatedHtml.includes('</a>')) {
           if (newHref) {
              updatedHtml = updatedHtml.replace(/href="[^"]+"/, `href="${newHref}"`);
+             locFlag.href = newHref;
           }
           updatedHtml = updatedHtml.replace('</a>', `${distStr}</a>`);
         } else {
@@ -9224,6 +9225,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       
       if (retornoStr) {
         if (retornoHref) {
+          (locFlag as any).retornoHref = retornoHref;
+          (locFlag as any).retornoStr = retornoStr;
           updatedHtml += ` | <a href="${retornoHref}" target="_blank">${retornoStr.replace(' | ', '')}</a>`;
         } else {
           updatedHtml += retornoStr;
