@@ -8815,10 +8815,13 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
       this.enrichedIncidenceData.set(dataMap);
 
-      // Popular a fila de geocoding com todas as O.S. que têm coordenadas nativas
+      // Popular a fila de geocoding com todas as O.S. que têm coordenadas nativas ou municipio/conjunto
       this.geocodingQueue = [];
       for (const [key, inc] of dataMap.entries()) {
-        if (inc.lat != null && inc.lon != null) {
+        const hasNativeCoords = inc.lat != null && inc.lon != null;
+        const hasMunicipio = !!inc.raw.municipio;
+        const hasConjunto = !!inc.raw.conjunto;
+        if (hasNativeCoords || hasMunicipio || hasConjunto) {
           this.geocodingQueue.push(key);
         }
       }
@@ -8854,65 +8857,128 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       if (!incidenceKey) return;
 
       const dataMap = this.enrichedIncidenceData();
-      const inc = dataMap.get(incidenceKey);
-      if (!inc || !inc.lat || !inc.lon) return;
+      let inc = dataMap.get(incidenceKey);
+      if (!inc) return;
 
-      const lat = inc.lat;
-      const lon = inc.lon;
-      const cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)}`;
+      const hasCoords = inc.lat != null && inc.lon != null;
+      const municipioStr = inc.raw.municipio;
 
-      let geoData = this.nominatimCacheMap.get(cacheKey);
+      if (!hasCoords && !municipioStr) return;
 
-      if (!geoData) {
-        try {
-          // console.log('[Dashboard] Geocoding', lat, lon);
-          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14`, {
-            headers: {
-              'Accept-Language': 'pt-BR',
-              'User-Agent': 'Workline-App/2.2.1'
+      let geoData: any = null;
+
+      if (hasCoords) {
+        const lat = inc.lat!;
+        const lon = inc.lon!;
+        const cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)}`;
+        geoData = this.nominatimCacheMap.get(cacheKey);
+
+        if (!geoData) {
+          try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14`, {
+              headers: {
+                'Accept-Language': 'pt-BR',
+                'User-Agent': 'Workline-App/2.2.1'
+              }
+            });
+            const result = await response.json();
+            if (result && result.address) {
+              const addr = result.address;
+              const bairroDistrito = addr.suburb || addr.city_district || addr.village || addr.hamlet || addr.town || addr.municipality || '';
+              const city = addr.city || addr.town || addr.municipality || '';
+              geoData = { bairro: bairroDistrito, municipio: city, isEstimated: false };
+              this.nominatimCacheMap.set(cacheKey, geoData);
             }
-          });
-          const result = await response.json();
-
-          if (result && result.address) {
-            const addr = result.address;
-            const bairroDistrito = addr.suburb || addr.city_district || addr.village || addr.hamlet || addr.town || addr.municipality || '';
-            const city = addr.city || addr.town || addr.municipality || '';
-
-            geoData = { bairro: bairroDistrito, municipio: city };
-            this.nominatimCacheMap.set(cacheKey, geoData);
+          } catch (e) {
+            console.warn('[Dashboard] Nominatim reverse geocode failed', e);
           }
-        } catch (e) {
-          console.warn('[Dashboard] Nominatim geocode failed', e);
+        }
+      } else if (municipioStr || inc.raw.conjunto) {
+        const conjuntoStr = inc.raw.conjunto;
+        const searchLocation = municipioStr || conjuntoStr;
+        const source = municipioStr ? 'Municipio' : 'Conjunto';
+        const cacheKey = `search:${searchLocation}`;
+        geoData = this.nominatimCacheMap.get(cacheKey);
+
+        if (!geoData) {
+          try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchLocation + ', Ceará, Brasil')}`, {
+              headers: {
+                'Accept-Language': 'pt-BR',
+                'User-Agent': 'Workline-App/2.2.1'
+              }
+            });
+            const result = await response.json();
+            if (result && result.length > 0) {
+              const bestMatch = result[0];
+              const lat = parseFloat(bestMatch.lat);
+              const lon = parseFloat(bestMatch.lon);
+              let locMarginKm = 10; // default 10km se não houver boundingbox
+
+              if (bestMatch.boundingbox && bestMatch.boundingbox.length === 4) {
+                // boundingbox format: [latMin, latMax, lonMin, lonMax]
+                const [latMin, latMax, lonMin, lonMax] = bestMatch.boundingbox.map(parseFloat);
+                const { calculateDistanceKm } = await import('../../core/utils/distance.util');
+                
+                // Distância do centro até a borda (usaremos do centro até o ponto máximo lat/lon)
+                locMarginKm = calculateDistanceKm(lat, lon, latMax, lonMax);
+              }
+
+              geoData = {
+                bairro: '',
+                municipio: searchLocation,
+                isEstimated: true,
+                source: source,
+                lat,
+                lon,
+                locMarginKm
+              };
+              this.nominatimCacheMap.set(cacheKey, geoData);
+            }
+          } catch (e) {
+            console.warn('[Dashboard] Nominatim direct geocode failed', e);
+          }
         }
       }
 
       if (geoData) {
-        // Update the incidence's location label
         let locLabel = geoData.bairro ? `${geoData.bairro}, ${geoData.municipio || inc.raw.municipio}` : (geoData.municipio || inc.raw.municipio || 'Localização não informada');
+        
+        let targetLat = inc.lat;
+        let targetLon = inc.lon;
+        let isEstimatedLoc = false;
+        let estimatedSource = '';
+        let locMarginKm = 0;
 
-        // Find and update the localizacao flag
+        if (geoData.isEstimated) {
+           targetLat = geoData.lat;
+           targetLon = geoData.lon;
+           isEstimatedLoc = true;
+           estimatedSource = geoData.source || 'Municipio';
+           locMarginKm = geoData.locMarginKm;
+        }
+
         const flags = [...inc.flags];
         const locIndex = flags.findIndex(f => f.type === 'localizacao');
-        if (locIndex !== -1) {
+        if (locIndex !== -1 && targetLat != null && targetLon != null) {
           const locFlag = { ...flags[locIndex] };
-
-          const prefix = 'Localização (Nativa):';
-          const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
-
-          locFlag.html = `<b><span style="color:#1d4ed8;">${prefix}</span></b> <a href="${mapsUrl}" target="_blank">${locLabel}</a>`;
+          const prefix = isEstimatedLoc ? `Localização (${estimatedSource}, Estimada):` : 'Localização (Nativa):';
+          const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${targetLat},${targetLon}`;
+          locFlag.html = `<b><span style="color:${isEstimatedLoc ? '#8b5cf6' : '#1d4ed8'};">${prefix}</span></b> <a href="${mapsUrl}" target="_blank">${locLabel}</a>`;
           locFlag.plainText = `${prefix} ${locLabel}`;
-
           flags[locIndex] = locFlag;
         }
 
         const updatedInc = {
           ...inc,
           locationLabel: locLabel,
-          flags
+          flags,
+          lat: targetLat,
+          lon: targetLon,
+          isEstimatedLoc,
+          locMarginKm
         };
 
-        // Create new map to trigger change detection
         const newMap = new Map(dataMap);
         newMap.set(incidenceKey, updatedInc);
         this.enrichedIncidenceData.set(newMap);
@@ -9202,8 +9268,34 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (isLastOs) {
       if (inc.baseLat != null && inc.baseLon != null && inc.lat != null && inc.lon != null && canEstimateBase(inc)) {
         const mins = getMins(inc.lat, inc.lon, inc.baseLat, inc.baseLon);
-        retornoStr = ` | Retorno estimado: ${mins} min`;
+        const marginKm = inc.isEstimatedLoc ? (inc.locMarginKm || 10) : 0;
+        const marginMin = Math.round((marginKm / 40) * 60);
+
+        let reliability = '';
+        // If distance is very small and we are using city center, it might be low reliability
+        const distKm = haversineDistance(inc.lat, inc.lon, inc.baseLat, inc.baseLon);
+        if (inc.isEstimatedLoc && distKm < marginKm) {
+          reliability = ' (Baixa Conf.)';
+        }
+
+        retornoStr = ` | Retorno estimado: ${mins} min${marginMin > 0 ? ` (±${marginMin}min)` : ''}${reliability}`;
         retornoHref = `https://www.google.com/maps/dir/?api=1&origin=${inc.lat},${inc.lon}&destination=${inc.baseLat},${inc.baseLon}`;
+
+        // Validação de Anomalia de Tempo (apenas para Retorno Base)
+        if (ev.retorno_base_min != null && !reliability.includes('Baixa Conf.')) {
+           const maxAcceptableTime = mins + marginMin + 15; // 15 mins extra grace period
+           if (ev.retorno_base_min > maxAcceptableTime) {
+              const alreadyHasFlag = clone.flags.some((f: any) => f.type === 'desvio_deslocamento');
+              if (!alreadyHasFlag) {
+                 clone.flags.push({
+                    type: 'desvio_deslocamento',
+                    html: `<b><span style="color:#dc2626;">Anomalia de Deslocamento:</span></b> O tempo real de Retorno Base (${ev.retorno_base_min} min) excedeu a estimativa máxima aceitável de ${maxAcceptableTime} min.`,
+                    plainText: `Anomalia de Deslocamento: O tempo real de Retorno Base (${ev.retorno_base_min} min) excedeu a estimativa de ${maxAcceptableTime} min.`,
+                    color: 'red'
+                 });
+              }
+           }
+        }
       }
     }
 

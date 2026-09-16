@@ -587,6 +587,7 @@ export interface ExternalIncidencePayload {
   qtdClientesAfetados?: number | null;
   municipio?: string | null;
   bairro?: string | null;
+  conjunto?: string | null;
 }
 
 export interface IncidenceTag {
@@ -620,6 +621,8 @@ export interface EnrichedIncidence {
   lon?: number | null;
   baseLat?: number | null;
   baseLon?: number | null;
+  isEstimatedLoc?: boolean;
+  locMarginKm?: number;
 }
 
 export interface GeneratedReport {

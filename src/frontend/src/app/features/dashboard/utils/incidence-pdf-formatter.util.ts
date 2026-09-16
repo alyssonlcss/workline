@@ -3,13 +3,14 @@ export class IncidencePdfFormatter {
     if (!flags) return [];
     
     const results: any[] = [];
-    flags.filter((f: any) => f.color === 'blue').forEach((flag: any) => {
+    flags.filter((f: any) => f.color === 'blue' || f.color === 'red').forEach((flag: any) => {
       const txt = (flag.plainText || flag.html.replace(/<[^>]*>/g, '')).replace(/\n/g, ' ').trim();
       const colonIndex = txt.indexOf(':');
       const linkProps = flag.href ? { link: flag.href, decoration: 'underline' } : {};
       
       const buildTextNodes = (contentStr: string, isValue: boolean) => {
-        const baseColor = isValue ? '#334155' : '#1d4ed8';
+        const themeColor = flag.color === 'red' ? '#dc2626' : '#1d4ed8';
+        const baseColor = isValue ? '#334155' : themeColor;
         const baseBold = !isValue;
         const finalLinkProps = isValue ? linkProps : (flag.href ? { link: flag.href, decoration: 'underline' } : {});
         
@@ -27,9 +28,10 @@ export class IncidencePdfFormatter {
       if (colonIndex > -1) {
         const prefix = txt.substring(0, colonIndex + 1);
         const rest = txt.substring(colonIndex + 1);
+        const themeColor = flag.color === 'red' ? '#dc2626' : '#1d4ed8';
         results.push({
           text: [
-            { text: prefix, color: '#1d4ed8', bold: true },
+            { text: prefix, color: themeColor, bold: true },
             ...buildTextNodes(rest, true)
           ],
           margin: [8, 1, 0, 1],

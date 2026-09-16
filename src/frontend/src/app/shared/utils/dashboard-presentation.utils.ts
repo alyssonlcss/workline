@@ -233,6 +233,7 @@ export function getDashboardAlerts(kpi: string, ev: any): DashboardAlert[] {
       addFlag('retorno_divergente', 'Divergência detectada:', true);
       addFlag('retorno_muito_alto', 'Retorno muito alto:');
       addFlag('retorno_alto', 'Retorno acima da meta:');
+      addFlag('desvio_deslocamento', 'Anomalia de Deslocamento:');
       break;
   }
 
