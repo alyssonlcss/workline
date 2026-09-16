@@ -499,6 +499,7 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
             for (const prevTitle of appliedFilters) {
               const prevFilter = filters.find((f) => f.title === prevTitle);
               if (prevFilter) {
+                this.info(`[Recuperação] Reaplicando filtro salvo: "${prevFilter.title}"...`);
                 await this.waitForSpotfireIdle(page);
                 await this.applySingleFilter(page, prevFilter);
               }
@@ -1914,7 +1915,7 @@ export class PuppeteerSpotfireAutomation implements ScannerAutomationPort {
           const scrolled = await this.scrollListItemIntoView(page, filterTitle, value);
           if (!scrolled) {
             this.logStep('list-filter', 'WARN', 'could not scroll item into view', { filterTitle, value, attempt });
-            continue;
+            break;
           }
 
           // Step 2: Wait for DOM to stabilize
