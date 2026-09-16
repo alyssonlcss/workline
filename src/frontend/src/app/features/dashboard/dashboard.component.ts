@@ -106,6 +106,29 @@ type SavedFilterState = {
   imports: [CommonModule, TocNavComponent, TimelineVisualComponent],
   template: `
     <main class="shell">
+      <!-- Incidencias Loading Banner -->
+      <div *ngIf="loadingIncidencias()" 
+           [style.top]="filtersVisible() && (!reportBarHidden() || openDropdownKey()) ? '74px' : '24px'"
+           style="position: fixed; left: 50%; transform: translateX(-50%); z-index: 9999; color: #3730a3; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 8px; pointer-events: none; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); padding: 4px 12px; border-radius: 999px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.05); transition: top 0.22s ease;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <div class="loading-spinner" style="margin: 0; width: 14px; height: 14px; border-width: 2px; border-color: rgba(55, 48, 163, 0.2); border-top-color: #3730a3; border-radius: 50%;"></div>
+          <span>Buscando base histórica de incidências...</span>
+        </div>
+      </div>
+
+      <!-- Geocoding Progress Banner -->
+      <div *ngIf="geocodingTotal() > 0 && geocodingProcessed() < geocodingTotal()" 
+           [style.top]="filtersVisible() && (!reportBarHidden() || openDropdownKey()) ? '74px' : '24px'"
+           style="position: fixed; left: 50%; transform: translateX(-50%); z-index: 9999; color: #3730a3; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 10px; pointer-events: none; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); padding: 4px 12px; border-radius: 999px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.05); transition: top 0.22s ease;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <div class="loading-spinner" style="margin: 0; width: 14px; height: 14px; border-width: 2px; border-color: rgba(55, 48, 163, 0.2); border-top-color: #3730a3; border-radius: 50%;"></div>
+          <span>Carregando dados de localização estimadas e nativas...</span>
+        </div>
+        <span style="font-feature-settings: 'tnum'; font-variant-numeric: tabular-nums; background: #eef2ff; padding: 1px 6px; border-radius: 999px; font-size: 0.8rem;">
+          {{ geocodingProcessed() }} / {{ geocodingTotal() }}
+        </span>
+      </div>
+
       <div class="report-loading" *ngIf="loading()" aria-live="polite" aria-busy="true" style="pointer-events: auto;">
         
         <!-- Loading State -->
@@ -5265,6 +5288,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   private nominatimCacheMap = new Map<string, any>();
   private activeGeocodingTimer: any = null;
   private geocodingQueue: string[] = [];
+  public geocodingTotal = signal<number>(0);
+  public geocodingProcessed = signal<number>(0);
+  public loadingIncidencias = signal<boolean>(false);
 
 
   private readonly pendingOsrmFetches = new Set<string>();
@@ -8593,7 +8619,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         }
 
         console.log(`[Dashboard] Buscando incidências da API (on-demand) para polos ${formattedPolos.join(', ')} e datas ${dataInicioStr} a ${dataFimStr}...`);
-        rawIncidencias = await firstValueFrom(this.api.getIncidencias(dataInicioStr, dataFimStr, formattedPolos));
+        this.loadingIncidencias.set(true);
+        try {
+          rawIncidencias = await firstValueFrom(this.api.getIncidencias(dataInicioStr, dataFimStr, formattedPolos));
+        } finally {
+          this.loadingIncidencias.set(false);
+        }
       }
       console.log(`[Dashboard] Carregadas ${rawIncidencias?.length || 0} incidências da API.`);
 
@@ -8827,6 +8858,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       }
 
       if (this.geocodingQueue.length > 0) {
+        this.geocodingTotal.set(this.geocodingQueue.length);
+        this.geocodingProcessed.set(0);
         this.startGeocodingQueue();
       }
 
@@ -8850,10 +8883,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       if (this.geocodingQueue.length === 0) {
         clearInterval(this.activeGeocodingTimer);
         this.activeGeocodingTimer = null;
+        this.geocodingTotal.set(0);
         return;
       }
 
       const incidenceKey = this.geocodingQueue.shift();
+      this.geocodingProcessed.update(v => v + 1);
       if (!incidenceKey) return;
 
       const dataMap = this.enrichedIncidenceData();
@@ -9204,28 +9239,33 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     let distStr = '';
 
-    const incHasNativeCoords = inc.raw?.latitude != null && inc.raw?.longitude != null && !isNaN(Number(inc.raw.latitude)) && !isNaN(Number(inc.raw.longitude)) && (Number(inc.raw.latitude) !== 0 || Number(inc.raw.longitude) !== 0);
+    const checkHasNativeCoords = (i: any) => i.raw?.latitude != null && i.raw?.longitude != null && !isNaN(Number(i.raw.latitude)) && !isNaN(Number(i.raw.longitude)) && (Number(i.raw.latitude) !== 0 || Number(i.raw.longitude) !== 0);
+    const incHasNativeCoords = checkHasNativeCoords(inc);
     const norm = (s: string | undefined | null) => (s || '').trim().toLowerCase();
+    const getLocationIdentifier = (i: any) => norm(i.raw?.municipio || i.raw?.conjunto);
 
     const canEstimateOsToOs = (prevInc: any, currInc: any) => {
-      const prevHasCoords = prevInc.raw?.latitude != null && prevInc.raw?.longitude != null;
-      const currHasCoords = currInc.raw?.latitude != null && currInc.raw?.longitude != null;
-      if (prevHasCoords && currHasCoords) return true;
-
-      const m1 = norm(prevInc.raw?.municipio);
-      const m2 = norm(currInc.raw?.municipio);
-      if (!m1 || !m2) return false;
-      return m1 !== m2;
+      const prevHasCoords = checkHasNativeCoords(prevInc);
+      const currHasCoords = checkHasNativeCoords(currInc);
+      
+      if (!prevHasCoords && !currHasCoords) {
+        const loc1 = getLocationIdentifier(prevInc);
+        const loc2 = getLocationIdentifier(currInc);
+        if (!loc1 || !loc2) return false;
+        return loc1 !== loc2;
+      }
+      
+      return true;
     };
 
     const canEstimateBase = (currInc: any) => {
-      const currHasCoords = currInc.raw?.latitude != null && currInc.raw?.longitude != null;
+      const currHasCoords = checkHasNativeCoords(currInc);
       if (currHasCoords) return true;
 
-      const m1 = norm(currInc.raw?.municipio);
+      const loc1 = getLocationIdentifier(currInc);
       const m2 = norm(currInc.nearestBaseName);
-      if (!m1 || !m2) return false;
-      return m1 !== m2;
+      if (!loc1 || !m2) return false;
+      return loc1 !== m2 && !m2.includes(loc1) && !loc1.includes(m2);
     };
 
     const getMins = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
