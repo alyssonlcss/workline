@@ -5291,6 +5291,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   public geocodingTotal = signal<number>(0);
   public geocodingProcessed = signal<number>(0);
   public loadingIncidencias = signal<boolean>(false);
+  private fetchedDates = new Set<string>();
+  private cachedIncidencias: any[] = [];
 
 
   private readonly pendingOsrmFetches = new Set<string>();
@@ -8135,6 +8137,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             const baseOperacionalFilters = this.buildReportFilterStates('operacional');
             this.analiticoFilters.set(baseAnaliticoFilters);
             this.operacionalFilters.set(baseOperacionalFilters);
+            this.fetchedDates.clear();
+            this.cachedIncidencias = [];
             this.saveToStorage();
           });
 
@@ -8551,82 +8555,104 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           return;
         }
 
-        let minDate: Date | null = null;
-        let maxDate: Date | null = null;
-
+        const parsedDates: Date[] = [];
         for (const ds of selectedDates) {
-          // Parse dd/MM or string to Date object roughly, assuming report.availableDates order or just pass them if backend handles.
-          // Wait, backend expects YYYY-MM-DD.
-          // Since availableDates are in "12/09", we can append current year.
           const parts = ds.split('/');
           if (parts.length >= 2) {
             const day = parseInt(parts[0], 10);
             const month = parseInt(parts[1], 10) - 1;
             const year = parts.length >= 3 ? parseInt(parts[2], 10) : new Date().getFullYear();
-            const d = new Date(year, month, day);
-            if (!minDate || d < minDate) minDate = new Date(d.getTime());
-            if (!maxDate || d > maxDate) maxDate = new Date(d.getTime());
+            parsedDates.push(new Date(year, month, day));
           }
         }
+        
+        parsedDates.sort((a, b) => a.getTime() - b.getTime());
+        const formatDateKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        
+        const missingDates = parsedDates.filter(d => !this.fetchedDates.has(formatDateKey(d)));
 
-        if (!minDate || !maxDate) return;
-
-        minDate.setDate(minDate.getDate() - 1);
-        maxDate.setDate(maxDate.getDate() + 1);
-
-        const dataInicioStr = `${minDate.getFullYear()}-${String(minDate.getMonth() + 1).padStart(2, '0')}-${String(minDate.getDate()).padStart(2, '0')} 00:00:00`;
-        const dataFimStr = `${maxDate.getFullYear()}-${String(maxDate.getMonth() + 1).padStart(2, '0')}-${String(maxDate.getDate()).padStart(2, '0')} 23:59:59`;
-
-        // We need the teams to determine Polos. We can get them from the report.
-        const allTeams = new Set<string>();
-        const analysisTypes = [
-          'osDiaAnalysis', 'utilizacaoAnalysis', 'tmeImpAnalysis',
-          'primeiroLoginAnalysis', 'primeiroDeslocAnalysis', 'retornoBaseAnalysis'
-        ] as const;
-        for (const type of analysisTypes) {
-          const arr = report.specialAnalysis?.[type] as any[];
-          if (arr) {
-            for (const ev of arr) {
-              if (ev.team) allTeams.add(ev.team);
+        if (missingDates.length > 0) {
+          const allTeams = new Set<string>();
+          const analysisTypes = [
+            'osDiaAnalysis', 'utilizacaoAnalysis', 'tmeImpAnalysis',
+            'primeiroLoginAnalysis', 'primeiroDeslocAnalysis', 'retornoBaseAnalysis'
+          ] as const;
+          for (const type of analysisTypes) {
+            const arr = report.specialAnalysis?.[type] as any[];
+            if (arr) {
+              for (const ev of arr) {
+                if (ev.team) allTeams.add(ev.team);
+              }
             }
           }
-        }
 
-        const poloSet = new Set<string>();
-        for (const team of allTeams) {
-          if (!this.basesConfig) continue;
-          for (const polo of this.basesConfig.polos) {
-            for (const base of polo.bases) {
-              const matchers = [...(base.propria || []), ...(base.parceira || []), ...(base.prefixes || [])];
-              for (const matcher of matchers) {
-                if (team.includes(matcher)) {
-                  poloSet.add(polo.name);
+          const poloSet = new Set<string>();
+          for (const team of allTeams) {
+            if (!this.basesConfig) continue;
+            for (const polo of this.basesConfig.polos) {
+              for (const base of polo.bases) {
+                const matchers = [...(base.propria || []), ...(base.parceira || []), ...(base.prefixes || [])];
+                for (const matcher of matchers) {
+                  if (team.includes(matcher)) {
+                    poloSet.add(polo.name);
+                  }
                 }
               }
             }
           }
-        }
 
-        const openviewPoloMapping: Record<string, string> = {
-          'atlântico': 'ATLANTICO',
-          'centro-norte': 'DECEN',
-          'norte': 'DNORT'
-        };
-        const formattedPolos = Array.from(poloSet).map(p => openviewPoloMapping[p.toLowerCase()] || p);
-        if (formattedPolos.length === 0) {
-          console.log('[Dashboard] Nenhuma equipe com polo correspondente, abortando fetch');
-          return;
+          const openviewPoloMapping: Record<string, string> = {
+            'atlântico': 'ATLANTICO',
+            'centro-norte': 'DECEN',
+            'norte': 'DNORT'
+          };
+          const formattedPolos = Array.from(poloSet).map(p => openviewPoloMapping[p.toLowerCase()] || p);
+          
+          if (formattedPolos.length > 0) {
+            this.loadingIncidencias.set(true);
+            try {
+              const globalMinTime = parsedDates[0].getTime();
+              const globalMaxTime = parsedDates[parsedDates.length - 1].getTime();
+              
+              for (let i = 0; i < missingDates.length; i += 3) {
+                const chunk = missingDates.slice(i, i + 3);
+                const chunkMin = new Date(chunk[0].getTime());
+                const chunkMax = new Date(chunk[chunk.length - 1].getTime());
+                
+                if (chunkMin.getTime() === globalMinTime) {
+                  chunkMin.setDate(chunkMin.getDate() - 1);
+                }
+                if (chunkMax.getTime() === globalMaxTime) {
+                  chunkMax.setDate(chunkMax.getDate() + 1);
+                }
+                
+                const dataInicioStr = `${chunkMin.getFullYear()}-${String(chunkMin.getMonth() + 1).padStart(2, '0')}-${String(chunkMin.getDate()).padStart(2, '0')} 00:00:00`;
+                const dataFimStr = `${chunkMax.getFullYear()}-${String(chunkMax.getMonth() + 1).padStart(2, '0')}-${String(chunkMax.getDate()).padStart(2, '0')} 23:59:59`;
+                
+                console.log(`[Dashboard] Buscando pacote de incidências (on-demand) para polos ${formattedPolos.join(', ')} e datas ${dataInicioStr} a ${dataFimStr}...`);
+                const chunkRes = await firstValueFrom(this.api.getIncidencias(dataInicioStr, dataFimStr, formattedPolos));
+                
+                const existingIds = new Set(this.cachedIncidencias.map(c => String(c.incidencia || (c as any).numero).trim()));
+                for (const inc of chunkRes) {
+                  const id = String(inc.incidencia || (inc as any).numero).trim();
+                  if (id && !existingIds.has(id)) {
+                    this.cachedIncidencias.push(inc);
+                    existingIds.add(id);
+                  }
+                }
+                
+                for (const d of chunk) {
+                  this.fetchedDates.add(formatDateKey(d));
+                }
+              }
+            } finally {
+              this.loadingIncidencias.set(false);
+            }
+          }
         }
-
-        console.log(`[Dashboard] Buscando incidências da API (on-demand) para polos ${formattedPolos.join(', ')} e datas ${dataInicioStr} a ${dataFimStr}...`);
-        this.loadingIncidencias.set(true);
-        try {
-          rawIncidencias = await firstValueFrom(this.api.getIncidencias(dataInicioStr, dataFimStr, formattedPolos));
-        } finally {
-          this.loadingIncidencias.set(false);
-        }
+        rawIncidencias = [...this.cachedIncidencias];
       }
-      console.log(`[Dashboard] Carregadas ${rawIncidencias?.length || 0} incidências da API.`);
+      console.log(`[Dashboard] Carregadas ${rawIncidencias?.length || 0} incidências em cache.`);
 
       const incidenciasList = rawIncidencias.filter(inc => {
         const num = String(inc.incidencia || (inc as any).numero);
@@ -8848,14 +8874,83 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
       // Popular a fila de geocoding com todas as O.S. que têm coordenadas nativas ou municipio/conjunto
       this.geocodingQueue = [];
-      for (const [key, inc] of dataMap.entries()) {
-        const hasNativeCoords = inc.lat != null && inc.lon != null;
-        const hasMunicipio = !!inc.raw.municipio;
-        const hasConjunto = !!inc.raw.conjunto;
-        if (hasNativeCoords || hasMunicipio || hasConjunto) {
-          this.geocodingQueue.push(key);
+      const queuedKeys = new Set<string>();
+
+      // Helper to process queue
+      const tryQueue = (key: string, inc: any) => {
+        if (!queuedKeys.has(key)) {
+          const hasNativeCoords = inc.lat != null && inc.lon != null;
+          const hasMunicipio = !!inc.raw.municipio;
+          const hasConjunto = !!inc.raw.conjunto;
+          
+          if (hasNativeCoords || hasMunicipio || hasConjunto) {
+            let cacheKey = '';
+            if (hasNativeCoords) {
+              cacheKey = `${inc.lat!.toFixed(4)},${inc.lon!.toFixed(4)}`;
+            } else {
+              const searchLocation = inc.raw.municipio || inc.raw.conjunto;
+              cacheKey = `search:${searchLocation}`;
+            }
+
+            const geoData = this.nominatimCacheMap.get(cacheKey);
+            if (geoData) {
+              // Já está no cache, aplica sincronamente
+              let locLabel = geoData.bairro ? `${geoData.bairro}, ${geoData.municipio || inc.raw.municipio}` : (geoData.municipio || inc.raw.municipio || 'Localização não informada');
+              let targetLat = inc.lat;
+              let targetLon = inc.lon;
+              let isEstimatedLoc = false;
+              let estimatedSource = '';
+              let locMarginKm = 0;
+
+              if (geoData.isEstimated) {
+                 targetLat = geoData.lat;
+                 targetLon = geoData.lon;
+                 isEstimatedLoc = true;
+                 estimatedSource = geoData.source || 'Municipio';
+                 locMarginKm = geoData.locMarginKm;
+              }
+
+              const flags = [...inc.flags];
+              const locIndex = flags.findIndex((f: any) => f.type === 'localizacao');
+              if (locIndex !== -1 && targetLat != null && targetLon != null) {
+                const locFlag = { ...flags[locIndex] };
+                const prefix = isEstimatedLoc ? `Localização (${estimatedSource}, Estimada):` : 'Localização (Nativa):';
+                const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${targetLat},${targetLon}`;
+                locFlag.html = `<b><span style="color:${isEstimatedLoc ? '#8b5cf6' : '#1d4ed8'};">${prefix}</span></b> <a href="${mapsUrl}" target="_blank">${locLabel}</a>`;
+                locFlag.plainText = `${prefix} ${locLabel}`;
+                flags[locIndex] = locFlag;
+              }
+
+              const updatedInc = {
+                ...inc,
+                locationLabel: locLabel,
+                flags,
+                lat: targetLat,
+                lon: targetLon,
+                isEstimatedLoc,
+                locMarginKm
+              };
+              dataMap.set(key, updatedInc);
+            } else {
+              this.geocodingQueue.push(key);
+            }
+            queuedKeys.add(key);
+          }
         }
+      };
+
+      // 1. Prioritize OS that are listed in the visual order (ordersToFetch)
+      for (const key of ordersToFetch.keys()) {
+        const inc = dataMap.get(key);
+        if (inc) tryQueue(key, inc);
       }
+
+      // 2. Append any remaining OS from dataMap that were not in the visual groups
+      for (const [key, inc] of dataMap.entries()) {
+        tryQueue(key, inc);
+      }
+
+      this.enrichedIncidenceData.set(dataMap);
 
       if (this.geocodingQueue.length > 0) {
         this.geocodingTotal.set(this.geocodingQueue.length);
