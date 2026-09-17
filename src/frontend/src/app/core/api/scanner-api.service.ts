@@ -723,6 +723,22 @@ export class ScannerApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = environment.apiBaseUrl;
 
+  public getNominatimCache(): Observable<Record<string, any>> {
+    return this.http.get<Record<string, any>>(`${this.baseUrl}/geocoding/database-nominatim-openstreetmap`);
+  }
+
+  public updateNominatimCache(key: string, value: any): Observable<{ success: boolean }> {
+    return this.http.post<{ success: boolean }>(`${this.baseUrl}/geocoding/database-nominatim-openstreetmap`, { key, value });
+  }
+
+  public getOsrmCache(): Observable<Record<string, number | null>> {
+    return this.http.get<Record<string, number | null>>(`${this.baseUrl}/geocoding/database-router-osrm`);
+  }
+
+  public updateOsrmCache(key: string, value: number | null): Observable<{ success: boolean }> {
+    return this.http.post<{ success: boolean }>(`${this.baseUrl}/geocoding/database-router-osrm`, { key, value });
+  }
+
   public startExecution(payload: {
     analysisTab?: string;
     reportTitle?: string;

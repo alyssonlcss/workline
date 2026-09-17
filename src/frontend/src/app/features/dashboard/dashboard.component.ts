@@ -36,6 +36,58 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { TocNavComponent } from '../../shared/toc/toc-nav.component';
 import { SpotfireFilter } from '../../models/spotfire-catalog.model';
 
+export class IdbStorage {
+  private static readonly DB_NAME = 'WorklineDashboardDB';
+  private static readonly STORE_NAME = 'IncidenciasStore';
+  
+  private static getDB(): Promise<IDBDatabase> {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(this.DB_NAME, 1);
+      req.onupgradeneeded = (e: IDBVersionChangeEvent) => {
+        const db = (e.target as IDBOpenDBRequest).result;
+        if (!db.objectStoreNames.contains(this.STORE_NAME)) {
+          db.createObjectStore(this.STORE_NAME);
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  static async get(key: string): Promise<any> {
+    const db = await this.getDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.STORE_NAME, 'readonly');
+      const store = tx.objectStore(this.STORE_NAME);
+      const req = store.get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  static async set(key: string, value: any): Promise<void> {
+    const db = await this.getDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.STORE_NAME, 'readwrite');
+      const store = tx.objectStore(this.STORE_NAME);
+      const req = store.put(value, key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  static async clear(): Promise<void> {
+    const db = await this.getDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.STORE_NAME, 'readwrite');
+      const store = tx.objectStore(this.STORE_NAME);
+      const req = store.clear();
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+}
+
 type FilterKey = 'ano' | 'mes' | 'atuacaoHd' | 'base';
 type ReportTypeValue = 'operacional' | 'analitico';
 type ReportFilterKey = 'reportBase' | 'reportTipoEquipe' | 'reportEquipe' | 'reportDataRef';
@@ -5285,7 +5337,48 @@ type SavedFilterState = {
 export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   protected readonly api = inject(ScannerApiService);
   protected readonly osrmCache = signal(new Map<string, number | null>());
+  private readonly NOMINATIM_CACHE_KEY = 'nominatim_cache_v1';
+  private readonly MAX_CACHE_SIZE = 3000;
   private nominatimCacheMap = new Map<string, any>();
+
+  private loadNominatimCache(): void {
+    this.api.getNominatimCache().subscribe({
+      next: (data) => {
+        const entries = Object.entries(data);
+        this.nominatimCacheMap = new Map<string, any>(entries);
+      },
+      error: (e) => {
+        console.warn('[Dashboard] Failed to load Nominatim cache from API', e);
+        this.nominatimCacheMap = new Map<string, any>();
+      }
+    });
+  }
+
+  private saveNominatimCache(key: string, value: any): void {
+    this.api.updateNominatimCache(key, value).subscribe({
+      error: (e) => console.warn('[Dashboard] Failed to save Nominatim cache to API', e)
+    });
+  }
+
+  private readonly OSRM_CACHE_KEY = 'osrm_cache_v1';
+  private loadOsrmCache(): void {
+    this.api.getOsrmCache().subscribe({
+      next: (data) => {
+        const entries = Object.entries(data);
+        this.osrmCache.set(new Map<string, number | null>(entries));
+      },
+      error: (e) => {
+        console.warn('[Dashboard] Failed to load OSRM cache from API', e);
+        this.osrmCache.set(new Map<string, number | null>());
+      }
+    });
+  }
+
+  private saveOsrmCache(key: string, value: number | null): void {
+    this.api.updateOsrmCache(key, value).subscribe({
+      error: (e) => console.warn('[Dashboard] Failed to save OSRM cache to API', e)
+    });
+  }
   private activeGeocodingTimer: any = null;
   private geocodingQueue: string[] = [];
   public geocodingTotal = signal<number>(0);
@@ -5313,11 +5406,13 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           finalMap.set(key, -1);
         }
         this.osrmCache.set(finalMap);
+        this.saveOsrmCache(key, finalMap.get(key) ?? null);
       })
       .catch(() => {
         const finalMap = new Map(this.osrmCache());
         finalMap.set(key, -1);
         this.osrmCache.set(finalMap);
+        this.saveOsrmCache(key, finalMap.get(key) ?? null);
       });
   }
   private readonly zone = inject(NgZone);
@@ -5600,6 +5695,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   };
 
   public ngOnInit(): void {
+    this.loadNominatimCache();
+    this.loadOsrmCache();
+    IdbStorage.get('fetchedDates').then(d => { if (d) this.fetchedDates = new Set(d); }).catch(console.warn);
+    IdbStorage.get('cachedIncidencias').then(c => { if (c) this.cachedIncidencias = c; }).catch(console.warn);
+
     this.api.getBasesConfig().subscribe(config => {
       this.basesConfig = config;
       const options: string[] = [];
@@ -8139,6 +8239,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             this.operacionalFilters.set(baseOperacionalFilters);
             this.fetchedDates.clear();
             this.cachedIncidencias = [];
+            IdbStorage.clear().catch(console.warn);
             this.saveToStorage();
           });
 
@@ -8644,6 +8745,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
                 for (const d of chunk) {
                   this.fetchedDates.add(formatDateKey(d));
                 }
+                IdbStorage.set('cachedIncidencias', this.cachedIncidencias).catch(console.warn);
+                IdbStorage.set('fetchedDates', Array.from(this.fetchedDates)).catch(console.warn);
               }
             } finally {
               this.loadingIncidencias.set(false);
@@ -8886,7 +8989,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           if (hasNativeCoords || hasMunicipio || hasConjunto) {
             let cacheKey = '';
             if (hasNativeCoords) {
-              cacheKey = `${inc.lat!.toFixed(4)},${inc.lon!.toFixed(4)}`;
+              cacheKey = `${inc.lat!.toFixed(3)},${inc.lon!.toFixed(3)}`;
             } else {
               const searchLocation = inc.raw.municipio || inc.raw.conjunto;
               cacheKey = `search:${searchLocation}`;
@@ -9000,7 +9103,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       if (hasCoords) {
         const lat = inc.lat!;
         const lon = inc.lon!;
-        const cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)}`;
+        const cacheKey = `${lat.toFixed(3)},${lon.toFixed(3)}`;
         geoData = this.nominatimCacheMap.get(cacheKey);
 
         if (!geoData) {
@@ -9018,6 +9121,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
               const city = addr.city || addr.town || addr.municipality || '';
               geoData = { bairro: bairroDistrito, municipio: city, isEstimated: false };
               this.nominatimCacheMap.set(cacheKey, geoData);
+              this.saveNominatimCache(cacheKey, geoData);
             }
           } catch (e) {
             console.warn('[Dashboard] Nominatim reverse geocode failed', e);
@@ -9064,6 +9168,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
                 locMarginKm
               };
               this.nominatimCacheMap.set(cacheKey, geoData);
+              this.saveNominatimCache(cacheKey, geoData);
             }
           } catch (e) {
             console.warn('[Dashboard] Nominatim direct geocode failed', e);

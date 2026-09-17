@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Alysson Pinheiro. Todos os direitos reservados.
 // Software proprietário e confidencial. Uso não autorizado é proibido.
 import { createReadStream } from 'node:fs';
-import { access, copyFile, mkdir, readdir, rename, rm } from 'node:fs/promises';
+import { access, copyFile, mkdir, readdir, rename, rm, readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, extname, join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -82,6 +82,66 @@ const reportGenerationSchema = z.object({
 
 export async function createServer() {
   const server = Fastify({ logger: true, disableRequestLogging: true });
+
+  const dataDir = await resolveDefaultDataDir();
+  const nominatimCachePath = join(dataDir, 'nominatim-cache.json');
+  let nominatimCache: Record<string, any> = {};
+  
+  try {
+    const fileData = await readFile(nominatimCachePath, 'utf-8');
+    nominatimCache = JSON.parse(fileData);
+  } catch (e) {
+    server.log.info('No existing nominatim cache found, starting fresh.');
+  }
+
+  server.get('/api/geocoding/database-nominatim-openstreetmap', async () => {
+    return nominatimCache;
+  });
+
+  server.post('/api/geocoding/database-nominatim-openstreetmap', async (request, reply) => {
+    const payload = z.object({
+      key: z.string(),
+      value: z.any()
+    }).parse(request.body);
+    
+    nominatimCache[payload.key] = payload.value;
+    
+    writeFile(nominatimCachePath, JSON.stringify(nominatimCache, null, 2), 'utf-8').catch(err => {
+      server.log.error({ err }, 'Failed to save nominatim cache to disk');
+    });
+    
+    return { success: true };
+  });
+
+  const osrmCachePath = join(dataDir, 'osrm-cache.json');
+  let osrmCache: Record<string, number | null> = {};
+  
+  try {
+    const fileData = await readFile(osrmCachePath, 'utf-8');
+    osrmCache = JSON.parse(fileData);
+  } catch (e) {
+    server.log.info('No existing osrm cache found, starting fresh.');
+  }
+
+  server.get('/api/geocoding/database-router-osrm', async () => {
+    return osrmCache;
+  });
+
+  server.post('/api/geocoding/database-router-osrm', async (request, reply) => {
+    const payload = z.object({
+      key: z.string(),
+      value: z.number().nullable()
+    }).parse(request.body);
+    
+    osrmCache[payload.key] = payload.value;
+    
+    writeFile(osrmCachePath, JSON.stringify(osrmCache, null, 2), 'utf-8').catch(err => {
+      server.log.error({ err }, 'Failed to save osrm cache to disk');
+    });
+    
+    return { success: true };
+  });
+
   const jobStore = new InMemoryJobStore();
   const automation = new PuppeteerSpotfireAutomation(environment);
   const downloadTargets = environment.spotfire.downloadTargets;
