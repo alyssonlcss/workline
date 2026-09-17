@@ -7880,11 +7880,18 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   protected isReportOptionSelected(filter: ReportSelectFilterState, option: string): boolean {
+    if (option === ALL_OPTION) {
+      const allOptionsExcludingAll = filter.options.filter(o => o !== ALL_OPTION);
+      return allOptionsExcludingAll.length > 0 && allOptionsExcludingAll.every(o => filter.value.includes(o));
+    }
     return filter.value.includes(option);
   }
 
   protected describeReportSelection(filter: ReportSelectFilterState): string {
-    if (filter.value.includes(ALL_OPTION)) {
+    const allOptionsExcludingAll = filter.options.filter(o => o !== ALL_OPTION);
+    const isAllSelected = allOptionsExcludingAll.length > 0 && allOptionsExcludingAll.every(o => filter.value.includes(o));
+
+    if (filter.value.includes(ALL_OPTION) || isAllSelected) {
       return 'Todos';
     }
 
@@ -7903,19 +7910,30 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const filters = this.reportFilterStates();
     const updated = filters.map((filter) => {
       if (filter.key !== key) return filter;
+
+      if (option === ALL_OPTION) {
+        const allOptionsExcludingAll = filter.options.filter(o => o !== ALL_OPTION);
+        const currentSelected = filter.value.filter(v => v !== ALL_OPTION);
+        const allSelected = allOptionsExcludingAll.length > 0 && 
+                            allOptionsExcludingAll.length === currentSelected.length &&
+                            allOptionsExcludingAll.every(o => currentSelected.includes(o));
+        if (allSelected) {
+          return { ...filter, value: [] };
+        } else {
+          return { ...filter, value: allOptionsExcludingAll };
+        }
+      }
+
       if (!multiSelect) {
         return { ...filter, value: [option] };
       }
-      // Ctrl+click: toggle the option while keeping others
-      if (option === ALL_OPTION) {
-        return { ...filter, value: [ALL_OPTION] };
-      }
+
       const current = filter.value.filter((v) => v !== ALL_OPTION);
       const idx = current.indexOf(option);
       const next = idx >= 0
         ? current.filter((v) => v !== option)
         : [...current, option];
-      return { ...filter, value: next.length > 0 ? next : [ALL_OPTION] };
+      return { ...filter, value: next };
     });
     this.setReportFilterStates(this.cascadeReportFilters(updated, this.reportType()), this.reportType());
     this.saveToStorage();
@@ -7963,7 +7981,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (anchorIndex < 0) return;
 
     if (option === ALL_OPTION) {
-      this.toggleReportFilterOption(filter.key, ALL_OPTION);
+      this.toggleReportFilterOption(filter.key, ALL_OPTION, true);
       this.reportDropdownDragState = null;
       return;
     }
@@ -7980,7 +7998,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     const updatedValue = Array.from(baseline);
-    this.applyReportFilterSelection(filter.key, updatedValue.length > 0 ? updatedValue : [ALL_OPTION]);
+    this.applyReportFilterSelection(filter.key, updatedValue);
 
     this.reportDropdownDragState = {
       key: filter.key,
@@ -8021,7 +8039,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     const updatedValue = Array.from(nextSelected);
-    this.applyReportFilterSelection(filter.key, updatedValue.length > 0 ? updatedValue : [ALL_OPTION]);
+    this.applyReportFilterSelection(filter.key, updatedValue);
   }
 
   private applyReportFilterSelection(key: ReportFilterKey, value: string[]): void {
