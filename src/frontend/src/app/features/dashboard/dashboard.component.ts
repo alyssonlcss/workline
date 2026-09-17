@@ -9448,7 +9448,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       const prevHasCoords = checkHasNativeCoords(prevInc);
       const currHasCoords = checkHasNativeCoords(currInc);
       
-      if (!prevHasCoords && !currHasCoords) {
+      if (!prevHasCoords || !currHasCoords) {
         const loc1 = getLocationIdentifier(prevInc);
         const loc2 = getLocationIdentifier(currInc);
         if (!loc1 || !loc2) return false;
