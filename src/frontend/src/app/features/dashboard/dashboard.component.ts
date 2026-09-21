@@ -704,7 +704,7 @@ type SavedFilterState = {
                     <span class="export-option-icon">🛑</span>
                     <div class="export-option-body">
                       <span class="export-option-title">Equipes com excesso de OS Improdutivas</span>
-                      <span class="export-option-sub">Envia um alerta sobre equipes com mais de 10% de improdutivas.</span>
+                      <span class="export-option-sub">Envia um alerta sobre equipes com mais de 5% de improdutivas.</span>
                     </div>
                   </div>
                   <div class="export-option-actions">
@@ -6190,13 +6190,13 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       msg = msg.trimEnd();
 
     } else if (type === 'excessive_imp') {
-      msg = `🛑 *ALERTA DE EXCESSO DE OS IMPRODUTIVAS${teamTypeSubtitle}*\n🗓️ *Período: ${daysText} | ${periodStr}*\n🎯 *Meta: ≤ 10%*\n${DIVIDER}\n\n`;
+      msg = `🛑 *ALERTA DE EXCESSO DE OS IMPRODUTIVAS${teamTypeSubtitle}*\n🗓️ *Período: ${daysText} | ${periodStr}*\n🎯 *Meta: ≤ 5%*\n${DIVIDER}\n\n`;
       msg += `📢 *AÇÃO OBRIGATÓRIA AOS SUPERVISORES DE BASE*\n`;
       msg += `Ao menos um supervisor responsável por cada base deve preencher o campo "📝 RETORNO DA SUPERVISÃO" abaixo.\n\n`;
       msg += `O retorno deve conter obrigatoriamente:\n`;
       msg += `1. Tratativa individual: Feedback repassado à equipe.\n`;
       msg += `2. Apuração em campo: Qual a causa real do problema? (⚠️ Atenção: Para causas como "Defeito Interno Cliente", "Estava Normal" ou "Casa Fechada", recomenda-se ação preventiva/leitura para não gerar improdutividade).\n`;
-      msg += `3. Plano de ação imediato: Solução adotada para atingir a meta (≤ 10%).\n\n`;
+      msg += `3. Plano de ação imediato: Solução adotada para atingir a meta (≤ 5%).\n\n`;
       msg += `Após preencher os campos (tratativa, data e autor), reenvie esta mensagem atualizada no grupo.\n\n`;
       msg += `${DIVIDER}\n\n`;
 
@@ -6225,9 +6225,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         const poloPctImp = poloTeams[0].poloPctImp || 0;
         const poloPctFmt = (poloPctImp * 100).toFixed(1).replace('.', ',');
         let poloEmoji = '🟢';
-        if (poloPctImp > 0.20) poloEmoji = '🔴';
-        else if (poloPctImp > 0.15) poloEmoji = '🟠';
-        else if (poloPctImp > 0.10) poloEmoji = '🟡';
+        if (poloPctImp > 0.15) poloEmoji = '🔴';
+        else if (poloPctImp > 0.10) poloEmoji = '🟠';
+        else if (poloPctImp > 0.05) poloEmoji = '🟡';
 
         msg += `🏢 *POLO: ${poloName.toUpperCase()}* | ${poloEmoji} *${poloPctFmt}%*\n\n`;
 
@@ -6256,17 +6256,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const basePctImp = top3[0].basePctImp || 0;
           const basePctFmt = (basePctImp * 100).toFixed(1).replace('.', ',');
           let baseEmoji = '🟢';
-          if (basePctImp > 0.20) baseEmoji = '🔴';
-          else if (basePctImp > 0.15) baseEmoji = '🟠';
-          else if (basePctImp > 0.10) baseEmoji = '🟡';
+          if (basePctImp > 0.15) baseEmoji = '🔴';
+          else if (basePctImp > 0.10) baseEmoji = '🟠';
+          else if (basePctImp > 0.05) baseEmoji = '🟡';
 
           msg += `📍 *BASE: ${baseName.toUpperCase()}* | ${baseEmoji} *${basePctFmt}%*\n\n`;
           for (const t of top3) {
             const pctFmt = (t.pctImp * 100).toFixed(1).replace('.', ',');
             let teamEmoji = '🟢';
-            if (t.pctImp > 0.20) teamEmoji = '🔴';
-            else if (t.pctImp > 0.15) teamEmoji = '🟠';
-            else if (t.pctImp > 0.10) teamEmoji = '🟡';
+            if (t.pctImp > 0.15) teamEmoji = '🔴';
+            else if (t.pctImp > 0.10) teamEmoji = '🟠';
+            else if (t.pctImp > 0.05) teamEmoji = '🟡';
 
             msg += `🚐 *${t.team}* | ${teamEmoji}\n`;
             msg += `${L3}Total de OS: ${t.totalOrders} | Improdutivas: ${t.impOrders} (*${pctFmt}%*)\n`;

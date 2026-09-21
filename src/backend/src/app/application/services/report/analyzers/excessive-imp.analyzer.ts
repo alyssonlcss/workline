@@ -94,7 +94,7 @@ export function analyzeExcessiveImp(
     
     const pctImp = stats.impOrders / stats.totalOrders;
     
-    if (pctImp > 0.1) {
+    if (pctImp > 0.05) {
       const teamInfo = resolvedTeams.get(team);
       const base = teamInfo?.base || 'Outros';
       const polo = teamInfo?.polo || 'Outros';
