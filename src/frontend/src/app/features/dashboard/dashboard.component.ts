@@ -9530,7 +9530,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     const checkHasNativeCoords = (i: any) => i.raw?.latitude != null && i.raw?.longitude != null && !isNaN(Number(i.raw.latitude)) && !isNaN(Number(i.raw.longitude)) && (Number(i.raw.latitude) !== 0 || Number(i.raw.longitude) !== 0);
     const incHasNativeCoords = checkHasNativeCoords(inc);
-    const norm = (s: string | undefined | null) => (s || '').trim().toLowerCase();
+    const norm = (s: string | undefined | null) => (s || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const getLocationIdentifier = (i: any) => norm(i.raw?.municipio || i.raw?.conjunto);
 
     const canEstimateOsToOs = (prevInc: any, currInc: any) => {
