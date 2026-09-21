@@ -189,6 +189,7 @@ export interface OsDiaOrderEvidence {
   nr_ordem: string;
   classe: string;
   causa: string;
+  seq_index?: number;
   despachada: string;
   a_caminho: string;
   no_local: string;
@@ -304,6 +305,7 @@ export interface EficienciaOrderEvidence {
   date_ref?: string;
   classe: string;
   causa: string;
+  seq_index?: number;
   despachada: string;
   a_caminho: string;
   no_local: string;
@@ -352,6 +354,7 @@ export interface UtilizacaoOrderEvidence {
   date_ref?: string;
   classe: string;
   causa: string;
+  seq_index?: number;
   despachada: string;
   a_caminho: string;
   no_local: string;
@@ -456,6 +459,7 @@ export interface TmeImpOrderEvidence {
   nr_ordem: string;
   classe: string;
   causa: string;
+  seq_index?: number;
   prev_liberada: string;
   despachada: string;
   a_caminho: string;

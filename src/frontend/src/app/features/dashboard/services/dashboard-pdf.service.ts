@@ -866,21 +866,20 @@ export class DashboardPdfService {
         margin: [0, 1, 0, 1],
       });
 
-      const orderHead = (nr_ordem: string, flags: string[], labelFn: (f: string) => string, extra?: string, isPrimeiraOs?: boolean, customFlags: string[] = []): any => {
+      const orderHead = (nr_ordem: string, flags: string[], labelFn: (f: string) => string, extra?: string, seqIndex?: number, customFlags: string[] = []): any => {
         const allFlags = [...(flags || []).map(labelFn), ...customFlags];
         const tags = allFlags.filter(f => f === '5RO' || f.startsWith('NT:'));
         const regFlags = allFlags.filter(f => f !== '5RO' && !f.startsWith('NT:'));
         return {
           text: [
-            { text: `OS ${nr_ordem}${extra ? ' | ' + extra : ''}`, bold: true, fontSize: 7.5, color: DARK },
+            { text: `${seqIndex ? seqIndex + 'ª OS ' : 'OS '}${nr_ordem}${extra ? ' | ' + extra : ''}`, bold: true, fontSize: 7.5, color: DARK },
             { text: '    ', fontSize: 7 },
-            ...(isPrimeiraOs ? [{ text: '1\u00aa OS', bold: true, color: BLUE, fontSize: 6.5 }] : []),
             ...tags.flatMap((t, i) => [
-              ...(i > 0 || isPrimeiraOs ? [{ text: '  |  ', color: MUTED, fontSize: 6.5 }] : []),
+              ...(i > 0 ? [{ text: '  |  ', color: MUTED, fontSize: 6.5 }] : []),
               { text: t, bold: true, color: BLUE, fontSize: 6.5 }
             ]),
             ...regFlags.flatMap((f, i) => [
-              ...(i > 0 || isPrimeiraOs || tags.length > 0 ? [{ text: '  |  ', color: MUTED, fontSize: 6.5 }] : []),
+              ...(i > 0 || tags.length > 0 ? [{ text: '  |  ', color: MUTED, fontSize: 6.5 }] : []),
               { text: f, bold: true, color: RED, fontSize: 6.5 },
             ]),
           ],
@@ -1089,7 +1088,7 @@ export class DashboardPdfService {
               if (ociosoTotal != null) {
                 customFlags.push(`Ocioso: ${Math.round(ociosoTotal)} min`);
               }
-              const orderBlock: any[] = [orderHead(ev.nr_ordem, ev.flags ?? [], (f) => helpers.osDiaFlagLabel(f), undefined, !ev.prev_liberada, customFlags)];
+              const orderBlock: any[] = [orderHead(ev.nr_ordem, ev.flags ?? [], (f) => helpers.osDiaFlagLabel(f), undefined, ev.seq_index, customFlags)];
               if (orderItems.length > 0) orderBlock.push(indentBlock(orderItems, '#94a3b8', 6));
               teamItems.push({ stack: orderBlock, unbreakable: true });
               if (evIdx < evArr.length - 1 && evArr[evIdx + 1].date_ref === curDateRef) teamItems.push(orderDivider());
@@ -1172,7 +1171,7 @@ export class DashboardPdfService {
                   if (inc && inc.tags) { IncidencePdfFormatter.appendTagsToEventFlags(inc.tags, ev); }
                 }
 
-              const orderBlock: any[] = [orderHead(ev.nr_ordem, ev.flags ?? [], (f) => helpers.eficienciaFlagLabel(f), undefined, !ev.prev_liberada)];
+              const orderBlock: any[] = [orderHead(ev.nr_ordem, ev.flags ?? [], (f) => helpers.eficienciaFlagLabel(f), undefined, ev.seq_index)];
               if (orderItems.length > 0) orderBlock.push(indentBlock(orderItems, '#94a3b8', 6));
               teamItems.push({ stack: orderBlock, unbreakable: true });
               if (evIdx < evArr.length - 1 && evArr[evIdx + 1].date_ref === curDateRef) teamItems.push(orderDivider());
@@ -1274,7 +1273,7 @@ export class DashboardPdfService {
               if (ociosoTotal != null) {
                 customFlags.push(`Ocioso: ${Math.round(ociosoTotal)} min`);
               }
-              const orderBlock: any[] = [orderHead(ev.nr_ordem, ev.flags ?? [], (f) => helpers.osDiaFlagLabel(f), undefined, !ev.prev_liberada, customFlags)];
+              const orderBlock: any[] = [orderHead(ev.nr_ordem, ev.flags ?? [], (f) => helpers.osDiaFlagLabel(f), undefined, ev.seq_index, customFlags)];
               if (orderItems.length > 0) orderBlock.push(indentBlock(orderItems, '#94a3b8', 6));
               teamItems.push({ stack: orderBlock, unbreakable: true });
               if (evIdx < evArr.length - 1 && evArr[evIdx + 1].date_ref === curDateRef) teamItems.push(orderDivider());
@@ -1342,7 +1341,7 @@ export class DashboardPdfService {
                   if (inc && inc.tags) { IncidencePdfFormatter.appendTagsToEventFlags(inc.tags, ev); }
                 }
 
-              const orderBlock: any[] = [orderHead(ev.nr_ordem, ev.flags ?? [], (f) => helpers.tmeImpFlagLabel(f), undefined)];
+              const orderBlock: any[] = [orderHead(ev.nr_ordem, ev.flags ?? [], (f) => helpers.tmeImpFlagLabel(f), undefined, ev.seq_index)];
               if (orderItems.length > 0) orderBlock.push(indentBlock(orderItems, '#94a3b8', 6));
               teamItems.push({ stack: orderBlock, unbreakable: true });
               if (evIdx < evArr.length - 1 && evArr[evIdx + 1].date_ref === curDateRef) teamItems.push(orderDivider());

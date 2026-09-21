@@ -92,6 +92,55 @@ type FilterKey = 'ano' | 'mes' | 'atuacaoHd' | 'base';
 type ReportTypeValue = 'operacional' | 'analitico';
 type ReportFilterKey = 'reportBase' | 'reportTipoEquipe' | 'reportEquipe' | 'reportDataRef';
 
+const CEARA_MUNICIPIOS_GEO: Record<string, { lat: number; lon: number }> = {
+  'fortaleza': { lat: -3.7319, lon: -38.5267 },
+  'caucaia': { lat: -3.7328, lon: -38.6531 },
+  'maracanaú': { lat: -3.8761, lon: -38.6254 },
+  'sobral': { lat: -3.6896, lon: -40.3497 },
+  'juazeiro do norte': { lat: -7.2016, lon: -39.3183 },
+  'crato': { lat: -7.2307, lon: -39.4103 },
+  'itapipoca': { lat: -3.4947, lon: -39.5802 },
+  'maranguape': { lat: -3.8913, lon: -38.6811 },
+  'iguatu': { lat: -6.3575, lon: -39.2974 },
+  'quixadá': { lat: -4.9702, lon: -39.0152 },
+  'pacatuba': { lat: -3.9840, lon: -38.6200 },
+  'aquiraz': { lat: -3.9056, lon: -38.3892 },
+  'quixeramobim': { lat: -5.1979, lon: -39.2952 },
+  'canindé': { lat: -4.3601, lon: -39.3101 },
+  'russas': { lat: -4.9392, lon: -37.9749 },
+  'crateús': { lat: -5.1740, lon: -40.6775 },
+  'tianguá': { lat: -3.7311, lon: -40.9904 },
+  'aracati': { lat: -4.5614, lon: -37.7681 },
+  'cascavel': { lat: -4.1332, lon: -38.2384 },
+  'pacajus': { lat: -4.1738, lon: -38.4600 },
+  'icó': { lat: -6.4022, lon: -38.8601 },
+  'horizonte': { lat: -4.0991, lon: -38.4839 },
+  'morada nova': { lat: -5.1055, lon: -38.3725 },
+  'acaraú': { lat: -2.8872, lon: -40.1194 },
+  'viçosa do ceará': { lat: -3.5622, lon: -41.0922 },
+  'barbalha': { lat: -7.3100, lon: -39.3038 },
+  'limoeiro do norte': { lat: -5.1458, lon: -38.0964 },
+  'tauá': { lat: -6.0025, lon: -40.2941 },
+  'trairi': { lat: -3.2758, lon: -39.2683 },
+  'boa viagem': { lat: -5.1275, lon: -39.7297 },
+  'acopiara': { lat: -6.0950, lon: -39.4502 },
+  'beberibe': { lat: -4.1788, lon: -38.1305 },
+  'eusébio': { lat: -3.8894, lon: -38.4505 },
+  'itapagé': { lat: -3.6841, lon: -39.5855 },
+  'brejo santo': { lat: -7.4930, lon: -38.9866 },
+  'são gonçalo do amarante': { lat: -3.6061, lon: -38.9702 },
+  'mauriti': { lat: -7.3888, lon: -38.7744 },
+  'mombaça': { lat: -5.7425, lon: -39.6272 },
+  'santa quitéria': { lat: -4.3319, lon: -40.1558 },
+  'amontada': { lat: -3.3611, lon: -39.8319 },
+  'pedra branca': { lat: -5.4525, lon: -39.7155 },
+  'são benedito': { lat: -4.0486, lon: -40.8638 },
+  'guaraciaba do norte': { lat: -4.1683, lon: -40.7486 },
+  'ipu': { lat: -4.3216, lon: -40.7108 },
+  'várzea alegre': { lat: -6.7863, lon: -39.2961 },
+  'morrinhos': { lat: -3.2286, lon: -40.1247 },
+};
+
 type SelectFilterState = {
   key: FilterKey;
   title: string;
@@ -842,11 +891,11 @@ type SavedFilterState = {
                           <div class="osdia-ev-list" *ngIf="analysis.flaggedOrders.length > 0">
                             <ng-template #osDiaEvTpl let-ev>
                               <div class="osdia-ev-header">
-    <span class="osdia-ev-ordem">OS {{ ev.nr_ordem }}</span>
+    <span class="osdia-ev-ordem">{{ ev.seq_index ? ev.seq_index + 'ª OS ' + ev.nr_ordem : 'OS ' + ev.nr_ordem }}</span>
                                 <ng-container *ngIf="getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev) as inc">
       <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngFor="let t of inc.tags">{{ t.label }}</span>
     </ng-container>
-                                <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngIf="!ev.prev_liberada">1ª OS</span>
+                                <!-- Removido tag 1ª OS pois agora está no título -->
                                 <span class="rpt-osdia-flag" *ngFor="let f of ev.flags">{{ osDiaFlagLabel(f) }}</span>
                                 <span class="rpt-osdia-flag" *ngIf="entreOsAfterIntervalo(ev)">Entre OS≥10min</span>
                                 <span class="rpt-osdia-flag" *ngIf="getOciosoTotal(ev) != null">Ocioso: {{ getOciosoTotal(ev) | number:'1.0-0' }} min</span>
@@ -961,11 +1010,11 @@ type SavedFilterState = {
                           <div class="osdia-ev-list" *ngIf="analysis.flaggedOrders.length > 0">
                             <ng-template #eficienciaEvTpl let-ev>
                               <div class="osdia-ev-header">
-    <span class="osdia-ev-ordem">OS {{ ev.nr_ordem }}</span>
+    <span class="osdia-ev-ordem">{{ ev.seq_index ? ev.seq_index + 'ª OS ' + ev.nr_ordem : 'OS ' + ev.nr_ordem }}</span>
                                 <ng-container *ngIf="getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev) as inc">
       <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngFor="let t of inc.tags">{{ t.label }}</span>
     </ng-container>
-                                <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngIf="!ev.prev_liberada">1ª OS</span>
+                                <!-- Removido tag 1ª OS pois agora está no título -->
                                 <span class="rpt-osdia-flag" *ngFor="let f of ev.flags">{{ eficienciaFlagLabel(f) }}</span>
                               </div>
                               <p class="osdia-ev-causa" *ngIf="ev.classe || ev.causa || evDespAfterPrevLib(ev)">
@@ -1094,11 +1143,11 @@ type SavedFilterState = {
                             <div class="osdia-ev-list" *ngIf="analysis.flaggedOrders && analysis.flaggedOrders.length > 0">
                               <ng-template #utilizacaoEvTpl let-ev>
                                 <div class="osdia-ev-header">
-    <span class="osdia-ev-ordem">OS {{ ev.nr_ordem }}</span>
+    <span class="osdia-ev-ordem">{{ ev.seq_index ? ev.seq_index + 'ª OS ' + ev.nr_ordem : 'OS ' + ev.nr_ordem }}</span>
                                 <ng-container *ngIf="getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev) as inc">
       <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngFor="let t of inc.tags">{{ t.label }}</span>
     </ng-container>
-                                  <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngIf="!ev.prev_liberada">1ª OS</span>
+                                  <!-- Removido tag 1ª OS pois agora está no título -->
                                   <span class="rpt-osdia-flag" *ngFor="let f of ev.flags">{{ osDiaFlagLabel(f) }}</span>
                                   <span class="rpt-osdia-flag" *ngIf="entreOsAfterIntervalo(ev)">Entre OS≥10min</span>
                                   <span class="rpt-osdia-flag" *ngIf="getOciosoTotal(ev) != null">Ocioso: {{ getOciosoTotal(ev) | number:'1.0-0' }} min</span>
@@ -1191,7 +1240,7 @@ type SavedFilterState = {
                       <div class="osdia-ev-list" *ngIf="analysis.flaggedOrders.length > 0; else noTmeImpEvidence">
                         <ng-template #tmeImpEvTpl let-ev>
                           <div class="osdia-ev-header">
-    <span class="osdia-ev-ordem">OS {{ ev.nr_ordem }}</span>
+    <span class="osdia-ev-ordem">{{ ev.seq_index ? ev.seq_index + 'ª OS ' + ev.nr_ordem : 'OS ' + ev.nr_ordem }}</span>
                                 <ng-container *ngIf="getDynamicIncidenceForOrder(kpi.kpi, analysis.team, ev) as inc">
       <span class="rpt-osdia-badge rpt-osdia-badge--first" *ngFor="let t of inc.tags">{{ t.label }}</span>
     </ng-container>
@@ -8866,14 +8915,29 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
         const mun = (payload.municipio || '').trim();
         let extraInfo = '';
+        if (payload.conjunto) {
+           extraInfo = payload.conjunto.trim();
+        }
+
+        const normMun = mun.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const normConjunto = extraInfo.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        
+        let cityCenter = null;
+        for (const [key, coords] of Object.entries(CEARA_MUNICIPIOS_GEO)) {
+           const normKey = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+           // Procura a cidade no município. Se vazio, verifica se a string do conjunto contém o nome da cidade.
+           if (normMun === normKey || (!normMun && normConjunto.includes(normKey))) {
+              cityCenter = coords;
+              break;
+           }
+        }
 
         if (hasCoords) {
           usedField = 'Nativa';
         } else if (mun) {
-          usedField = 'Município';
-        } else if (payload.conjunto) {
-          extraInfo = payload.conjunto.trim();
-          usedField = 'Conjunto';
+          usedField = cityCenter ? 'Município, Estimado' : 'Município';
+        } else if (extraInfo) {
+          usedField = cityCenter ? 'Conjunto, Estimado' : 'Conjunto';
         }
 
         let locPrefixText = usedField ? `Localização (${usedField}):` : 'Localização:';
@@ -8886,6 +8950,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           locationLabel = mun;
         } else {
           locationLabel = `${extraInfo}, ${mun}`;
+        }
+
+        if (!hasCoords && cityCenter && locationLabel && locationLabel !== 'Localização não informada') {
+          if (!locationLabel.toLowerCase().startsWith('centro')) {
+             locationLabel = `Centro, ${locationLabel}`;
+          }
         }
 
         const tags: import('../../core/api/scanner-api.service').IncidenceTag[] = [];
@@ -8936,11 +9006,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         const baseInfo = getBaseCoordsForTeam(teamName);
         let mapsUrl = null;
         if (hasCoords) {
-           if (baseInfo && baseInfo.lat != null && baseInfo.lon != null) {
-              mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${baseInfo.lat},${baseInfo.lon}&destination=${lat},${lon}`;
-           } else {
-              mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
-           }
+           mapsUrl = `https://www.google.com/maps/place/${lat},${lon}`;
+        } else if (cityCenter) {
+           mapsUrl = `https://www.google.com/maps/place/${cityCenter.lat},${cityCenter.lon}`;
         }
 
         if (locationLabel && locationLabel !== 'Localização não informada') {
@@ -8955,6 +9023,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           });
         }
 
+
         return {
           incidenceNumber,
           raw: payload,
@@ -8965,10 +9034,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           tags,
           flags,
           status: 'enriched' as 'enriched',
-          lat: hasCoords ? lat : null,
-          lon: hasCoords ? lon : null,
+          lat: hasCoords ? lat : (cityCenter ? cityCenter.lat : null),
+          lon: hasCoords ? lon : (cityCenter ? cityCenter.lon : null),
           baseLat: baseInfo && baseInfo.lat != null ? baseInfo.lat : null,
           baseLon: baseInfo && baseInfo.lon != null ? baseInfo.lon : null,
+          isEstimatedLoc: !hasCoords && !!cityCenter,
+          locMarginKm: !hasCoords && !!cityCenter ? 15 : 0
         };
       };
 
@@ -9000,7 +9071,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       // Helper to process queue
       const tryQueue = (key: string, inc: any) => {
         if (!queuedKeys.has(key)) {
-          const hasNativeCoords = inc.lat != null && inc.lon != null;
+          const hasNativeCoords = inc.lat != null && inc.lon != null && !inc.isEstimatedLoc;
           const hasMunicipio = !!inc.raw.municipio;
           const hasConjunto = !!inc.raw.conjunto;
           
@@ -9035,8 +9106,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
               const locIndex = flags.findIndex((f: any) => f.type === 'localizacao');
               if (locIndex !== -1 && targetLat != null && targetLon != null) {
                 const locFlag = { ...flags[locIndex] };
-                const prefix = isEstimatedLoc ? `Localização (${estimatedSource}, Estimada):` : 'Localização (Nativa):';
-                const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${targetLat},${targetLon}`;
+                const prefix = isEstimatedLoc ? `Localização (${estimatedSource}, Estimado):` : 'Localização (Nativa):';
+                const mapsUrl = `https://www.google.com/maps/place/${targetLat},${targetLon}`;
                 locFlag.html = `<b><span style="color:${isEstimatedLoc ? '#8b5cf6' : '#1d4ed8'};">${prefix}</span></b> <a href="${mapsUrl}" target="_blank">${locLabel}</a>`;
                 locFlag.plainText = `${prefix} ${locLabel}`;
                 flags[locIndex] = locFlag;
@@ -9111,7 +9182,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       let inc = dataMap.get(incidenceKey);
       if (!inc) return;
 
-      const hasCoords = inc.lat != null && inc.lon != null;
+      const hasCoords = inc.lat != null && inc.lon != null && !inc.isEstimatedLoc;
       const municipioStr = inc.raw.municipio;
 
       if (!hasCoords && !municipioStr) return;
@@ -9215,8 +9286,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         const locIndex = flags.findIndex(f => f.type === 'localizacao');
         if (locIndex !== -1 && targetLat != null && targetLon != null) {
           const locFlag = { ...flags[locIndex] };
-          const prefix = isEstimatedLoc ? `Localização (${estimatedSource}, Estimada):` : 'Localização (Nativa):';
-          const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${targetLat},${targetLon}`;
+          const prefix = isEstimatedLoc ? `Localização (${estimatedSource}, Estimado):` : 'Localização (Nativa):';
+          const mapsUrl = `https://www.google.com/maps/place/${targetLat},${targetLon}`;
           locFlag.html = `<b><span style="color:${isEstimatedLoc ? '#8b5cf6' : '#1d4ed8'};">${prefix}</span></b> <a href="${mapsUrl}" target="_blank">${locLabel}</a>`;
           locFlag.plainText = `${prefix} ${locLabel}`;
           flags[locIndex] = locFlag;
@@ -9486,34 +9557,40 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return loc1 !== m2 && !m2.includes(loc1) && !loc1.includes(m2);
     };
 
-    const getMins = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const getMinsAndSpeed = (lat1: number, lon1: number, lat2: number, lon2: number): { mins: number, speed: number } => {
       const key = `${lat1},${lon1}|${lat2},${lon2}`;
       const cache = this.osrmCache();
+      const distKm = haversineDistance(lat1, lon1, lat2, lon2) * 1.4;
+      const fallbackMins = Math.max(1, Math.round((distKm / 30) * 60));
+
+      let mins = fallbackMins;
       if (!cache.has(key)) {
         this.fetchOsrmEstimate(lat1, lon1, lat2, lon2);
-        return Math.max(1, Math.round((haversineDistance(lat1, lon1, lat2, lon2) * 1.4 / 30) * 60));
+      } else {
+        const val = cache.get(key);
+        if (val !== null && val !== -1 && val !== undefined) {
+          mins = val;
+        }
       }
-      const val = cache.get(key);
-      if (val === null || val === -1 || val === undefined) {
-        return Math.max(1, Math.round((haversineDistance(lat1, lon1, lat2, lon2) * 1.4 / 30) * 60));
-      }
-      return val;
+
+      const speed = Math.round(distKm / (mins / 60));
+      return { mins, speed };
     };
 
     let newHref = '';
 
-    const isPrimeiraOs = ev.is_primeira_os_jornada || !ev.prev_liberada;
+    const isPrimeiraOs = ev.seq_index === 1 || ev.is_primeira_os_jornada || !ev.prev_liberada;
     if (isPrimeiraOs) {
       if (inc.baseLat != null && inc.baseLon != null && inc.lat != null && inc.lon != null && canEstimateBase(inc)) {
-        const mins = getMins(inc.baseLat, inc.baseLon, inc.lat, inc.lon);
-        distStr = ` | Deslocamento estimando (Base): ${mins} min`;
+        const est = getMinsAndSpeed(inc.baseLat, inc.baseLon, inc.lat, inc.lon);
+        distStr = ` | Deslocamento estimando (Base): ${est.mins} min, ${est.speed}km/h`;
         newHref = `https://www.google.com/maps/dir/?api=1&origin=${inc.baseLat},${inc.baseLon}&destination=${inc.lat},${inc.lon}`;
       }
     } else if (ev.prev_nr_ordem) {
       const prevInc = this.getIncidenceForOrder(teamName, ev.prev_nr_ordem);
       if (prevInc && prevInc.lat != null && prevInc.lon != null && inc.lat != null && inc.lon != null && canEstimateOsToOs(prevInc, inc)) {
-        const mins = getMins(prevInc.lat, prevInc.lon, inc.lat, inc.lon);
-        distStr = ` | Deslocamento estimando (OS ${ev.prev_nr_ordem}): ${mins} min`;
+        const est = getMinsAndSpeed(prevInc.lat, prevInc.lon, inc.lat, inc.lon);
+        distStr = ` | Deslocamento estimando (OS ${ev.prev_nr_ordem}): ${est.mins} min, ${est.speed}km/h`;
         newHref = `https://www.google.com/maps/dir/?api=1&origin=${prevInc.lat},${prevInc.lon}&destination=${inc.lat},${inc.lon}`;
       }
     }
@@ -9525,7 +9602,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     if (isLastOs) {
       if (inc.baseLat != null && inc.baseLon != null && inc.lat != null && inc.lon != null && canEstimateBase(inc)) {
-        const mins = getMins(inc.lat, inc.lon, inc.baseLat, inc.baseLon);
+        const est = getMinsAndSpeed(inc.lat, inc.lon, inc.baseLat, inc.baseLon);
         const marginKm = inc.isEstimatedLoc ? (inc.locMarginKm || 10) : 0;
         const marginMin = Math.round((marginKm / 40) * 60);
 
@@ -9536,12 +9613,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           reliability = ' (Baixa Conf.)';
         }
 
-        retornoStr = ` | Retorno estimado: ${mins} min${marginMin > 0 ? ` (±${marginMin}min)` : ''}${reliability}`;
+        retornoStr = ` | Retorno estimado: ${est.mins} min, ${est.speed}km/h${marginMin > 0 ? ` (±${marginMin}min)` : ''}${reliability}`;
         retornoHref = `https://www.google.com/maps/dir/?api=1&origin=${inc.lat},${inc.lon}&destination=${inc.baseLat},${inc.baseLon}`;
 
         // Validação de Anomalia de Tempo (apenas para Retorno Base)
         if (ev.retorno_base_min != null && !reliability.includes('Baixa Conf.')) {
-           const maxAcceptableTime = mins + marginMin + 15; // 15 mins extra grace period
+           const maxAcceptableTime = est.mins + marginMin + 15; // 15 mins extra grace period
            if (ev.retorno_base_min > maxAcceptableTime) {
               const alreadyHasFlag = clone.flags.some((f: any) => f.type === 'desvio_deslocamento');
               if (!alreadyHasFlag) {

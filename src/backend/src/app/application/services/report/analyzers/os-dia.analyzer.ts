@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 Alysson Pinheiro. Todos os direitos reservados.
+// Copyright (c) 2026 Alysson Pinheiro. Todos os direitos reservados.
 // Software proprietário e confidencial. Uso não autorizado é proibido.
 import type { CsvRow } from '../csv-utils.js';
 import type { OsDiaTeamAnalysis, OsDiaOrderEvidence, UtilizacaoOrderEvidence, KpiInsight, GlobalAveragesMap } from '../types.js';
@@ -475,6 +475,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
             nr_ordem: nr,
             classe: classeCol ? String(row[classeCol] ?? '').trim() : '',
             causa: causaCol ? String(row[causaCol] ?? '').trim() : '',
+            seq_index: bIdx + 1,
             prev_liberada: prevRow && liberadaCol ? String(prevRow[liberadaCol] ?? '').trim() || undefined : undefined,
             despachada: desp,
             a_caminho: String(row[caminhoCol] ?? '').trim(),
@@ -764,6 +765,7 @@ export function analyzeOsDia(deslocRows: CsvRow[], kpis: KpiInsight[], globalAve
           nr_ordem:          nrOrdemCol ? String(row[nrOrdemCol] ?? '').trim()         : '',
           classe:            classeCol  ? String(row[classeCol]  ?? '').trim()         : '',
           causa:             causaCol   ? String(row[causaCol]   ?? '').trim()         : '',
+          seq_index:         i + 1,
           despachada:        despachadaCol        ? String(row[despachadaCol]        ?? '').trim() : '',
           a_caminho:                       String(row[caminhoCol]                     ?? '').trim(),
           no_local:          noLocalCol   ? String(row[noLocalCol]   ?? '').trim()    : '',

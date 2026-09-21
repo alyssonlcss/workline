@@ -179,6 +179,7 @@ export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[], glob
 
       // Build prev_liberada map: sort teamRows by date+a_caminho, track consecutive pairs per date
       const prevLiberadaMap = new Map<string, string>();
+      const seqIndexMap = new Map<string, number>();
       if (nrOrdemCol && aCaminhoCol) {
         const sortedForPrev = [...teamRows].sort((a, b) => {
           const da = parseDateTimeBr(String(a[aCaminhoCol] ?? ''));
@@ -188,6 +189,14 @@ export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[], glob
           if (!db) return -1;
           return da.getTime() - db.getTime();
         });
+        
+        // Populate seqIndexMap
+        let seq = 1;
+        for (const row of sortedForPrev) {
+          const currNr = String(row[nrOrdemCol] ?? '').trim();
+          if (currNr) seqIndexMap.set(currNr, seq++);
+        }
+
         for (let i = 1; i < sortedForPrev.length; i++) {
           const curr = sortedForPrev[i];
           const prev = sortedForPrev[i - 1];
@@ -247,6 +256,7 @@ export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[], glob
             nr_ordem: String(row[nrOrdemCol] ?? '').trim(),
             classe: classeCol ? String(row[classeCol] ?? '').trim() : '',
             causa: causaCol ? String(row[causaCol] ?? '').trim() : '',
+            seq_index: seqIndexMap.get(String(row[nrOrdemCol] ?? '').trim()),
             prev_liberada: prevLiberadaMap.get(String(row[nrOrdemCol] ?? '').trim()) || undefined,
             despachada: despachadaCol ? String(row[despachadaCol] ?? '').trim() : '',
             a_caminho: String(row[aCaminhoCol] ?? '').trim(),
@@ -268,6 +278,7 @@ export function analyzeEficiencia(deslocRows: CsvRow[], kpis: KpiInsight[], glob
               nr_ordem: String(row[nrOrdemCol] ?? '').trim(),
               classe: classeCol ? String(row[classeCol] ?? '').trim() : '',
               causa: causaCol ? String(row[causaCol] ?? '').trim() : '',
+              seq_index: seqIndexMap.get(String(row[nrOrdemCol] ?? '').trim()),
               prev_liberada: prevLiberadaMap.get(String(row[nrOrdemCol] ?? '').trim()) || undefined,
               despachada: despachadaCol ? String(row[despachadaCol] ?? '').trim() : '',
               a_caminho: String(row[aCaminhoCol] ?? '').trim(),

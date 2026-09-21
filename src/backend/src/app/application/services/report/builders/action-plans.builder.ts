@@ -376,7 +376,7 @@ export function buildActionPlans(
             .filter((d) => d.flags.includes('login_muito_tardio'))
             .sort((a, b) => b.primeiro_login_min - a.primeiro_login_min)[0];
           issues.push(
-            `Furo de Jornada (Log In Extremo): ${login.summary.countLoginMuitoTardio} dia(s) com acesso ao sistema absurdamente tarde. Caso mais grave: dia ${worst.date_ref} com ${round2(worst.primeiro_login_min)} min de atraso após o horário oficial.` +
+            `Furo de Jornada (Log In Extremo): ${login.summary.countLoginMuitoTardio} dia(s) com acesso ao sistema absurdamente tarde. Caso mais grave: dia ${worst?.date_ref || '—'} com ${round2(worst?.primeiro_login_min || 0)} min de atraso após o horário oficial.` +
             kpiCtx('1º Login'),
           );
           recommendations.push(
@@ -405,7 +405,7 @@ export function buildActionPlans(
             .filter((d) => d.flags.includes('desloc_muito_lento'))
             .sort((a, b) => b.primeiro_desloc_min - a.primeiro_desloc_min)[0];
           issues.push(
-            `Retenção Crítica na Base (1º Deslocamento): ${desloc.summary.countDeslocMuitoLento} dia(s) com demora inaceitável para sair após o 1º despacho. Pior caso: dia ${worst.date_ref} com ${round2(worst.primeiro_desloc_min)} min de imobilidade.` +
+            `Retenção Crítica na Base (1º Deslocamento): ${desloc.summary.countDeslocMuitoLento} dia(s) com demora inaceitável para sair após o 1º despacho. Pior caso: dia ${worst?.date_ref || '—'} com ${round2(worst?.primeiro_desloc_min || 0)} min de imobilidade.` +
             kpiCtx('1º Desloc.'),
           );
           recommendations.push(
@@ -454,7 +454,7 @@ export function buildActionPlans(
             .filter((d) => d.flags.includes('retorno_muito_alto'))
             .sort((a, b) => (b.true_retorno_min ?? b.retorno_base_min) - (a.true_retorno_min ?? a.retorno_base_min))[0];
           issues.push(
-            `Fuga de Produtividade no Retorno: ${retorno.summary.countRetornoMuitoAlto} dia(s) com demora exorbitante entre a última OS e o encerramento da jornada (dia ${worst.date_ref} com ${round2(worst.true_retorno_min ?? worst.retorno_base_min)} min ociosos).` +
+            `Fuga de Produtividade no Retorno: ${retorno.summary.countRetornoMuitoAlto} dia(s) com demora exorbitante entre a última OS e o encerramento da jornada (dia ${worst?.date_ref || '—'} com ${round2(worst?.true_retorno_min ?? worst?.retorno_base_min ?? 0)} min ociosos).` +
             kpiCtx('Retorno Base'),
           );
           recommendations.push(

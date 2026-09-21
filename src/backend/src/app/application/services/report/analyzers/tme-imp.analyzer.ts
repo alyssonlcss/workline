@@ -75,6 +75,14 @@ export function analyzeTmeImp(deslocRows: CsvRow[], kpis: KpiInsight[], globalAv
       });
       // Build a map: nr_ordem -> prev_liberada
       const prevLiberadaMap = new Map<string, string>();
+      const seqIndexMap = new Map<string, number>();
+      
+      let seq = 1;
+      for (const row of sortedTeamRows) {
+        const currNr = nrOrdemCol ? String(row[nrOrdemCol] ?? '').trim() : '';
+        if (currNr) seqIndexMap.set(currNr, seq++);
+      }
+
       for (let i = 1; i < sortedTeamRows.length; i++) {
         const curr = sortedTeamRows[i];
         const prev = sortedTeamRows[i - 1];
@@ -115,6 +123,7 @@ export function analyzeTmeImp(deslocRows: CsvRow[], kpis: KpiInsight[], globalAv
           nr_ordem:          nrOrdem,
           classe:            classeCol     ? String(row[classeCol] ?? '').trim()     : '',
           causa:             causaCol      ? String(row[causaCol] ?? '').trim()      : '',
+          seq_index:         seqIndexMap.get(nrOrdem),
           prev_liberada:     prevLiberadaMap.get(nrOrdem) ?? '',
           despachada:        despachadaCol ? String(row[despachadaCol] ?? '').trim() : '',
           a_caminho:         aCaminho,
@@ -135,6 +144,7 @@ export function analyzeTmeImp(deslocRows: CsvRow[], kpis: KpiInsight[], globalAv
           nr_ordem:          nrOrdem,
           classe:            classeCol     ? String(row[classeCol] ?? '').trim()     : '',
           causa:             causaCol      ? String(row[causaCol] ?? '').trim()      : '',
+          seq_index:         seqIndexMap.get(nrOrdem),
           prev_liberada:     prevLiberadaMap.get(nrOrdem) ?? '',
           despachada:        despachadaCol ? String(row[despachadaCol] ?? '').trim() : '',
           a_caminho:         aCaminho,
