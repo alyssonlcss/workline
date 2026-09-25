@@ -39,7 +39,7 @@ import { SpotfireFilter } from '../../models/spotfire-catalog.model';
 export class IdbStorage {
   private static readonly DB_NAME = 'WorklineDashboardDB';
   private static readonly STORE_NAME = 'IncidenciasStore';
-  
+
   private static getDB(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
       const req = indexedDB.open(this.DB_NAME, 1);
@@ -5758,8 +5758,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           options.push(base.name);
           if (polo.matchType === 'direct_prefix') {
             prefixMap[base.name] = {
-              own: base.propria?.[0] || '',
-              partner: base.parceira?.[0] || ''
+              own: (base.propria?.prefixes || (Array.isArray(base.propria) ? base.propria : []))?.[0] || '',
+              partner: (base.parceira?.prefixes || (Array.isArray(base.parceira) ? base.parceira : []))?.[0] || ''
             };
           } else if (polo.matchType === 'infix_type_with_base_prefix') {
             prefixMap[base.name] = {
@@ -6350,7 +6350,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       const text = this.includeAttentionMessage() ? this.buildShareText(sections) : '';
       console.log(`[Share Flow] PDFs gerados: ${files.length} arquivo(s). Iniciando download em memória...`);
       files.forEach(f => this.downloadFileFromMemory(f));
-      
+
       const shared = await this.tryShare(files, text);
       if (shared) {
         console.log(`[Share Flow] Compartilhamento automático via Windows Share foi concluído com sucesso.`);
@@ -7416,8 +7416,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     for (const polo of config.polos) {
       if (polo.matchType === 'direct_prefix') {
         for (const base of polo.bases) {
-          if (base.propria?.some((p: string) => upper.startsWith(p.toUpperCase()))) return { base: base.name, teamType: 'propria' };
-          if (base.parceira?.some((p: string) => upper.startsWith(p.toUpperCase()))) return { base: base.name, teamType: 'parceira' };
+          const propriaPrefixes: string[] = Array.isArray(base.propria) ? base.propria : (base.propria?.prefixes || []);
+          const parceiraPrefixes: string[] = Array.isArray(base.parceira) ? base.parceira : (base.parceira?.prefixes || []);
+          if (propriaPrefixes.some((p: string) => upper.startsWith(p.toUpperCase()))) return { base: base.name, teamType: 'propria' };
+          if (parceiraPrefixes.some((p: string) => upper.startsWith(p.toUpperCase()))) return { base: base.name, teamType: 'parceira' };
         }
       } else if (polo.matchType === 'infix_type_with_base_prefix') {
         for (const base of polo.bases) {
@@ -7963,9 +7965,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       if (option === ALL_OPTION) {
         const allOptionsExcludingAll = filter.options.filter(o => o !== ALL_OPTION);
         const currentSelected = filter.value.filter(v => v !== ALL_OPTION);
-        const allSelected = allOptionsExcludingAll.length > 0 && 
-                            allOptionsExcludingAll.length === currentSelected.length &&
-                            allOptionsExcludingAll.every(o => currentSelected.includes(o));
+        const allSelected = allOptionsExcludingAll.length > 0 &&
+          allOptionsExcludingAll.length === currentSelected.length &&
+          allOptionsExcludingAll.every(o => currentSelected.includes(o));
         if (allSelected) {
           return { ...filter, value: [] };
         } else {
@@ -8733,10 +8735,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             parsedDates.push(new Date(year, month, day));
           }
         }
-        
+
         parsedDates.sort((a, b) => a.getTime() - b.getTime());
         const formatDateKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        
+
         const missingDates = parsedDates.filter(d => !this.fetchedDates.has(formatDateKey(d)));
 
         if (missingDates.length > 0) {
@@ -8759,7 +8761,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             if (!this.basesConfig) continue;
             for (const polo of this.basesConfig.polos) {
               for (const base of polo.bases) {
-                const matchers = [...(base.propria || []), ...(base.parceira || []), ...(base.prefixes || [])];
+                const matchers = [...(Array.isArray(base.propria) ? base.propria : (base.propria?.prefixes || [])), ...(Array.isArray(base.parceira) ? base.parceira : (base.parceira?.prefixes || [])), ...(base.prefixes || [])];
                 for (const matcher of matchers) {
                   if (team.includes(matcher)) {
                     poloSet.add(polo.name);
@@ -8775,31 +8777,31 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             'norte': 'DNORT'
           };
           const formattedPolos = Array.from(poloSet).map(p => openviewPoloMapping[p.toLowerCase()] || p);
-          
+
           if (formattedPolos.length > 0) {
             this.loadingIncidencias.set(true);
             try {
               const globalMinTime = parsedDates[0].getTime();
               const globalMaxTime = parsedDates[parsedDates.length - 1].getTime();
-              
+
               for (let i = 0; i < missingDates.length; i += 3) {
                 const chunk = missingDates.slice(i, i + 3);
                 const chunkMin = new Date(chunk[0].getTime());
                 const chunkMax = new Date(chunk[chunk.length - 1].getTime());
-                
+
                 if (chunkMin.getTime() === globalMinTime) {
                   chunkMin.setDate(chunkMin.getDate() - 1);
                 }
                 if (chunkMax.getTime() === globalMaxTime) {
                   chunkMax.setDate(chunkMax.getDate() + 1);
                 }
-                
+
                 const dataInicioStr = `${chunkMin.getFullYear()}-${String(chunkMin.getMonth() + 1).padStart(2, '0')}-${String(chunkMin.getDate()).padStart(2, '0')} 00:00:00`;
                 const dataFimStr = `${chunkMax.getFullYear()}-${String(chunkMax.getMonth() + 1).padStart(2, '0')}-${String(chunkMax.getDate()).padStart(2, '0')} 23:59:59`;
-                
+
                 console.log(`[Dashboard] Buscando pacote de incidências (on-demand) para polos ${formattedPolos.join(', ')} e datas ${dataInicioStr} a ${dataFimStr}...`);
                 const chunkRes = await firstValueFrom(this.api.getIncidencias(dataInicioStr, dataFimStr, formattedPolos));
-                
+
                 const existingIds = new Set(this.cachedIncidencias.map(c => String(c.incidencia || (c as any).numero).trim()));
                 for (const inc of chunkRes) {
                   const id = String(inc.incidencia || (inc as any).numero).trim();
@@ -8808,7 +8810,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
                     existingIds.add(id);
                   }
                 }
-                
+
                 for (const d of chunk) {
                   this.fetchedDates.add(formatDateKey(d));
                 }
@@ -8833,9 +8835,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         const reqStr = String(reqIncidence);
         // Ordenamos por length decrescente para que IDs maiores deem match primeiro (evita falso positivo se um ID for substring do outro)
         const sorted = [...incidenciasList].sort((a, b) => {
-           const idA = String(a.incidencia || (a as any).numero).trim();
-           const idB = String(b.incidencia || (b as any).numero).trim();
-           return idB.length - idA.length;
+          const idA = String(a.incidencia || (a as any).numero).trim();
+          const idB = String(b.incidencia || (b as any).numero).trim();
+          return idB.length - idA.length;
         });
         for (const inc of sorted) {
           const openviewId = String(inc.incidencia || (inc as any).numero).trim();
@@ -8883,13 +8885,66 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       const getBaseCoordsForTeam = (teamName: string) => {
         if (!this.basesConfig) return null;
         for (const polo of this.basesConfig.polos) {
-          for (const base of polo.bases) {
-            const matchers = [...(base.propria || []), ...(base.parceira || []), ...(base.prefixes || [])];
-            for (const matcher of matchers) {
-              if (teamName.includes(matcher)) {
-                console.log('Matched team:', teamName, 'to base:', base.name, 'with localBase:', base.localBase);
-                if (base.localBase && base.localBase.length > 0) {
-                  const parts = base.localBase[0].split(',');
+          
+          if (polo.matchType === 'direct_prefix') {
+            for (const base of polo.bases) {
+              const parceiraPrefixes = Array.isArray(base.parceira) ? base.parceira : (base.parceira?.prefixes || []);
+              const propriaPrefixes = Array.isArray(base.propria) ? base.propria : (base.propria?.prefixes || []);
+              
+              const isParceira = parceiraPrefixes.some(m => teamName.includes(m));
+              const isPropria = propriaPrefixes.some(m => teamName.includes(m));
+              
+              if (isParceira || isPropria) {
+                let coordsString: string | null = null;
+                const teamType = isParceira ? 'parceira' : 'propria';
+
+                if (base.propria && !Array.isArray(base.propria) && base.propria.localBase && teamType === 'propria') {
+                  const lb = base.propria.localBase as any;
+                  coordsString = lb?.place?.[0] || lb?.coords || (Array.isArray(lb) ? lb[0] : lb);
+                } else if (base.parceira && !Array.isArray(base.parceira) && base.parceira.localBase && teamType === 'parceira') {
+                  const lb = base.parceira.localBase as any;
+                  coordsString = lb?.place?.[0] || lb?.coords || (Array.isArray(lb) ? lb[0] : lb);
+                } else if ((base as any).localBase) {
+                  const lb = Array.isArray((base as any).localBase) ? (base as any).localBase[0] : (base as any).localBase;
+                  coordsString = lb?.place?.[0] || lb?.coords || lb;
+                }
+
+                if (coordsString && typeof coordsString === 'string') {
+                  const parts = coordsString.split(',');
+                  if (parts.length === 2) {
+                    return { lat: parseFloat(parts[0]), lon: parseFloat(parts[1]), name: base.name };
+                  }
+                }
+                return { name: base.name };
+              }
+            }
+          } else if (polo.matchType === 'infix_type_with_base_prefix') {
+            for (const base of polo.bases) {
+              const isPrefix = (base.prefixes || []).some(m => teamName.includes(m));
+              if (isPrefix) {
+                let teamType: 'propria' | 'parceira' | null = null;
+                if (polo.typeIdentifiers?.propria.some((inf: string) => teamName.includes(inf))) {
+                  teamType = 'propria';
+                } else if (polo.typeIdentifiers?.parceira.some((inf: string) => teamName.includes(inf))) {
+                  teamType = 'parceira';
+                } else {
+                  teamType = 'propria';
+                }
+
+                let coordsString: string | null = null;
+                if (base.propria && !Array.isArray(base.propria) && base.propria.localBase && teamType === 'propria') {
+                  const lb = base.propria.localBase as any;
+                  coordsString = lb?.place?.[0] || lb?.coords || (Array.isArray(lb) ? lb[0] : lb);
+                } else if (base.parceira && !Array.isArray(base.parceira) && base.parceira.localBase && teamType === 'parceira') {
+                  const lb = base.parceira.localBase as any;
+                  coordsString = lb?.place?.[0] || lb?.coords || (Array.isArray(lb) ? lb[0] : lb);
+                } else if ((base as any).localBase) {
+                  const lb = Array.isArray((base as any).localBase) ? (base as any).localBase[0] : (base as any).localBase;
+                  coordsString = lb?.place?.[0] || lb?.coords || lb;
+                }
+
+                if (coordsString && typeof coordsString === 'string') {
+                  const parts = coordsString.split(',');
                   if (parts.length === 2) {
                     return { lat: parseFloat(parts[0]), lon: parseFloat(parts[1]), name: base.name };
                   }
@@ -8916,20 +8971,20 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         const mun = (payload.municipio || '').trim();
         let extraInfo = '';
         if (payload.conjunto) {
-           extraInfo = payload.conjunto.trim();
+          extraInfo = payload.conjunto.trim();
         }
 
         const normMun = mun.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const normConjunto = extraInfo.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        
+
         let cityCenter = null;
         for (const [key, coords] of Object.entries(CEARA_MUNICIPIOS_GEO)) {
-           const normKey = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-           // Procura a cidade no município. Se vazio, verifica se a string do conjunto contém o nome da cidade.
-           if (normMun === normKey || (!normMun && normConjunto.includes(normKey))) {
-              cityCenter = coords;
-              break;
-           }
+          const normKey = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          // Procura a cidade no município. Se vazio, verifica se a string do conjunto contém o nome da cidade.
+          if (normMun === normKey || (!normMun && normConjunto.includes(normKey))) {
+            cityCenter = coords;
+            break;
+          }
         }
 
         if (hasCoords) {
@@ -8954,7 +9009,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
         if (!hasCoords && cityCenter && locationLabel && locationLabel !== 'Localização não informada') {
           if (!locationLabel.toLowerCase().startsWith('centro')) {
-             locationLabel = `Centro, ${locationLabel}`;
+            locationLabel = `Centro, ${locationLabel}`;
           }
         }
 
@@ -9006,9 +9061,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         const baseInfo = getBaseCoordsForTeam(teamName);
         let mapsUrl = null;
         if (hasCoords) {
-           mapsUrl = `https://www.google.com/maps/place/${lat},${lon}`;
+          mapsUrl = `https://www.google.com/maps/place/${lat},${lon}`;
         } else if (cityCenter) {
-           mapsUrl = `https://www.google.com/maps/place/${cityCenter.lat},${cityCenter.lon}`;
+          mapsUrl = `https://www.google.com/maps/place/${cityCenter.lat},${cityCenter.lon}`;
         }
 
         if (locationLabel && locationLabel !== 'Localização não informada') {
@@ -9074,7 +9129,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const hasNativeCoords = inc.lat != null && inc.lon != null && !inc.isEstimatedLoc;
           const hasMunicipio = !!inc.raw.municipio;
           const hasConjunto = !!inc.raw.conjunto;
-          
+
           if (hasNativeCoords || hasMunicipio || hasConjunto) {
             let cacheKey = '';
             if (hasNativeCoords) {
@@ -9095,11 +9150,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
               let locMarginKm = 0;
 
               if (geoData.isEstimated) {
-                 targetLat = geoData.lat;
-                 targetLon = geoData.lon;
-                 isEstimatedLoc = true;
-                 estimatedSource = geoData.source || 'Municipio';
-                 locMarginKm = geoData.locMarginKm;
+                targetLat = geoData.lat;
+                targetLon = geoData.lon;
+                isEstimatedLoc = true;
+                estimatedSource = geoData.source || 'Municipio';
+                locMarginKm = geoData.locMarginKm;
               }
 
               const flags = [...inc.flags];
@@ -9242,7 +9297,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
                 // boundingbox format: [latMin, latMax, lonMin, lonMax]
                 const [latMin, latMax, lonMin, lonMax] = bestMatch.boundingbox.map(parseFloat);
                 const { calculateDistanceKm } = await import('../../core/utils/distance.util');
-                
+
                 // Distância do centro até a borda (usaremos do centro até o ponto máximo lat/lon)
                 locMarginKm = calculateDistanceKm(lat, lon, latMax, lonMax);
               }
@@ -9267,7 +9322,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
       if (geoData) {
         let locLabel = geoData.bairro ? `${geoData.bairro}, ${geoData.municipio || inc.raw.municipio}` : (geoData.municipio || inc.raw.municipio || 'Localização não informada');
-        
+
         let targetLat = inc.lat;
         let targetLon = inc.lon;
         let isEstimatedLoc = false;
@@ -9275,11 +9330,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         let locMarginKm = 0;
 
         if (geoData.isEstimated) {
-           targetLat = geoData.lat;
-           targetLon = geoData.lon;
-           isEstimatedLoc = true;
-           estimatedSource = geoData.source || 'Municipio';
-           locMarginKm = geoData.locMarginKm;
+          targetLat = geoData.lat;
+          targetLon = geoData.lon;
+          isEstimatedLoc = true;
+          estimatedSource = geoData.source || 'Municipio';
+          locMarginKm = geoData.locMarginKm;
         }
 
         const flags = [...inc.flags];
@@ -9536,14 +9591,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const canEstimateOsToOs = (prevInc: any, currInc: any) => {
       const prevHasCoords = checkHasNativeCoords(prevInc);
       const currHasCoords = checkHasNativeCoords(currInc);
-      
+
       if (!prevHasCoords || !currHasCoords) {
         const loc1 = getLocationIdentifier(prevInc);
         const loc2 = getLocationIdentifier(currInc);
         if (!loc1 || !loc2) return false;
         return loc1 !== loc2;
       }
-      
+
       return true;
     };
 
@@ -9618,38 +9673,38 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
         // Validação de Anomalia de Tempo (apenas para Retorno Base)
         if (ev.retorno_base_min != null && !reliability.includes('Baixa Conf.')) {
-           const maxAcceptableTime = est.mins + marginMin + 15; // 15 mins extra grace period
-           if (ev.retorno_base_min > maxAcceptableTime) {
-              const alreadyHasFlag = clone.flags.some((f: any) => f.type === 'desvio_deslocamento');
-              if (!alreadyHasFlag) {
-                 clone.flags.push({
-                    type: 'desvio_deslocamento',
-                    html: `<b><span style="color:#dc2626;">Anomalia de Deslocamento:</span></b> O tempo real de Retorno Base (${ev.retorno_base_min} min) excedeu a estimativa máxima aceitável de ${maxAcceptableTime} min.`,
-                    plainText: `Anomalia de Deslocamento: O tempo real de Retorno Base (${ev.retorno_base_min} min) excedeu a estimativa de ${maxAcceptableTime} min.`,
-                    color: 'red'
-                 });
-              }
-           }
+          const maxAcceptableTime = est.mins + marginMin + 15; // 15 mins extra grace period
+          if (ev.retorno_base_min > maxAcceptableTime) {
+            const alreadyHasFlag = clone.flags.some((f: any) => f.type === 'desvio_deslocamento');
+            if (!alreadyHasFlag) {
+              clone.flags.push({
+                type: 'desvio_deslocamento',
+                html: `<b><span style="color:#dc2626;">Anomalia de Deslocamento:</span></b> O tempo real de Retorno Base (${ev.retorno_base_min} min) excedeu a estimativa máxima aceitável de ${maxAcceptableTime} min.`,
+                plainText: `Anomalia de Deslocamento: O tempo real de Retorno Base (${ev.retorno_base_min} min) excedeu a estimativa de ${maxAcceptableTime} min.`,
+                color: 'red'
+              });
+            }
+          }
         }
       }
     }
 
     if (distStr || retornoStr) {
       locFlag.plainText = `${locFlag.plainText}${distStr}${retornoStr}`;
-      
+
       let updatedHtml = locFlag.html;
       if (distStr) {
         if (updatedHtml.includes('</a>')) {
           if (newHref) {
-             updatedHtml = updatedHtml.replace(/href="[^"]+"/, `href="${newHref}"`);
-             locFlag.href = newHref;
+            updatedHtml = updatedHtml.replace(/href="[^"]+"/, `href="${newHref}"`);
+            locFlag.href = newHref;
           }
           updatedHtml = updatedHtml.replace('</a>', `${distStr}</a>`);
         } else {
           updatedHtml = `${updatedHtml}${distStr}`;
         }
       }
-      
+
       if (retornoStr) {
         if (retornoHref) {
           (locFlag as any).retornoHref = retornoHref;
@@ -9659,7 +9714,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           updatedHtml += retornoStr;
         }
       }
-      
+
       locFlag.html = updatedHtml;
       clone.flags[locFlagIndex] = locFlag;
     }

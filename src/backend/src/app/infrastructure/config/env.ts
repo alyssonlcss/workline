@@ -116,9 +116,8 @@ export type BasesConfig = {
     typeIdentifiers?: { propria: string[]; parceira: string[] };
     bases: Array<{
       name: string;
-      propria?: string[];
-        localBase?: string[];
-      parceira?: string[];
+      propria?: { prefixes?: string[]; localBase?: { city?: string; place?: string[] } };
+      parceira?: { prefixes?: string[]; localBase?: { city?: string; place?: string[] } };
       prefixes?: string[];
     }>;
   }>;

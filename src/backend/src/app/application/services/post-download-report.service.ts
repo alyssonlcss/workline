@@ -489,13 +489,16 @@ export class PostDownloadReportService {
       for (const polo of config.polos) {
         if (polo.matchType === 'direct_prefix') {
           for (const base of polo.bases) {
-            if (base.propria?.some((p: string) => teamName.startsWith(p.toUpperCase()))) {
+            const propriaPrefixes: string[] = Array.isArray(base.propria) ? base.propria : (base.propria?.prefixes || []);
+            const parceiraPrefixes: string[] = Array.isArray(base.parceira) ? base.parceira : (base.parceira?.prefixes || []);
+
+            if (propriaPrefixes.some((p: string) => teamName.startsWith(p.toUpperCase()))) {
               matchedBase = base.name;
               matchedType = 'propria';
               matchedPolo = polo.name;
               break;
             }
-            if (base.parceira?.some((p: string) => teamName.startsWith(p.toUpperCase()))) {
+            if (parceiraPrefixes.some((p: string) => teamName.startsWith(p.toUpperCase()))) {
               matchedBase = base.name;
               matchedType = 'parceira';
               matchedPolo = polo.name;
